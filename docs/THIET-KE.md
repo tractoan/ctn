@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.0 |
+| Phiên bản | 1.1 – sơ đồ theo bản vẽ của cựu học sinh |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
 | Nền tảng | Trình duyệt (điện thoại là chính) · Cloudflare Workers + D1 |
@@ -19,7 +19,7 @@ thi đua giữa các khóa.
 **Mục tiêu chính**
 
 1. Vào chơi trong vòng 1 phút, không mật khẩu, chạy tốt trên điện thoại.
-2. Gợi nhớ không gian trường cũ: cổng, nhà xe, sân trường, cột cờ, nhà A, nhà B, C, D.
+2. Gợi nhớ không gian trường cũ: cổng xanh, nhà hiệu bộ, dãy 3–4–5 tầng, sân trường cao có bậc thang, sân đá cầu, nhà đa năng, căng tin.
 3. Kết nối các thế hệ: lưu bút theo lớp và khóa, lịch họp lớp, bảng thi đua.
 4. Chi phí vận hành gần bằng 0 (gói miễn phí của Cloudflare).
 
@@ -45,39 +45,48 @@ Lớp chuyên: Toán, Tin, Lý, Hóa, Sinh, Văn, Sử, Địa, Anh, Nga, Pháp,
 
 ## 3. Sơ đồ khuôn viên
 
-Toàn bộ dữ liệu sơ đồ nằm trong `public/js/campus.js`. Thế giới rộng **2000 × 1720 px**, hướng Bắc ở trên,
-đường Lương Ngọc Quyến ở dưới. Vị trí các dãy nhà là **ước lượng** từ mô tả "nhà A là nhà hiệu bộ, nhà B, C, D
-là các dãy lớp học"; chỉnh số liệu trong file này để khớp thực tế.
+Sơ đồ dựng theo **bản vẽ tay của cựu học sinh** (`docs/so-do-goc.jpg`) và ảnh chụp cổng trường, nhà hiệu bộ,
+dãy 4 tầng. Mỗi pixel của bản vẽ gốc = **1,6 px thế giới**. Thế giới rộng **2000 × 1400 px**, hướng Bắc ở trên,
+đường Lương Ngọc Quyến ở dưới. Toàn bộ dữ liệu nằm trong `public/js/campus.js`.
 
-![Sơ đồ](so-do.png)
+| Bản vẽ gốc | Bản trong game |
+|---|---|
+| ![Bản vẽ gốc](so-do-goc.jpg) | ![Sơ đồ trong game](so-do.png) |
 
 ```
- ┌───────────────────────────── tường rào ─────────────────────────────┐
- │ NHÀ ĐA NĂNG        ┌────────── NHÀ D (Anh·Nga·Pháp·Trung) ──┐  SÂN │
- │                    └─────────────────────────────────────────┘  BÓNG│
- │ CĂNG TIN    ┌──┐   ┌────────── NHÀ A · HIỆU BỘ ─────────────┐  ┌──┐ │
- │             │N │   └─────────────────────────────────────────┘  │N │ │
- │ VƯỜN        │H │        SÂN KHẤU      CỘT CỜ   BẢNG THI ĐUA     │H │KTX
- │ TRƯỜNG      │À │                                                │À │ │
- │             │  │                SÂN TRƯỜNG                      │  │ │
- │             │B │   (hàng phượng, ghế đá)                        │C │ │
- │             └──┘                                                └──┘ │
- │ TƯỜNG ƯỚC MƠ      NHÀ XE HS     [ CỔNG ]  BẢO VỆ    NHÀ XE GV        │
- └──────────────────────────────┘        └───────────────────────────────┘
- ═══════════════════════ ĐƯỜNG LƯƠNG NGỌC QUYẾN ═════════════════════════
+┌──────────────────────────────┬──────────────────────────────────┬──────────┐
+│ DÃY NHÀ 4 TẦNG (chữ L)       │ DÃY NHÀ 3 TẦNG    [sân khấu]     │ CHỖ TRỐN │
+│ ┌────┐ (hàng cau vua)        │                          ┌───────┤ HỌC ĐÁ   │
+│ │    │  ┌──────────┐ ║┌──────┴───────────────────┐      │       │ BÓNG     │
+│ └────┘  │ SÂN ĐÁ   │ ║│                          │      └───────┘          │
+│CỔNG PHỤ │   CẦU    │ ▤│       SÂN TRƯỜNG         │ ┌──────────┐ ┌──┐      │
+│         └──────────┘ ║│      (cao hơn mặt đất)   │ │ NHÀ ĐA   │ │CĂ│      │
+│┌──────────┐          ║└──────────────────────────┘ │ NĂNG     │ │NG│      │
+││ NHÀ      │  Lối  ┌──────────────────────────────┐ └──────────┘ │TIN      │
+││ HIỆU BỘ  │  vào  │       DÃY NHÀ 5 TẦNG         │                         │
+│└──────────┘       └──────────────────────────────┘       (cây xanh)        │
+│                       [ CỔNG TRƯỜNG ]                                       │
+└─────────────────────────┘         └───────────────────────────────────────┘
+══════════════════════════ ĐƯỜNG LƯƠNG NGỌC QUYẾN ═══════════════════════════
+ ║ bậc thang   ▤ bảng tin
 ```
 
 | Hằng số | Nội dung |
 |---|---|
-| `GROUNDS` | Mặt đất: đường, vỉa hè, cỏ, sân lát gạch, sân bóng, vườn |
-| `BUILDINGS` | Toà nhà: `id, name, x, y, w, h, floors, wall, roof, vertical, shed` – là vật cản |
-| `WALLS`, `GATE` | Tường rào (chừa cổng x 900–1100) và biển cổng |
+| `GROUNDS` | Mặt đất: đường, vỉa hè, sân bê tông, bãi cỏ, sân đá cầu (`court`), sân trường (`yard`) |
+| `BUILDINGS` | Toà nhà: `id, name, short, x, y, w, h, floors, wall, roof` + tuỳ chọn `trim` (lan can đỏ dãy 4 tầng), `bands` (dải xanh nhà hiệu bộ), `hall` (mái nhà đa năng). Nhà chữ L tách thành nhiều khối cùng `id`; chỉ khối có `short` mới vẽ tên |
+| `YARD`, `STAIRS`, `EDGES` | Sân trường cao; hai bậc thang ở cạnh trái (xuống sân đá cầu, bậc thang chính); tường chắn là vật cản, chừa chỗ bậc thang |
+| `WALLS`, `GATE`, `SIDE_GATE` | Tường rào thấp màu kem, cổng chính (x 693–1130), cổng phụ bên trái |
 | `CLASS_DOORS` | Cửa lớp: lớp chuyên nào ở dãy nào, vị trí đứng trước cửa |
 | `HOTSPOTS` | Điểm tương tác: toạ độ, biểu tượng, nhãn, nhãn ngắn trên bản đồ (`map`), bảng cần mở (`panel`) |
-| `TREES`, `BENCHES`, `FLAG`, `BOARD`, `STAGE` | Trang trí; gốc cây, cột cờ, bảng là vật cản nhỏ |
+| `TREES` (`palm`, `bonsai`, `tree`), `LAMPS`, `BENCHES`, `FLAG`, `BOARD`, `STAGE` | Trang trí; gốc cây, cột cờ, bảng tin, bục sân khấu là vật cản |
 
-Phân bổ lớp (minh hoạ): **Nhà B** – Toán, Tin, Lý, Hóa, Sinh (WC cuối dãy). **Nhà C** – Văn, Sử, Địa.
-**Nhà D** – Anh, Nga, Pháp, Trung.
+Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối vào** giữa nhà hiệu bộ và dãy 5 tầng → **bậc thang
+chính** lên sân trường (sân chỉ lên được bằng hai bậc thang bên trái). Căng tin và chỗ trốn học đi vòng phía
+Đông nhà đa năng.
+
+Phân bổ lớp (minh hoạ, đổi trong `CLASS_DOORS`): **dãy 5 tầng** – Toán, Tin, Lý, Hóa (cửa quay ra cổng);
+**dãy 4 tầng** – Sinh, Văn, Sử, Địa; **dãy 3 tầng** – Anh, Nga, Pháp, Trung.
 
 ## 4. Chức năng
 
@@ -85,17 +94,22 @@ Phân bổ lớp (minh hoạ): **Nhà B** – Toán, Tin, Lý, Hóa, Sinh (WC cu
 |---|---|---|---|
 | Cổng trường | `gate` | Giới thiệu cơ sở cũ, hướng dẫn | Không |
 | Bác bảo vệ | `guard` | Câu thoại ngẫu nhiên | Không |
-| Nhà xe HS | `parking` | Điểm danh mỗi ngày: +20.000đ vào ví, +2 điểm | Có |
-| Cột cờ | `board` | Bảng thi đua theo khóa, theo lớp chuyên, đá cầu | Không |
-| Nhà A · Hiệu bộ | `office` | Lịch họp lớp (tạo, đăng ký/huỷ), thiệp tri ân thầy cô | Ghi: có |
+| Gửi xe (trái cổng) | `parking` | Điểm danh mỗi ngày: +20.000đ vào ví, +2 điểm | Có |
+| Bảng tin | `board` | Bảng thi đua theo khóa, theo lớp chuyên, đá cầu | Không |
+| Sân khấu | `stage` | "Hiền tài là nguyên khí của quốc gia", lưu bút chào cờ/văn nghệ | Ghi: có |
+| Sân trường · ghế đá | `garden` | Lưu bút tâm sự | Ghi: có |
+| Nhà hiệu bộ | `office` | Lịch họp lớp (tạo, đăng ký/huỷ), thiệp tri ân thầy cô | Ghi: có |
 | Phòng giáo viên | `teachers` | Lưu bút `gv` | Ghi: có |
 | Phòng truyền thống | `history` | Mốc lịch sử cơ sở, góc kỷ niệm | Ghi: có |
 | Cửa lớp | `class` | Chọn khóa → Lưu bút · Sổ đầu bài · Đố vui | Ghi: có |
+| Sân đá cầu | `football` | Trò đá cầu + bảng xếp hạng | Lưu điểm: có |
 | Nhà đa năng | `clubs` | Gian từng CLB, mỗi gian một lưu bút | Ghi: có |
 | Căng tin | `canteen` | Thực đơn, mua/đãi bạn, giảm 20% giờ ra chơi | Có |
-| Sân bóng | `football` | Trò đá cầu + bảng xếp hạng | Lưu điểm: có |
-| Ký túc xá, vườn trường, tường ước mơ | `dorm`, `garden`, `wish` | Lưu bút theo chủ đề | Ghi: có |
-| WC · gương | `mirror` | Đổi tên, kiểu tóc, đồng phục | Có |
+| Chỗ trốn học đá bóng | `tronhoc` | Lưu bút "tự thú" | Ghi: có |
+| Cổng phụ | `sidegate` | Lưu bút chuyện cổng phụ | Ghi: có |
+| Tường ước mơ | `wish` | Lưu bút "Ước mơ vào Chuyên" | Ghi: có |
+| Lối vào | `entry` | Gợi ý đường lên sân trường | Không |
+| Nhân vật của tôi (nút ảnh đại diện) | `mirror` | Đổi tên, kiểu tóc, đồng phục | Có |
 
 **Điểm thi đua** (`POINTS` trong `logic.js`): điểm danh +2, lưu bút +5, tạo họp lớp +3, đăng ký họp lớp +3,
 mỗi câu đố đúng +1 (tối đa 10 điểm/ngày), đá cầu từ 5 quả +1. Điểm của khóa/lớp = tổng điểm thành viên.
@@ -222,7 +236,7 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `score` | `trò chơi\|uid` | `{id, name, khoa, lop, score, at}` |
 | `buy` | `thời gian-id` | `{id, uid, name, item, emoji, price, forName, at}` |
 
-Tên phòng lưu bút: `lop:<Lớp>:<Khóa>`, `gv`, `trian`, `kyniem`, `clb:<id>`, `ktx`, `ghe-da`, `uocmo`.
+Tên phòng lưu bút: `lop:<Lớp>:<Khóa>`, `gv`, `trian`, `kyniem`, `clb:<id>`, `ghe-da`, `san-khau`, `tronhoc`, `cong-phu`, `uocmo`.
 
 ## 8. API
 
@@ -284,7 +298,7 @@ ghi danh, thấy nhau online, lời nói hiện cho người khác, lưu bút l�
 
 | Ưu tiên | Việc | Ghi chú |
 |---|---|---|
-| Cao | Đối chiếu sơ đồ với ảnh/bản vẽ thật của cơ sở 234A | Chỉ sửa `campus.js` |
+| Cao | Xác nhận lớp chuyên nào học ở dãy nào; thêm cửa phòng thí nghiệm, thư viện | Chỉ sửa `campus.js` |
 | Cao | Giới hạn tần suất API, nút báo cáo/xoá lưu bút, trang quản trị | Cần trước khi công bố rộng |
 | Trung bình | Thay CLB, câu đố, thực đơn bằng nội dung thật của trường | Hiện là nội dung mẫu |
 | Trung bình | Nhạc nền, ném bóng nước 🎈 như trang mẫu | |

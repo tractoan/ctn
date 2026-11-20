@@ -10,18 +10,17 @@ ghé lớp cũ, viết lưu bút, đăng ký họp lớp và thi đua giữa cá
 
 | Địa điểm | Chức năng |
 |---|---|
-| Cổng trường, bác bảo vệ | Giới thiệu, trò chuyện với bác bảo vệ |
-| Nhà xe học sinh | Điểm danh mỗi ngày, nhận 20k ăn vặt |
-| Sân trường: cột cờ, sân khấu, hàng phượng | Bảng thi đua theo khóa, theo lớp chuyên, đá cầu |
-| **Nhà A (hiệu bộ)** | Lịch họp lớp (tạo, đăng ký), tri ân thầy cô, phòng giáo viên, phòng truyền thống |
-| **Nhà B** | Lớp chuyên Toán, Tin, Lý, Hóa, Sinh; WC cuối dãy có gương để đổi kiểu tóc |
-| **Nhà C** | Lớp chuyên Văn, Sử, Địa |
-| **Nhà D** | Lớp chuyên Anh, Nga, Pháp, Trung |
+| Cổng trường (xanh, biển trắng chữ đỏ), bác bảo vệ | Giới thiệu, gửi xe điểm danh mỗi ngày nhận 20k ăn vặt |
+| **Nhà hiệu bộ** (4 tầng, sơn xanh trắng) | Lịch họp lớp (tạo, đăng ký), tri ân thầy cô, phòng giáo viên, phòng truyền thống |
+| **Dãy nhà 5 tầng** (ngay sau cổng) | Lớp chuyên Toán, Tin, Lý, Hóa |
+| **Dãy nhà 4 tầng** (chữ L, hàng cau vua) | Lớp chuyên Sinh, Văn, Sử, Địa |
+| **Dãy nhà 3 tầng** | Lớp chuyên Anh, Nga, Pháp, Trung |
 | Trong mỗi lớp | Lưu bút theo từng khóa, sổ đầu bài (ai đã về lớp), đố vui theo môn |
+| Sân trường (cao, có bậc thang) | Sân khấu chào cờ, bảng tin thi đua theo khóa/lớp, ghế đá |
+| Sân đá cầu | Trò đá cầu có bảng xếp hạng |
 | Nhà đa năng | Gian các CLB |
 | Căng tin | Thực đơn có giá, mua và đãi bạn; giờ ra chơi thật (9:25–9:45, 15:55–16:15) giảm 20% |
-| Sân bóng | Trò đá cầu có bảng xếp hạng |
-| Ký túc xá, vườn trường, tường "Ước mơ vào Chuyên" | Góc lưu bút kỷ niệm |
+| Chỗ trốn học đá bóng, cổng phụ, tường "Ước mơ vào Chuyên" | Góc lưu bút kỷ niệm |
 
 Giao diện theo kiểu trang mẫu [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/):
 vào là thấy ngay sân trường với tư cách khách; muốn viết lưu bút, điểm danh, mua đồ, trò chuyện tự do thì bấm
@@ -37,11 +36,12 @@ Tài liệu thiết kế chi tiết: [`docs/THIET-KE.md`](docs/THIET-KE.md).
 
 ## Sửa sơ đồ cho đúng thực tế
 
-Toàn bộ sơ đồ nằm trong [`public/js/campus.js`](public/js/campus.js): toạ độ, kích thước các dãy nhà
-(`BUILDINGS`), cửa lớp và lớp chuyên của từng dãy (`CLASS_DOORS`), điểm tương tác (`HOTSPOTS`), cây cối,
-ghế đá. Hướng Bắc ở trên, đường Lương Ngọc Quyến ở dưới. Vị trí hiện tại là **ước lượng** theo mô tả
-"nhà A là nhà hiệu bộ, nhà B, C, D là các dãy lớp học"; sửa các con số là va chạm, tìm đường,
-bản đồ thu nhỏ tự cập nhật theo.
+Sơ đồ dựng theo bản vẽ tay của cựu học sinh ([`docs/so-do-goc.jpg`](docs/so-do-goc.jpg)), nhân hệ số 1,6.
+Toàn bộ nằm trong [`public/js/campus.js`](public/js/campus.js): toạ độ, kích thước các dãy nhà
+(`BUILDINGS`), sân trường cao và bậc thang (`YARD`, `STAIRS`, `EDGES`), cửa lớp và lớp chuyên của từng dãy
+(`CLASS_DOORS`), điểm tương tác (`HOTSPOTS`), cây cối. Hướng Bắc ở trên, đường Lương Ngọc Quyến ở dưới.
+Sửa các con số là va chạm, tìm đường, bản đồ toàn cảnh tự cập nhật theo. Việc xếp lớp chuyên vào dãy nào
+là minh hoạ, đổi trong `CLASS_DOORS`.
 
 ## Cấu trúc
 

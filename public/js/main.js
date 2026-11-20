@@ -21,11 +21,11 @@ const ROLE_INFO = {
 };
 const QUICK = ['Xin chào! 👋', 'Lâu quá không gặp!', 'Bạn khóa nào đấy?', 'Trường mình đẹp quá!', 'Ra căng tin không?', 'Em chào thầy cô ạ!', 'Hẹn gặp ở họp lớp nhé!', 'Đá cầu không?'];
 const EMOJI = ['😂', '❤️', '👍'];
-const ZONES = { A: 'Nhà A · Hiệu bộ', B: 'Nhà B', C: 'Nhà C', D: 'Nhà D', DN: 'Nhà đa năng', CT: 'Căng tin', KTX: 'Ký túc xá', XE1: 'Nhà xe', XE2: 'Nhà xe', BV: 'Cổng trường', san: 'Sân trường', duong: 'Đường Lương Ngọc Quyến' };
+const ZONES = { D3: 'Dãy nhà 3 tầng', D4: 'Dãy nhà 4 tầng', D5: 'Dãy nhà 5 tầng', HB: 'Nhà hiệu bộ', DN: 'Nhà đa năng', CT: 'Căng tin', san: 'Sân trường', dacau: 'Sân đá cầu', tronhoc: 'Chỗ trốn học đá bóng', cong: 'Cổng trường', khuon: 'Khuôn viên trường', duong: 'Đường Lương Ngọc Quyến' };
 
 const POS_KEY = 'ctn.pos';
 function savePos() { try { if (world?.me) localStorage.setItem(POS_KEY, JSON.stringify({ x: world.me.x, y: world.me.y })); } catch { /* */ } }
-function loadPos() { try { const p = JSON.parse(localStorage.getItem(POS_KEY)); if (p && p.x > 0 && p.y > 0 && p.y < 1700) return p; } catch { /* */ } return { x: SPAWN.x + Math.round((Math.random() - 0.5) * 160), y: SPAWN.y + Math.round((Math.random() - 0.5) * 20) }; }
+function loadPos() { try { const p = JSON.parse(localStorage.getItem(POS_KEY)); if (p && p.x > 0 && p.y > 0 && p.y < 1700) return p; } catch { /* */ } return { x: SPAWN.x + Math.round((Math.random() - 0.5) * 80), y: SPAWN.y + Math.round((Math.random() - 0.5) * 10) }; }
 function sessionGet(k) { try { return sessionStorage.getItem(k); } catch { return null; } }
 function sessionSet(k, v) { try { sessionStorage.setItem(k, v); } catch { /* */ } }
 
@@ -261,9 +261,9 @@ function enterSchool() {
 }
 
 function makeNpcs() {
-  const guard = { tag: false, name: 'Bác bảo vệ', sub: 'Cổng trường', x: 1080, y: 1345, look: { gender: 'nam', skin: 2, hair: 4, hairColor: 4, bottom: 'quan', bag: 0 }, dir: -1, moving: false };
-  const cook = { name: 'Cô căng tin', sub: 'Căng tin', x: 250, y: 790, look: { gender: 'nu', skin: 1, hair: 2, hairColor: 1, bottom: 'vay', bag: 3 }, dir: 1, moving: false };
-  cook.update = (dt, now) => { const nx = 200 + Math.sin(now / 3000) * 60; cook.moving = Math.abs(nx - cook.x) > 0.05; cook.dir = nx > cook.x ? 1 : -1; cook.x = nx; };
+  const guard = { tag: false, name: 'Bác bảo vệ', sub: 'Cổng trường', x: 1165, y: 1165, look: { gender: 'nam', skin: 2, hair: 4, hairColor: 4, bottom: 'quan', bag: 0 }, dir: -1, moving: false };
+  const cook = { name: 'Cô căng tin', sub: 'Căng tin', x: 1884, y: 745, look: { gender: 'nu', skin: 1, hair: 2, hairColor: 1, bottom: 'vay', bag: 3 }, dir: 1, moving: false };
+  cook.update = (dt, now) => { const nx = 1890 + Math.sin(now / 3000) * 40; cook.moving = Math.abs(nx - cook.x) > 0.05; cook.dir = nx > cook.x ? 1 : -1; cook.x = nx; };
   return [guard, cook];
 }
 
@@ -361,9 +361,9 @@ const panels = {
         h('div', { class: 'hero-sign' }, 'TRƯỜNG THPT CHUYÊN THÁI NGUYÊN'),
         h('p', {}, 'Cổng chính mở ra đường Lương Ngọc Quyến. Đây là cơ sở 234A Lương Ngọc Quyến, phường Quang Trung, nơi trường học từ năm 1995 đến 2019 trước khi chuyển về cơ sở mới.'),
         h('ul', { class: 'bullets' },
-          h('li', {}, '🛵 Gửi xe ở nhà xe bên trái cổng để điểm danh và nhận 20k ăn vặt mỗi ngày.'),
-          h('li', {}, '🏛️ Đi thẳng là sân trường, cột cờ và nhà A (hiệu bộ).'),
-          h('li', {}, '🚪 Nhà B, C, D là các dãy lớp học: mỗi lớp chuyên một cửa.')),
+          h('li', {}, '🛵 Gửi xe phía trái cổng để điểm danh và nhận 20k ăn vặt mỗi ngày.'),
+          h('li', {}, '🏫 Trước mặt là dãy nhà 5 tầng; bên trái là nhà hiệu bộ và lối vào, đi lên bậc thang chính là tới sân trường.'),
+          h('li', {}, '🚪 Dãy 3, 4, 5 tầng là các dãy lớp học: mỗi lớp chuyên một cửa. Nhà đa năng và căng tin ở bên phải sân.')),
         h('a', { class: 'btn ghost', href: 'pages/gioi-thieu.html' }, 'Giới thiệu trang'),
       );
     });
@@ -422,7 +422,7 @@ const panels = {
   },
 
   office() {
-    openSheet('Nhà A · Hiệu bộ', (b) => {
+    openSheet('Nhà hiệu bộ', (b) => {
       b.append(tabs([
         { label: '📅 Lịch họp lớp', render: (c) => eventsView(c) },
         { label: '💌 Tri ân thầy cô', render: (c) => { c.append(h('p', { class: 'muted' }, 'Gửi lời tri ân tới thầy cô đã dạy mình.')); guestbook(c, 'trian', { placeholder: 'Em gửi lời cảm ơn thầy/cô…' }); } },
@@ -441,7 +441,7 @@ const panels = {
     openSheet('Phòng truyền thống', (b) => {
       b.append(
         h('div', { class: 'timeline' },
-          h('div', {}, h('b', {}, '1995 – 2019'), h('p', {}, 'Trường học tại cơ sở 234A đường Lương Ngọc Quyến, phường Quang Trung: nhà A là nhà hiệu bộ, nhà B, C, D là ba dãy lớp học.')),
+          h('div', {}, h('b', {}, '1995 – 2019'), h('p', {}, 'Trường học tại cơ sở 234A đường Lương Ngọc Quyến: nhà hiệu bộ 4 tầng sơn xanh trắng, các dãy lớp 3, 4, 5 tầng quây quanh sân trường cao có bậc thang, sân đá cầu, nhà đa năng và căng tin.')),
           h('div', {}, h('b', {}, '2019'), h('p', {}, 'Trường chuyển về cơ sở mới, khang trang hơn với nhà đa năng, bể bơi, sân bóng và ký túc xá.')),
           h('div', {}, h('b', {}, 'Hôm nay'), h('p', {}, 'Sân trường ảo này dựng lại cơ sở cũ để các thế hệ học sinh cùng về thăm.'))),
         h('h3', {}, 'Góc kỷ niệm'),
@@ -527,10 +527,36 @@ const panels = {
   },
 
   garden() {
-    openSheet('Vườn trường · Ghế đá', (b) => {
-      b.append(h('p', { class: 'muted' }, 'Ghế đá dưới gốc bàng – nơi tâm sự giờ ra chơi.'));
+    openSheet('Sân trường · Ghế đá', (b) => {
+      b.append(h('p', { class: 'muted' }, 'Hàng cau vua, chậu cảnh, ghế đá giữa sân – nơi tâm sự giờ ra chơi.'));
       guestbook(b, 'ghe-da', { placeholder: 'Tâm sự một chút…' });
     });
+  },
+
+  stage() {
+    openSheet('Sân khấu · Chào cờ', (b) => {
+      b.append(h('div', { class: 'hero-sign' }, 'HIỀN TÀI LÀ NGUYÊN KHÍ CỦA QUỐC GIA'),
+        h('p', { class: 'muted' }, 'Sáng thứ Hai chào cờ, văn nghệ 20/11, 26/3… Kể lại một tiết mục, một lần lên sân khấu nhớ đời.'));
+      guestbook(b, 'san-khau', { placeholder: 'Kỷ niệm trên sân khấu…' });
+    });
+  },
+
+  tronhoc() {
+    openSheet('Chỗ trốn học đá bóng', (b) => {
+      b.append(h('p', { class: 'speech' }, 'Góc sau dãy 3 tầng, khuất tầm nhìn của thầy giám thị. Ai từng trốn tiết ra đây đá bóng thì tự thú đi!'));
+      guestbook(b, 'tronhoc', { placeholder: 'Tự thú: tôi đã trốn tiết…' });
+    });
+  },
+
+  sidegate() {
+    openSheet('Cổng phụ', (b) => {
+      b.append(h('p', { class: 'speech' }, 'Cổng phụ bên hông dãy 4 tầng – lối tắt quen thuộc mỗi khi đi muộn hay ra quán nước.'));
+      guestbook(b, 'cong-phu', { placeholder: 'Chuyện ở cổng phụ…' });
+    });
+  },
+
+  entry() {
+    toast('Lối vào giữa nhà hiệu bộ và dãy 5 tầng – đi tiếp lên bậc thang chính để vào sân trường.');
   },
 
   wish() {

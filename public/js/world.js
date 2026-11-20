@@ -1,5 +1,5 @@
 // Sân trường: vẽ bản đồ, camera, tìm đường (A* trên lưới), nhân vật mình + người khác.
-import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
+import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, LAMPS, STAIRS, YARD, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
 import { drawAvatar } from './avatar.js';
 
 const CELL = 20;
@@ -103,81 +103,108 @@ function drawGround(ctx, g) {
       ctx.fillStyle = '#4B5160'; ctx.fillRect(g.x, g.y, g.w, g.h);
       ctx.strokeStyle = '#F4F1E6'; ctx.lineWidth = 4; ctx.setLineDash([40, 30]);
       ctx.beginPath(); ctx.moveTo(g.x, g.y + g.h / 2); ctx.lineTo(g.x + g.w, g.y + g.h / 2); ctx.stroke(); ctx.setLineDash([]);
-      for (let x = 160; x < g.w; x += 640) label(ctx, g.label, x, g.y + g.h / 2 + 34, { size: 14, color: 'rgba(255,255,255,.75)', weight: 800 });
-      // vạch qua đường trước cổng
+      for (let x = 260; x < g.w; x += 740) label(ctx, g.label, x, g.y + g.h / 2 + 34, { size: 14, color: 'rgba(255,255,255,.75)', weight: 800 });
       ctx.fillStyle = 'rgba(255,255,255,.8)';
-      for (let x = 920; x < 1080; x += 22) ctx.fillRect(x, g.y + 8, 12, 46);
+      for (let x = 820; x < 1000; x += 22) ctx.fillRect(x, g.y + 8, 12, 46);
       break;
     }
     case 'sidewalk': ctx.fillStyle = '#C9C3B6'; ctx.fillRect(g.x, g.y, g.w, g.h);
       ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.lineWidth = 1;
       for (let x = 0; x < g.w; x += 40) { ctx.beginPath(); ctx.moveTo(x, g.y); ctx.lineTo(x, g.y + g.h); ctx.stroke(); }
       break;
-    case 'grass': ctx.fillStyle = '#A9D18E'; ctx.fillRect(g.x, g.y, g.w, g.h);
-      ctx.fillStyle = 'rgba(70,120,50,.10)';
-      for (let i = 0; i < 900; i++) { const px = g.x + ((i * 7919) % g.w), py = g.y + ((i * 104729) % g.h); ctx.fillRect(px, py, 3, 2); }
-      break;
-    case 'paving': ctx.fillStyle = '#E9E2D3'; ctx.fillRect(g.x, g.y, g.w, g.h);
-      ctx.strokeStyle = 'rgba(120,100,70,.10)'; ctx.lineWidth = 1;
-      for (let x = g.x; x <= g.x + g.w; x += 40) { ctx.beginPath(); ctx.moveTo(x, g.y); ctx.lineTo(x, g.y + g.h); ctx.stroke(); }
-      for (let y = g.y; y <= g.y + g.h; y += 40) { ctx.beginPath(); ctx.moveTo(g.x, y); ctx.lineTo(g.x + g.w, y); ctx.stroke(); }
-      if (g.label) label(ctx, g.label, g.x + g.w / 2, g.y + g.h - 150, { size: 30, color: 'rgba(120,100,70,.16)', weight: 800 });
-      break;
-    case 'field': {
-      ctx.fillStyle = '#5FAE55'; ctx.fillRect(g.x, g.y, g.w, g.h);
-      ctx.fillStyle = 'rgba(255,255,255,.06)';
-      for (let y = g.y; y < g.y + g.h; y += 80) ctx.fillRect(g.x, y, g.w, 40);
-      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3;
-      ctx.strokeRect(g.x + 14, g.y + 14, g.w - 28, g.h - 28);
-      ctx.beginPath(); ctx.moveTo(g.x + 14, g.y + g.h / 2); ctx.lineTo(g.x + g.w - 14, g.y + g.h / 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(g.x + g.w / 2, g.y + g.h / 2, 46, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeRect(g.x + g.w / 2 - 60, g.y + 14, 120, 70); ctx.strokeRect(g.x + g.w / 2 - 60, g.y + g.h - 84, 120, 70);
-      ctx.fillStyle = '#fff'; ctx.fillRect(g.x + g.w / 2 - 30, g.y + 6, 60, 8); ctx.fillRect(g.x + g.w / 2 - 30, g.y + g.h - 14, 60, 8);
+    case 'concrete': {
+      ctx.fillStyle = '#D3CEC3'; ctx.fillRect(g.x, g.y, g.w, g.h);
+      // vệt loang, vết nứt của sân bê tông cũ
+      ctx.fillStyle = 'rgba(90,80,60,.06)';
+      for (let i = 0; i < 70; i++) { ctx.beginPath(); ctx.ellipse(g.x + ((i * 7919) % g.w), g.y + ((i * 104729) % g.h), 30 + (i % 5) * 12, 14 + (i % 3) * 8, i, 0, Math.PI * 2); ctx.fill(); }
+      ctx.strokeStyle = 'rgba(80,70,55,.12)'; ctx.lineWidth = 1;
+      for (let i = 0; i < 40; i++) { const x = (i * 4931) % g.w, y = (i * 7757) % g.h; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 18, y + 9); ctx.lineTo(x + 30, y + 4); ctx.stroke(); }
       break;
     }
-    case 'garden': ctx.fillStyle = '#93C47D'; rr(ctx, g.x, g.y, g.w, g.h, 24); ctx.fill();
-      ctx.strokeStyle = '#D8CFB8'; ctx.lineWidth = 10; ctx.beginPath();
-      ctx.moveTo(g.x + 30, g.y + 20); ctx.bezierCurveTo(g.x + 220, g.y + 120, g.x + 20, g.y + 300, g.x + 200, g.y + g.h - 20); ctx.stroke();
-      ctx.fillStyle = '#E8A0BF';
-      for (let i = 0; i < 60; i++) { ctx.beginPath(); ctx.arc(g.x + 20 + ((i * 37) % (g.w - 40)), g.y + 20 + ((i * 71) % (g.h - 40)), 2.5, 0, Math.PI * 2); ctx.fill(); }
+    case 'grass': ctx.fillStyle = g.wild ? '#9CC77E' : '#A9D18E'; ctx.fillRect(g.x, g.y, g.w, g.h);
+      ctx.fillStyle = g.wild ? 'rgba(140,100,60,.25)' : 'rgba(70,120,50,.10)';
+      for (let i = 0; i < (g.wild ? 260 : 400); i++) { const px = g.x + ((i * 7919) % g.w), py = g.y + ((i * 104729) % g.h); ctx.fillRect(px, py, g.wild ? 6 : 3, g.wild ? 4 : 2); }
+      if (g.wild) { // khung thành tự chế
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+        ctx.strokeRect(g.x + g.w / 2 - 30, g.y + 14, 60, 20); ctx.strokeRect(g.x + g.w / 2 - 30, g.y + g.h - 34, 60, 20);
+      }
       break;
+    case 'court': {
+      ctx.fillStyle = '#C3BEB3'; ctx.fillRect(g.x, g.y, g.w, g.h);
+      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 3;
+      ctx.strokeRect(g.x + 20, g.y + 20, g.w - 40, g.h - 40);
+      ctx.beginPath(); ctx.moveTo(g.x + 20, g.y + g.h / 2); ctx.lineTo(g.x + g.w - 20, g.y + g.h / 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(g.x + g.w / 2, g.y + 20); ctx.lineTo(g.x + g.w / 2, g.y + g.h - 20); ctx.stroke();
+      // lưới chắn thấp quanh sân
+      ctx.strokeStyle = 'rgba(60,60,60,.55)'; ctx.lineWidth = 2; ctx.strokeRect(g.x + 2, g.y + 2, g.w - 4, g.h - 4);
+      ctx.fillStyle = '#555'; for (const [px, py] of [[g.x, g.y], [g.x + g.w, g.y], [g.x, g.y + g.h], [g.x + g.w, g.y + g.h]]) ctx.fillRect(px - 3, py - 3, 6, 6);
+      break;
+    }
+    case 'yard': {
+      // sân cao: bóng đổ + tường chắn phía Tây và phía Nam
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(g.x - 4, g.y + 8, 8, g.h); ctx.fillRect(g.x, g.y + g.h, g.w, 10);
+      ctx.fillStyle = '#E4DFD4'; ctx.fillRect(g.x, g.y, g.w, g.h);
+      ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 3;
+      for (let i = 1; i <= 4; i++) { const y = g.y + 90 + i * 95; ctx.beginPath(); ctx.moveTo(g.x + 130, y); ctx.lineTo(g.x + g.w - 90, y); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(g.x + 130, g.y + 185); ctx.lineTo(g.x + 130, g.y + 470); ctx.moveTo(g.x + g.w - 90, g.y + 185); ctx.lineTo(g.x + g.w - 90, g.y + 470); ctx.stroke();
+      ctx.fillStyle = '#A9A295'; ctx.fillRect(g.x - 6, g.y, 8, g.h + 6); ctx.fillRect(g.x - 6, g.y + g.h - 2, g.w + 6, 8);
+      label(ctx, g.label, g.x + g.w / 2 + 20, g.y + 330, { size: 30, color: 'rgba(120,100,70,.14)', weight: 800 });
+      break;
+    }
   }
 }
 
+function drawStairs(ctx, st) {
+  ctx.fillStyle = '#C8C1B2'; ctx.fillRect(st.x - 8, st.y, st.w + 8, st.h);
+  ctx.fillStyle = '#E9E4D8';
+  for (let x = st.x - 6; x < st.x + st.w; x += 8) ctx.fillRect(x, st.y + 2, 5, st.h - 4);
+  ctx.fillStyle = '#9C9586'; ctx.fillRect(st.x - 8, st.y, st.w + 8, 4); ctx.fillRect(st.x - 8, st.y + st.h - 4, st.w + 8, 4);
+}
+
 function drawBuilding(ctx, b) {
-  const depth = b.shed ? 10 : 14 + b.floors * 6;
-  // bóng đổ
+  const depth = b.hall ? 46 : 14 + b.floors * 7;
   ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.fillRect(b.x + 8, b.y + 10, b.w, b.h);
-  if (b.shed) {
-    ctx.fillStyle = b.roof; rr(ctx, b.x, b.y, b.w, b.h, 4); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 2;
-    for (let x = b.x + 12; x < b.x + b.w; x += 16) { ctx.beginPath(); ctx.moveTo(x, b.y + 4); ctx.lineTo(x, b.y + b.h - 4); ctx.stroke(); }
-    label(ctx, b.short, b.x + b.w / 2, b.y + b.h / 2, { size: 12, color: '#fff', bg: 'rgba(27,42,78,.75)' });
-    return;
+  // mặt tường phía Nam
+  const fy = b.y + b.h - depth;
+  ctx.fillStyle = b.wall; ctx.fillRect(b.x, fy, b.w, depth);
+  ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(b.x, b.y + b.h - 3, b.w, 3);
+  if (b.hall) {
+    // nhà đa năng: cửa lớn ở giữa, vòm trang trí
+    ctx.fillStyle = '#5E6F63'; ctx.fillRect(b.x + b.w / 2 - 34, fy + 14, 68, depth - 14);
+    ctx.strokeStyle = 'rgba(120,100,60,.5)'; ctx.lineWidth = 2;
+    for (const cx of [b.x + b.w / 4, b.x + b.w * 3 / 4]) { ctx.beginPath(); ctx.arc(cx, fy + depth, 30, Math.PI, 0); ctx.stroke(); }
+  } else {
+    const rows = Math.max(1, b.floors), rowH = (depth - 6) / rows;
+    for (let r = 0; r < rows; r++) {
+      const ry = fy + 4 + r * rowH;
+      if (b.trim) { ctx.fillStyle = b.trim; ctx.fillRect(b.x, ry - 2, b.w, 2); }
+      ctx.fillStyle = b.bands ? '#8C5A3C' : '#7FA7CF';
+      for (let x = b.x + 10; x < b.x + b.w - 14; x += 22) ctx.fillRect(x, ry, 12, Math.max(3, rowH - 4));
+    }
+    if (b.bands) { ctx.fillStyle = b.bands; for (const f of [0.18, 0.82]) ctx.fillRect(b.x + b.w * f - 12, fy, 24, depth); }
   }
-  // mặt tường phía nam (thấy được) + mái
-  ctx.fillStyle = b.wall; ctx.fillRect(b.x, b.y + b.h - depth, b.w, depth);
-  ctx.fillStyle = 'rgba(0,0,0,.06)'; ctx.fillRect(b.x, b.y + b.h - 3, b.w, 3);
-  // cửa sổ trên mặt tường
-  const rows = Math.max(1, b.floors), rowH = (depth - 6) / rows;
-  ctx.fillStyle = '#7FA7CF';
-  for (let r = 0; r < rows; r++) for (let x = b.x + 10; x < b.x + b.w - 14; x += 22) ctx.fillRect(x, b.y + b.h - depth + 4 + r * rowH, 12, Math.max(3, rowH - 4));
   // mái
-  ctx.fillStyle = b.roof; rr(ctx, b.x - 4, b.y - 4, b.w + 8, b.h - depth + 8, 6); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.12)';
-  if (b.vertical) ctx.fillRect(b.x + b.w / 2 - 2, b.y, 4, b.h - depth);
-  else ctx.fillRect(b.x, b.y + (b.h - depth) / 2 - 2, b.w, 4);
-  // hành lang (nhà lớp học): dải màu nhạt dọc mặt hướng ra sân
-  const cx = b.x + b.w / 2, cy = b.y + (b.h - depth) / 2;
-  if (b.w < 100) return;
+  const rh = b.h - depth;
+  ctx.fillStyle = b.roof; rr(ctx, b.x - 4, b.y - 4, b.w + 8, rh + 8, 6); ctx.fill();
+  if (b.hall) {
+    ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(b.x + b.w / 2, b.y - 4, b.w / 2 + 4, rh + 8);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1.5;
+    for (let y = b.y + 10; y < b.y + rh; y += 14) { ctx.beginPath(); ctx.moveTo(b.x, y); ctx.lineTo(b.x + b.w, y); ctx.stroke(); }
+  } else {
+    ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.lineWidth = 2; ctx.strokeRect(b.x + 6, b.y + 6, b.w - 12, rh - 12);
+    if (b.bands) { ctx.fillStyle = b.bands; ctx.fillRect(b.x - 4, b.y - 4, b.w + 8, 8); }
+    if (b.trim) { ctx.fillStyle = b.trim; ctx.fillRect(b.x - 4, b.y + rh - 4, b.w + 8, 6); }
+  }
+  if (!b.short) return;
+  const cx = b.x + b.w / 2, cy = b.y + rh / 2;
+  const ink = '#6B5A35';
   if (b.vertical) {
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(-Math.PI / 2);
-    label(ctx, b.short, 0, 0, { size: 18, color: '#fff', weight: 800 });
+    label(ctx, b.short, 0, 0, { size: 16, color: ink, weight: 800 });
     ctx.restore();
   } else {
-    label(ctx, b.short, cx, cy, { size: b.w < 300 ? 14 : 20, color: '#fff', weight: 800 });
+    label(ctx, b.short, cx, cy, { size: b.w < 400 ? 18 : 24, color: ink, weight: 800 });
   }
-  if (b.floors > 1) label(ctx, `${b.floors} tầng`, cx, b.y + b.h + 10, { size: 9, color: '#5B6577', weight: 600 });
 }
 
 function drawDoor(ctx, d) {
@@ -189,19 +216,35 @@ function drawDoor(ctx, d) {
 
 function drawTree(ctx, t, time) {
   const sway = Math.sin(time / 1400 + t.x) * 1.5;
-  ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.beginPath(); ctx.ellipse(t.x + 6, t.y + 2, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#7A5230'; ctx.fillRect(t.x - 3, t.y - 18, 6, 20);
-  const leaf = t.kind === 'phuong' ? '#3F8A3A' : t.kind === 'xacu' ? '#2F6E3B' : '#4E9A48';
-  ctx.fillStyle = leaf;
-  ctx.beginPath();
-  ctx.arc(t.x + sway, t.y - 32, 20, 0, Math.PI * 2);
-  ctx.arc(t.x - 14 + sway, t.y - 24, 13, 0, Math.PI * 2);
-  ctx.arc(t.x + 14 + sway, t.y - 24, 13, 0, Math.PI * 2);
-  ctx.fill();
-  if (t.kind === 'phuong') {
-    ctx.fillStyle = '#E5382F';
-    for (let i = 0; i < 14; i++) { const a = i * 2.4, r = 6 + (i * 5) % 14; ctx.beginPath(); ctx.arc(t.x + sway + Math.cos(a) * r, t.y - 30 + Math.sin(a) * r * 0.7, 3, 0, Math.PI * 2); ctx.fill(); }
+  if (t.kind === 'palm') {
+    ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.beginPath(); ctx.ellipse(t.x + 10, t.y + 2, 26, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#A99C86'; ctx.fillRect(t.x - 3, t.y - 70, 6, 72);
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; for (let y = t.y - 66; y < t.y; y += 7) ctx.fillRect(t.x - 3, y, 6, 1.5);
+    ctx.strokeStyle = '#3F8A3A'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    const top = { x: t.x + sway, y: t.y - 72 };
+    for (let i = 0; i < 9; i++) {
+      const a = -Math.PI / 2 + (i - 4) * 0.42, len = 28 + (i % 2) * 6;
+      ctx.beginPath(); ctx.moveTo(top.x, top.y);
+      ctx.quadraticCurveTo(top.x + Math.cos(a) * len * 0.6, top.y + Math.sin(a) * len * 0.6 - 6, top.x + Math.cos(a) * len, top.y + Math.sin(a) * len * 0.5 + 12);
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+    return;
   }
+  if (t.kind === 'bonsai') {
+    ctx.fillStyle = '#6E6A63'; rr(ctx, t.x - 9, t.y - 10, 18, 12, 3); ctx.fill();
+    ctx.fillStyle = '#5D8F45'; ctx.beginPath(); ctx.arc(t.x - 5 + sway / 2, t.y - 18, 8, 0, Math.PI * 2); ctx.arc(t.x + 6 + sway / 2, t.y - 22, 9, 0, Math.PI * 2); ctx.fill();
+    return;
+  }
+  ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.beginPath(); ctx.ellipse(t.x + 6, t.y + 2, 26, 9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7A5230'; ctx.fillRect(t.x - 3, t.y - 18, 6, 20);
+  ctx.fillStyle = '#4E9A48';
+  ctx.beginPath();
+  ctx.arc(t.x + sway, t.y - 36, 24, 0, Math.PI * 2);
+  ctx.arc(t.x - 17 + sway, t.y - 26, 15, 0, Math.PI * 2);
+  ctx.arc(t.x + 17 + sway, t.y - 26, 15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(t.x - 6 + sway, t.y - 44, 9, 0, Math.PI * 2); ctx.fill();
 }
 
 function drawBench(ctx, b) {
@@ -209,10 +252,15 @@ function drawBench(ctx, b) {
   ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(b.x - 22, b.y + 4, 44, 3);
 }
 
+function drawLamp(ctx, l) {
+  ctx.fillStyle = '#6B7280'; ctx.fillRect(l.x - 2, l.y - 70, 4, 70);
+  ctx.fillRect(l.x - 2, l.y - 70, 18, 3);
+  ctx.fillStyle = '#F4F1E6'; ctx.beginPath(); ctx.ellipse(l.x + 16, l.y - 66, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+}
+
 function drawFlag(ctx, time) {
   const { x, y } = FLAG;
-  ctx.fillStyle = '#D5D8DE'; ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#B8BDC6'; ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#B8BDC6'; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#6B7280'; ctx.fillRect(x - 2, y - 120, 4, 120);
   const wave = Math.sin(time / 300) * 3;
   ctx.fillStyle = '#DA251D';
@@ -225,46 +273,50 @@ function drawFlag(ctx, time) {
 }
 
 function drawBoard(ctx) {
-  const { x, y } = BOARD;
-  ctx.fillStyle = '#6B7280'; ctx.fillRect(x - 36, y - 40, 4, 40); ctx.fillRect(x + 32, y - 40, 4, 40);
-  ctx.fillStyle = '#1B2A4E'; rr(ctx, x - 44, y - 70, 88, 40, 4); ctx.fill();
-  label(ctx, 'THI ĐUA', x, y - 56, { size: 10, color: '#F2B233', weight: 800 });
-  label(ctx, 'CÁC KHÓA', x, y - 42, { size: 8, color: '#fff', weight: 700 });
+  const b = BOARD;
+  ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(b.x + 6, b.y + 6, b.w, b.h);
+  ctx.fillStyle = '#8A4B2E'; ctx.fillRect(b.x, b.y - 40, b.w, b.h + 40);
+  ctx.fillStyle = '#F7F3E8'; ctx.fillRect(b.x + 4, b.y - 36, b.w - 8, b.h + 28);
+  ctx.fillStyle = '#1B2A4E'; ctx.fillRect(b.x + 4, b.y - 36, b.w - 8, 14);
+  label(ctx, 'BẢNG TIN', b.x + b.w / 2, b.y - 29, { size: 7, color: '#fff', weight: 800 });
+  ctx.fillStyle = '#C9D6E8'; for (let y = b.y - 16; y < b.y + b.h - 14; y += 18) ctx.fillRect(b.x + 8, y, b.w - 16, 12);
 }
 
 function drawStage(ctx) {
   const s = STAGE;
-  ctx.fillStyle = '#C9A26B'; rr(ctx, s.x, s.y, s.w, s.h, 4); ctx.fill();
-  ctx.fillStyle = '#A9824F'; ctx.fillRect(s.x, s.y + s.h - 8, s.w, 8);
-  label(ctx, s.label, s.x + s.w / 2, s.y + s.h / 2 - 4, { size: 11, color: '#fff', weight: 800 });
+  // phông sân khấu: nền đỏ, sao vàng, băng chữ
+  ctx.fillStyle = '#1F5E3B'; ctx.fillRect(s.x + 20, s.y - 70, s.w - 40, 70);
+  ctx.fillStyle = '#C62828'; ctx.fillRect(s.x + s.w / 2 - 50, s.y - 70, 100, 70);
+  ctx.fillStyle = '#FFDE00'; ctx.beginPath();
+  for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 4 * Math.PI / 5; ctx[i ? 'lineTo' : 'moveTo'](s.x + s.w / 2 + Math.cos(a) * 16, s.y - 32 + Math.sin(a) * 16); }
+  ctx.fill();
+  ctx.fillStyle = '#C62828'; ctx.fillRect(s.x + 10, s.y - 86, s.w - 20, 18);
+  label(ctx, s.label, s.x + s.w / 2, s.y - 77, { size: 9, color: '#FFE08A', weight: 800 });
+  // bục sân khấu
+  ctx.fillStyle = '#E7A9A0'; rr(ctx, s.x, s.y, s.w, s.h, 3); ctx.fill();
+  ctx.fillStyle = '#C98C83'; ctx.fillRect(s.x, s.y + s.h - 10, s.w, 10);
 }
 
 function drawGate(ctx, time) {
-  const g = GATE, top = g.y - 120;
-  // trụ cổng
-  for (const px of [g.x - 34, g.x + g.w + 6]) {
-    ctx.fillStyle = '#C9CCD3'; ctx.fillRect(px, top + 30, 28, 102);
-    ctx.fillStyle = '#E4E6EA'; ctx.fillRect(px + 4, top + 34, 20, 94);
+  const g = GATE, top = g.y - 104;
+  // cánh cổng xếp (inox) bên trái, đang mở
+  ctx.strokeStyle = '#9AA0A6'; ctx.lineWidth = 2;
+  for (let x = g.x + 4; x < g.x + 70; x += 6) { ctx.beginPath(); ctx.moveTo(x, g.y - 40); ctx.lineTo(x, g.y + 4); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(g.x + 4, g.y - 40); ctx.lineTo(g.x + 70, g.y - 40); ctx.moveTo(g.x + 4, g.y - 4); ctx.lineTo(g.x + 70, g.y - 4); ctx.stroke();
+  // trụ cổng xanh nhạt
+  for (const px of [g.x - 30, g.x + g.w * 0.62, g.x + g.w + 4]) {
+    ctx.fillStyle = '#7FB6DA'; ctx.fillRect(px, top + 40, 26, g.y - top - 36);
+    ctx.fillStyle = '#A8D0EA'; ctx.fillRect(px + 4, top + 44, 18, g.y - top - 44);
   }
-  // cờ trang trí
-  const colors = ['#D8343A', '#F2B233', '#2E8B57', '#7E57C2', '#2F6FB5'];
-  for (let i = 0; i < 9; i++) {
-    const fx = g.x - 40 + i * ((g.w + 80) / 8), wave = Math.sin(time / 400 + i) * 2;
-    ctx.fillStyle = '#9AA0A6'; ctx.fillRect(fx - 1, top - 34, 2, 30);
-    ctx.fillStyle = colors[i % colors.length];
-    ctx.beginPath(); ctx.moveTo(fx + 1, top - 34); ctx.lineTo(fx + 12, top - 28 + wave); ctx.lineTo(fx + 1, top - 20); ctx.fill();
-  }
-  // băng rôn đỏ
-  ctx.fillStyle = '#D8343A'; rr(ctx, g.x - 60, top - 6, g.w + 120, 16, 3); ctx.fill();
-  label(ctx, 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ HỌC SINH VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 2, { size: 7.5, color: '#FFE08A', weight: 800 });
-  // biển trường
-  ctx.fillStyle = '#E4E6EA'; rr(ctx, g.x - 70, top + 12, g.w + 140, 42, 4); ctx.fill();
-  ctx.fillStyle = '#1E4FA3'; rr(ctx, g.x - 64, top + 16, g.w + 128, 34, 3); ctx.fill();
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(g.x - 61, top + 19, g.w + 122, 28);
-  label(ctx, 'SỞ GIÁO DỤC VÀ ĐÀO TẠO THÁI NGUYÊN', g.x + g.w / 2, top + 25, { size: 6, color: '#fff', weight: 600 });
-  label(ctx, g.sign, g.x + g.w / 2, top + 38, { size: 11.5, color: '#fff', weight: 800 });
-  // barie
-  ctx.fillStyle = '#F2B233'; ctx.fillRect(g.x + 4, g.y - 14, 10, 18); ctx.fillRect(g.x + g.w - 14, g.y - 14, 10, 18);
+  // xà ngang + biển trường trắng chữ đỏ
+  ctx.fillStyle = '#7FB6DA'; rr(ctx, g.x - 46, top + 2, g.w + 92, 50, 4); ctx.fill();
+  ctx.fillStyle = '#FBFBF7'; rr(ctx, g.x - 38, top + 6, g.w + 76, 40, 3); ctx.fill();
+  label(ctx, 'SỞ GIÁO DỤC & ĐÀO TẠO TỈNH THÁI NGUYÊN', g.x + g.w / 2, top + 14, { size: 7.5, color: '#C62828', weight: 800 });
+  label(ctx, g.sign, g.x + g.w / 2, top + 31, { size: 16, color: '#C62828', weight: 800 });
+  // băng rôn xanh
+  const wave = Math.sin(time / 600) * 1;
+  ctx.fillStyle = '#1E5BB8'; rr(ctx, g.x + 10, top + 56 + wave, g.w - 20, 16, 2); ctx.fill();
+  label(ctx, 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ THẦY TRÒ VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 64 + wave, { size: 7.5, color: '#fff', weight: 800 });
 }
 
 export class World {
@@ -305,11 +357,9 @@ export class World {
     c.width = WORLD.w; c.height = WORLD.h;
     const ctx = c.getContext('2d');
     for (const g of GROUNDS) drawGround(ctx, g);
-    ctx.fillStyle = '#B5452F';
-    for (const w of WALLS) { ctx.fillRect(w.x, w.y, w.w, w.h); }
-    ctx.fillStyle = 'rgba(255,255,255,.35)';
-    for (const w of WALLS) { if (w.w > w.h) for (let x = w.x; x < w.x + w.w; x += 30) ctx.fillRect(x, w.y + 2, 14, 3); }
-    drawStage(ctx);
+    for (const st of STAIRS) drawStairs(ctx, st);
+    // tường rào thấp màu kem
+    for (const w of WALLS) { ctx.fillStyle = '#E8E1CF'; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(w.x, w.y + w.h - 2, w.w, 2); }
     for (const d of CLASS_DOORS) drawDoor(ctx, d);
     for (const b of BENCHES) drawBench(ctx, b);
     this.bg = c;
@@ -360,9 +410,14 @@ export class World {
   }
 
   zoneOf(x, y) {
-    for (const b of BUILDINGS) if (x > b.x - 60 && x < b.x + b.w + 60 && y > b.y - 60 && y < b.y + b.h + 60) return b.id;
-    if (y > 1500) return 'duong';
-    return 'san';
+    const inR = (r, m = 0) => x > r.x - m && x < r.x + r.w + m && y > r.y - m && y < r.y + r.h + m;
+    if (y > GATE.y) return 'duong';
+    if (inR(YARD)) return 'san';
+    for (const g of GROUNDS) if (g.kind === 'court' && inR(g)) return 'dacau';
+    for (const g of GROUNDS) if (g.wild && inR(g)) return 'tronhoc';
+    for (const b of BUILDINGS) if (inR(b, 40)) return b.id;
+    if (y > 984 && x > 380) return 'cong';
+    return 'khuon';
   }
 
   _bindInput() {
@@ -470,7 +525,9 @@ export class World {
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
     items.push({ y: FLAG.y, draw: () => drawFlag(ctx, now) });
-    items.push({ y: BOARD.y, draw: () => drawBoard(ctx) });
+    items.push({ y: BOARD.y + BOARD.h, draw: () => drawBoard(ctx) });
+    items.push({ y: STAGE.y + STAGE.h, draw: () => drawStage(ctx) });
+    for (const l of LAMPS) items.push({ y: l.y, draw: () => drawLamp(ctx, l) });
     items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
     for (const n of this.npcs) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir }); if (n.tag !== false) this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57'); } });
     for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: o.dir, back: o.back }); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._bubble(ctx, id, o.x, o.y, now); } });
@@ -553,6 +610,8 @@ export class World {
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
     items.push({ y: FLAG.y, draw: () => drawFlag(ctx, now) });
+    items.push({ y: BOARD.y + BOARD.h, draw: () => drawBoard(ctx) });
+    items.push({ y: STAGE.y + STAGE.h, draw: () => drawStage(ctx) });
     items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
     items.sort((a, b) => a.y - b.y).forEach((it) => it.draw());
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
