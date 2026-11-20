@@ -33,6 +33,8 @@ giờ Việt Nam và tiết học hiện tại; thanh dưới có câu nói nhan
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
 Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.
 
+Tài liệu thiết kế chi tiết: [`docs/THIET-KE.md`](docs/THIET-KE.md).
+
 ## Sửa sơ đồ cho đúng thực tế
 
 Toàn bộ sơ đồ nằm trong [`public/js/campus.js`](public/js/campus.js): toạ độ, kích thước các dãy nhà
