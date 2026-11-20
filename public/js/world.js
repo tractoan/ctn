@@ -347,6 +347,10 @@ export class World {
     this.onArrive = () => {};
     this.onTapPlayer = () => {};
     this.bubbles = new Map(); // id -> {text, until}
+    this.fx = []; // bóng nước đang bay / vừa vỡ
+    this.wet = new Map(); // id ('me' hoặc id người khác) -> ướt đến lúc nào
+    this.myId = '';
+    this.onWet = () => {};
     this.bg = null;
     this._last = performance.now();
     this._loop = this._loop.bind(this);
@@ -417,6 +421,16 @@ export class World {
       if (p.say && p.sayAt && (!this._saidAt?.[p.id] || this._saidAt[p.id] < p.sayAt)) {
         (this._saidAt ||= {})[p.id] = p.sayAt;
         this.say(p.id, p.say);
+      }
+      if (p.throw && p.throw.at && (!this._threwAt?.[p.id] || this._threwAt[p.id] < p.throw.at)) {
+        const first = !this._threwAt?.[p.id];
+        (this._threwAt ||= {})[p.id] = p.throw.at;
+        const from = this.others.get(p.id);
+        // lần đầu thấy người này thì bỏ qua cú ném cũ, chỉ diễn những cú ném mới
+        if (!first || Date.now() - p.throw.at < 4000) {
+          const target = p.throw.target && p.throw.target === this.myId ? 'me' : p.throw.target || null;
+          this.throwBalloon({ from: p.id, fromName: p.name, fx: from.x, fy: from.y, tx: p.throw.x, ty: p.throw.y, target });
+        }
       }
     }
     for (const id of [...this.others.keys()]) if (!seen.has(id)) this.others.delete(id);
@@ -544,11 +558,12 @@ export class World {
     for (const l of LAMPS) items.push({ y: l.y, draw: () => drawLamp(ctx, l) });
     items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
     for (const n of this.npcs) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir }); if (n.tag !== false) this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57'); } });
-    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: o.dir, back: o.back }); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._bubble(ctx, id, o.x, o.y, now); } });
-    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.back }); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
+    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: o.dir, back: o.back }); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
+    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.back }); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._wetFx(ctx, 'me', m.x, m.y, now); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
 
+    this._drawFx(ctx, now);
     if (this.tapFx && now - this.tapFx.t < 400) {
       const k = (now - this.tapFx.t) / 400;
       ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 2;
@@ -581,6 +596,74 @@ export class World {
     if (p.role === 'em') return 'Em · THCS';
     if (p.role === 'khach') return p.school ? 'Bạn · ' + p.school : 'Bạn trường khác';
     return [p.khoa, p.lop].filter(Boolean).join(' · ');
+  }
+
+  // ---------- Bóng nước ----------
+  posOf(id) {
+    if (id === 'me') return this.me;
+    return this.others.get(id) || null;
+  }
+
+  // Người gần nhất trong tầm ném (px thế giới), hoặc null
+  nearestOther(range = 360) {
+    let best = null, bd = range;
+    for (const [id, o] of this.others) { const d = Math.hypot(o.x - this.me.x, o.y - this.me.y); if (d < bd) { bd = d; best = { id, o }; } }
+    return best;
+  }
+
+  throwBalloon({ from = 'me', fromName = '', fx, fy, tx, ty, target = null }) {
+    const colors = ['#F06292', '#4FC3F7', '#FFD54F', '#81C784', '#BA68C8'];
+    const dist = Math.hypot(tx - fx, ty - fy);
+    this.fx.push({ from, fromName, fx, fy: fy - 30, tx, ty, target, t0: performance.now(), dur: 450 + dist * 1.3, color: colors[Math.floor(Math.random() * colors.length)], landed: false });
+  }
+
+  _drawFx(ctx, now) {
+    this.fx = this.fx.filter((f) => now - f.t0 < f.dur + 700);
+    for (const f of this.fx) {
+      // bám theo mục tiêu đang di chuyển
+      const tp = f.target ? this.posOf(f.target) : null;
+      const tx = tp ? tp.x : f.tx, ty = tp ? tp.y - 26 : f.ty;
+      const k = (now - f.t0) / f.dur;
+      if (k < 1) {
+        const x = f.fx + (tx - f.fx) * k, y = f.fy + (ty - f.fy) * k - Math.sin(Math.PI * k) * (60 + f.dur / 12);
+        ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.ellipse(f.fx + (tx - f.fx) * k, f.fy + 30 + (ty + 26 - f.fy - 30) * k, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.save(); ctx.translate(x, y); ctx.rotate(k * 8);
+        ctx.fillStyle = f.color; ctx.beginPath(); ctx.ellipse(0, 0, 9, 11, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-3, -4, 2.5, 3.5, -0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = f.color; ctx.beginPath(); ctx.moveTo(-2, 11); ctx.lineTo(2, 11); ctx.lineTo(0, 15); ctx.fill();
+        ctx.restore();
+      } else {
+        if (!f.landed) {
+          f.landed = true; f.lx = tx; f.ly = ty;
+          if (f.target) {
+            this.wet.set(f.target, now + 4000);
+            if (f.target === 'me' && f.from !== 'me') this.onWet(f.fromName);
+          }
+        }
+        const s = Math.min(1, (now - f.t0 - f.dur) / 700);
+        ctx.strokeStyle = `rgba(79,195,247,${1 - s})`; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(f.lx, f.ly + 24, 10 + s * 30, 4 + s * 12, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = `rgba(79,195,247,${0.9 * (1 - s)})`;
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2;
+          ctx.beginPath(); ctx.arc(f.lx + Math.cos(a) * (6 + s * 34), f.ly + Math.sin(a) * (4 + s * 18) - Math.sin(Math.PI * s) * 16, 3 - s * 2, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+  }
+
+  // Giọt nước nhỏ quanh người vừa bị ném trúng
+  _wetFx(ctx, id, x, y, now) {
+    const until = this.wet.get(id);
+    if (!until) return;
+    if (now > until) { this.wet.delete(id); return; }
+    ctx.fillStyle = 'rgba(79,195,247,.85)';
+    for (let i = 0; i < 6; i++) {
+      const ph = ((now / 600) + i / 6) % 1;
+      const dx = Math.sin(i * 2.1) * 12, dy = -48 + ph * 46;
+      ctx.beginPath(); ctx.moveTo(x + dx, y + dy - 4); ctx.quadraticCurveTo(x + dx + 3, y + dy + 1, x + dx, y + dy + 2); ctx.quadraticCurveTo(x + dx - 3, y + dy + 1, x + dx, y + dy - 4); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(79,195,247,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 1, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
   }
 
   _nameTag(ctx, x, y, name, sub, color, mine = false) {

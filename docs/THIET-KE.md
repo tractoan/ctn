@@ -252,7 +252,7 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `recover` | – | `code` | `{token, user}` |
 | `me` | ✔ | – | `{user}` |
 | `look` | ✔ | `look, name` | `{user}` |
-| `presence` | ✔ | `x, y, zone, say?` | `{others[], now}` |
+| `presence` | ✔ | `x, y, zone, say?, throw? {x, y, target}` | `{others[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
 | `online` | – | – | `{others[], now}` |
 | `guestbook` | – | `room` | `{items[]}` (100 mới nhất) |
 | `sign` | ✔ | `room, body` (≤ 600 ký tự) | `{item, user}` |
@@ -303,7 +303,7 @@ ghi danh, thấy nhau online, lời nói hiện cho người khác, lưu bút l�
 | Cao | Thêm cửa phòng thí nghiệm, thư viện, phòng học bộ môn | Chỉ sửa `campus.js` |
 | Cao | Giới hạn tần suất API, nút báo cáo/xoá lưu bút, trang quản trị | Cần trước khi công bố rộng |
 | Trung bình | Thay CLB, câu đố, thực đơn bằng nội dung thật của trường | Hiện là nội dung mẫu |
-| Trung bình | Ném bóng nước 🎈 như trang mẫu | Nhạc nền đã có (nút 🎵, YouTube nhúng) |
+| Trung bình | Album ảnh, giấy chứng nhận kỷ niệm | Nhạc nền 🎵 và ném bóng nước 🎈 đã có |
 | Trung bình | Album ảnh kỷ yếu, giấy chứng nhận kỷ niệm | Cần R2 để lưu ảnh |
 | Thấp | Durable Objects + WebSocket cho chuyển động thời gian thực | Khi > vài trăm người online |
 | Thấp | Đóng gói APK bằng Capacitor / TWA | |

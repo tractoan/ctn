@@ -94,6 +94,13 @@ test('presence trả về người khác, bỏ người đã rời đi', async (
   assert.equal(r.others[0].name, 'An');
   assert.equal(r.others[0].say, 'Chào');
   assert.equal((await call(s, 'online', {}, '', 2500)).body.others.length, 2);
+  await call(s, 'presence', { x: 10, y: 20, throw: { x: 50, y: 60, target: b.user.id } }, a.token, 3000);
+  const seen = (await call(s, 'presence', { x: 50, y: 60 }, b.token, 4000)).body.others[0];
+  assert.deepEqual(seen.throw, { x: 50, y: 60, target: b.user.id, at: 3000 });
+  await call(s, 'presence', { x: 10, y: 20 }, a.token, 5000);
+  assert.equal((await call(s, 'presence', { x: 50, y: 60 }, b.token, 5500)).body.others[0].throw.at, 3000);
+  await call(s, 'presence', { x: 10, y: 20 }, a.token, 10000);
+  assert.equal((await call(s, 'presence', { x: 50, y: 60 }, b.token, 10500)).body.others[0].throw, undefined);
   const later = (await call(s, 'presence', { x: 50, y: 60 }, b.token, 60000)).body;
   assert.equal(later.others.length, 0);
 });

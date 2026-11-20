@@ -224,3 +224,6 @@ body.page { overflow: auto; background: var(--bg); }
   .chip.warn::before { content: '⚠'; font-size: 13px; }
   .hud-right { gap: 4px; }
 }
+
+.fab.balloon { font-size: 22px; width: 52px; height: 52px; justify-self: end; }
+.fab.balloon:active { transform: scale(.92); }

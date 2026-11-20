@@ -31,6 +31,9 @@ giờ Việt Nam và tiết học hiện tại; thanh dưới có câu nói nhan
 Nút 🎵 trên thanh trên phát **bài ca truyền thống** qua trình phát nhúng của YouTube (đổi video ở hằng số `MUSIC`
 trong `public/js/main.js`). Trình phát hiện ở góc dưới bên trái, có nút tắt và link mở trên YouTube.
 
+Nút 🎈 bên phải **ném bóng nước** vào người đang online gần nhất (trong khoảng 360 px); không có ai thì ném ra phía trước.
+Người bị ném trúng ướt sũng vài giây, mọi người đang online đều thấy.
+
 Điều khiển: chạm/nhấp vào sân để đi (tự tìm đường quanh các dãy nhà), chạm nhãn để mở,
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
 Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.

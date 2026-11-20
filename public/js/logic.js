@@ -176,6 +176,10 @@ const handlers = {
     const old = await ctx.store.get('presence', u.id);
     if (typeof b.say === 'string' && b.say.trim()) { p.say = str(b.say, 80); p.sayAt = ctx.now; }
     else if (old && old.say && ctx.now - old.sayAt < 6000) { p.say = old.say; p.sayAt = old.sayAt; }
+    // Ném bóng nước: lưu cú ném gần nhất 6 giây để người khác kịp thấy
+    if (b.throw && typeof b.throw === 'object') {
+      p.throw = { x: num(b.throw.x, 0, 4000), y: num(b.throw.y, 0, 4000), target: str(b.throw.target, 20), at: ctx.now };
+    } else if (old && old.throw && ctx.now - old.throw.at < 6000) p.throw = old.throw;
     await ctx.store.put('presence', u.id, p);
     const all = await ctx.store.list('presence', '', 500);
     const others = [];

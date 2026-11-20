@@ -77,7 +77,7 @@ function recoverFlow() {
 
 function setMe(u) {
   me = u;
-  if (world) { world.me.look = me.look; world.me.name = me.name; world.me.sub = world.subOf(me); }
+  if (world) { world.me.look = me.look; world.me.name = me.name; world.me.sub = world.subOf(me); world.myId = me.id || ''; }
   hud.update();
 }
 
@@ -247,6 +247,7 @@ function enterSchool() {
       h('div', { class: 'brand' }, h('span', { class: 'crest sm' }, 'CTN'), h('div', {}, zoneEl, clockEl)),
       right),
     h('div', { class: 'fabs' },
+      h('button', { class: 'fab balloon', 'aria-label': 'Ném bóng nước', title: 'Ném bóng nước vào bạn gần nhất', onclick: () => throwBalloon() }, '🎈'),
       h('button', { class: 'fab', 'aria-label': 'Phóng to', onclick: () => world.zoomBy(1.2) }, '+'),
       h('button', { class: 'fab', 'aria-label': 'Thu nhỏ', onclick: () => world.zoomBy(1 / 1.2) }, '−')),
     h('footer', { class: 'chatbar' },
@@ -264,6 +265,8 @@ function enterSchool() {
   world.npcs = makeNpcs();
   world.onArrive = (hs) => openHotspot(hs);
   world.onTapPlayer = (p) => playerCard(p);
+  world.myId = me.id || '';
+  world.onWet = (fromName) => { toast(`💦 ${fromName || 'Ai đó'} vừa ném bóng nước trúng bạn!`); world.say('me', 'Ướt hết rồi! 💦'); };
   world.start();
   hud.update();
   updateClock();
@@ -272,6 +275,20 @@ function enterSchool() {
   let lastZone = '';
   let pendingSay = null;
   sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); };
+  let pendingThrow = null;
+  let lastThrow = 0;
+  throwBalloon = () => {
+    const now = performance.now();
+    if (now - lastThrow < 1200) return;
+    lastThrow = now;
+    const m = world.me;
+    const near = world.nearestOther();
+    const t = near ? { x: Math.round(near.o.x), y: Math.round(near.o.y - 26), target: near.id }
+      : { x: Math.round(m.x + (m.dir || 1) * 170), y: Math.round(m.y - 6), target: '' };
+    world.throwBalloon({ fx: m.x, fy: m.y, tx: t.x, ty: t.y, target: near ? near.id : null });
+    if (near) toast(`🎈 Ném vào ${near.o.data.name}!`);
+    if (!me.guest) pendingThrow = t;
+  };
   const tick = async () => {
     const pos = { x: Math.round(world.me.x), y: Math.round(world.me.y) };
     const zone = world.zoneOf(pos.x, pos.y);
@@ -282,6 +299,7 @@ function enterSchool() {
       else {
         const body = { ...pos, zone };
         if (pendingSay) { body.say = pendingSay; pendingSay = null; }
+        if (pendingThrow) { body.throw = pendingThrow; pendingThrow = null; }
         r = await api('presence', body);
       }
       world.updateOthers(r.others);
@@ -325,6 +343,7 @@ function mapSheet() {
 }
 
 function sayPrompt() {}
+let throwBalloon = () => {};
 
 function moreSheet() {
   openSheet('Nhân vật của tôi', (b) => {
