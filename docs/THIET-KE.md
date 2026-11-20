@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.4 – nhiệm vụ & thành tựu, ví, hộp thư (đãi bạn, tỏ tình), chào cờ, 20/11, trò chơi 5 vòng, NPC, ngày/đêm, âm thanh |
+| Phiên bản | 1.5 – vẽ lại cảnh vật theo phong cách trang mẫu (gạch sân, cỏ, cây tán tròn, hoa 5 cánh, mái nhà, màu trời theo giờ) |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -254,6 +254,30 @@ Logo là file cùng nguồn nên canvas không bị "nhiễm bẩn" và xuất �
 | `--bg` | `#F4F6FA` | Nền sheet |
 | Font | Be Vietnam Pro 400/600/700/800 | Toàn bộ (hỗ trợ tiếng Việt tốt) |
 
+#### Bảng màu cảnh vật (`world.js`)
+
+Vẽ phẳng, màu ấm, bóng đổ mềm `rgba(20,30,50,.16)` lệch xuống dưới – phải, giống trang mẫu.
+
+| Thành phần | Cách vẽ | Màu |
+|---|---|---|
+| Sân lát gạch | Ô 40 px, ô xen kẽ phủ màu đất nung nhạt, đường ron trắng | nền `#E7D9C4`, phủ `rgba(196,110,80,.18)` |
+| Cỏ | Mẫu lặp 96 px (`grassPattern`) gồm vệt đậm nhạt + 46 nhúm cỏ | `#98CC7C` (bãi trống học: `#8CC36F`), nhúm `rgba(55,105,50,.32)` |
+| Sân đá cầu | Nền đất nung, vạch trắng, lưới giữa | `#D98A5B`, viền `#C46A45` |
+| Cây tán tròn | Thân + 5 vòng tròn: lớp tối lệch +3 px, lớp sáng phía trên; cây có hoa rắc hoa 5 cánh | thân `#8B6243`/`#A7795A`, tán `#4E9E55`/`#5DAA5E` → `#6CC06A`/`#7CC870`/`#76C27A` |
+| Hoa (`flower5`) | 5 cánh tròn + nhụy | phượng `#F2544A`, bằng lăng `#C29BEA`, hoa sữa `#FFFFFF`, nhụy `#FFD45E` |
+| Bồn hoa / bụi cây | Viền xanh đậm, nền `#7FB069`, hoa nhiều màu | `#6A9A55`, `#7FB069` |
+| Ghế đá | Mặt + chân đá hoa cương hồng | `#E2B4A6`, `#C9978A`, `#B98579` |
+| Ghế chào cờ | Ghế nhựa trắng, dải đỏ, biển lớp đỏ | `#FFFFFF`, `#D8343A`, `#C8343A` |
+| Đèn sân | Cột xanh, chụp kem; tối thì có quầng sáng | `#2F6FB5`, `#FFF3C4` |
+| Tường rào | Gạch đỏ, mũ tường trắng | `#C8553D`, `#F6F5F1` |
+| Toà nhà | Mặt tường có vân dọc; cửa sổ khung trắng, kính xanh có vệt sáng, bệ cửa; tầng trệt cứ 4 ô có 1 cửa gỗ; mái có tường chắn mái (màu mái tối 18 %) và gạch lá nem ô bàn cờ; bồn nước + cục điều hoà trên mái dãy lớn | tường `#F4E2A6`, mái `#D9C9A0`, lan can dãy 4 tầng `#B5452F`, kính `#9CC3E6`, cửa `#8A5A35` |
+| Nhà đa năng | Mái tôn xanh hai dốc có sóng, cửa lớn ở giữa, vòm trang trí | mái `#8FA3BF` |
+| Căng tin | Mái cam | tường `#FFF1D6`, mái `#E08A4B` |
+
+Màu trời theo giờ Việt Nam (`skyTint`): trước 5 h và sau 19 h 30 phủ `rgba(16,24,58,.50)` và bật đèn; 5–6 h
+`rgba(60,50,110,.32)`; 6–7 h bình minh `rgba(255,170,120,.14)`; 7–16 h 30 không phủ; 16 h 30–18 h hoàng hôn
+`rgba(255,140,60,.16)`; 18–19 h 30 chạng vạng `rgba(80,50,110,.32)` và bật đèn. Ban đêm cửa sổ sáng vàng `#FFD97A`.
+
 ### 5.8 Tiến trình người chơi (nhiệm vụ, thành tựu, ví)
 
 Tất cả tính trên máy chủ (`logic.js`), máy khách chỉ hiển thị. Mỗi lần xác thực, `ensure(u, now)` bổ sung các
@@ -305,7 +329,7 @@ Mỗi lượt presence trả kèm inbox của người gọi rồi xoá (nhận 
   `npcSheet` (nói tiếp + hành động theo `panel`: vào nhà hiệu bộ, căng tin, đá cầu, pha chế, kiểm tra bài cũ).
 - Chuông trống: `checkBell()` chạy mỗi 20 giây, so `periodOf()` với lần trước; đổi sang "Ra chơi" hoặc "Tiết …" thì
   hiện banner + âm thanh. Sáng thứ Hai mở trang thấy banner chào cờ với nút đưa tới đúng hàng ghế lớp mình.
-- Ngày/đêm: `nightLevel()` (0 → 1) theo giờ Việt Nam; `_draw` phủ lớp màu đêm `rgba(14,22,56,0.46·level)` lên
+- Ngày/đêm: `skyTint()` trả về màu phủ theo giờ Việt Nam (xem 5.7); `_draw` phủ màu đó lên
   cảnh có `lamps`, rồi vẽ quầng sáng đèn bằng `globalCompositeOperation = 'lighter'`; `drawBuilding` thắp cửa sổ.
   Lớp học không có `lamps` nên luôn sáng. Kiểm thử có thể ép `world.forceNight`.
 - Âm thanh (`sound.js`): bộ dao động + nhiễu Web Audio cho `click, coin, pop, whoosh, splash, drum, bell, win,

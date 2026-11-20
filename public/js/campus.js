@@ -29,14 +29,14 @@ export const GROUNDS = [
 
 // Toà nhà = vật cản. Nhà hình chữ L tách thành nhiều khối cùng `id`; chỉ khối có `short` mới vẽ tên.
 export const BUILDINGS = [
-  { id: 'D4', name: 'Dãy nhà 4 tầng', short: 'DÃY NHÀ 4 TẦNG', x: 8, y: 8, w: 784, h: 168, floors: 4, wall: '#F4E2A6', roof: '#E9D9A6', trim: '#9C2F2B' },
-  { id: 'D4', name: 'Dãy nhà 4 tầng', x: 8, y: 160, w: 240, h: 200, floors: 4, wall: '#F4E2A6', roof: '#E9D9A6', trim: '#9C2F2B' },
-  { id: 'D3', name: 'Dãy nhà 3 tầng', short: 'DÃY NHÀ 3 TẦNG', x: 797, y: 8, w: 891, h: 168, floors: 3, wall: '#F4E2A6', roof: '#EADCAE' },
-  { id: 'D3', name: 'Dãy nhà 3 tầng', x: 1507, y: 160, w: 181, h: 149, floors: 3, wall: '#F4E2A6', roof: '#EADCAE' },
-  { id: 'HB', name: 'Nhà hiệu bộ', short: 'NHÀ HIỆU BỘ', x: 6, y: 600, w: 363, h: 392, floors: 4, wall: '#F2EEE4', roof: '#DCD6C8', bands: '#3E8E4A' },
-  { id: 'D5', name: 'Dãy nhà 5 tầng', short: 'DÃY NHÀ 5 TẦNG', x: 578, y: 830, w: 1019, h: 160, floors: 5, wall: '#F4E2A6', roof: '#EADCAE' },
-  { id: 'DN', name: 'Nhà đa năng', short: 'NHÀ ĐA NĂNG', x: 1501, y: 339, w: 328, h: 426, floors: 1, wall: '#EFE6C8', roof: '#C9C3AE', hall: true },
-  { id: 'CT', name: 'Căng tin', short: 'CĂNG TIN', x: 1835, y: 373, w: 98, h: 320, floors: 1, wall: '#EFE6C8', roof: '#C9C3AE', vertical: true },
+  { id: 'D4', name: 'Dãy nhà 4 tầng', short: 'DÃY NHÀ 4 TẦNG', x: 8, y: 8, w: 784, h: 168, floors: 4, wall: '#F4E2A6', roof: '#D9C9A0', trim: '#B5452F' },
+  { id: 'D4', name: 'Dãy nhà 4 tầng', x: 8, y: 160, w: 240, h: 200, floors: 4, wall: '#F4E2A6', roof: '#D9C9A0', trim: '#B5452F' },
+  { id: 'D3', name: 'Dãy nhà 3 tầng', short: 'DÃY NHÀ 3 TẦNG', x: 797, y: 8, w: 891, h: 168, floors: 3, wall: '#F4E2A6', roof: '#D9C9A0' },
+  { id: 'D3', name: 'Dãy nhà 3 tầng', x: 1507, y: 160, w: 181, h: 149, floors: 3, wall: '#F4E2A6', roof: '#D9C9A0' },
+  { id: 'HB', name: 'Nhà hiệu bộ', short: 'NHÀ HIỆU BỘ', x: 6, y: 600, w: 363, h: 392, floors: 4, wall: '#F2EEE4', roof: '#CFC9BD', bands: '#3E8E4A' },
+  { id: 'D5', name: 'Dãy nhà 5 tầng', short: 'DÃY NHÀ 5 TẦNG', x: 578, y: 830, w: 1019, h: 160, floors: 5, wall: '#F4E2A6', roof: '#D9C9A0' },
+  { id: 'DN', name: 'Nhà đa năng', short: 'NHÀ ĐA NĂNG', x: 1501, y: 339, w: 328, h: 426, floors: 1, wall: '#EFE6C8', roof: '#8FA3BF', hall: true },
+  { id: 'CT', name: 'Căng tin', short: 'CĂNG TIN', x: 1835, y: 373, w: 98, h: 320, floors: 1, wall: '#FFF1D6', roof: '#E08A4B', vertical: true },
 ];
 
 // Tường rào. Chừa cổng chính (x 693–1130) và cổng phụ bên trái (y 414–564).
@@ -117,7 +117,9 @@ for (const y of [240, 360, 480, 620]) trees.push({ x: 1440, y, kind: 'palm' });
 for (let x = 760; x <= 1380; x += 90) trees.push({ x, y: 715, kind: 'bonsai' });
 // Cây to quanh cổng, góc vườn
 // bloom: cây đang ra hoa – phượng đỏ, bằng lăng tím, hoa sữa trắng
-for (const [x, y, bloom] of [[60, 1070, 'phuong'], [170, 1120], [280, 1060, 'banglang'], [1660, 860, 'phuong'], [1780, 940], [1900, 880, 'banglang'], [1700, 1080, 'hoasua'], [1880, 1110, 'phuong'], [1600, 1150, 'phuong']]) trees.push({ x, y, kind: 'tree', bloom });
+for (const [x, y, bloom] of [[60, 1070, 'phuong'], [170, 1120], [280, 1060, 'banglang'], [1660, 860, 'phuong'], [1780, 940], [1900, 880, 'banglang'], [1700, 1080, 'hoasua'], [1880, 1110, 'phuong'], [1600, 1150, 'phuong']]) trees.push({ x, y, kind: 'tree', bloom, planter: x < 1610 && y > 1000 && x > 1500 });
+// Cây có bồn dọc lối vào (trên nền gạch)
+trees.push({ x: 505, y: 690, kind: 'tree', bloom: 'phuong', planter: true }, { x: 505, y: 930, kind: 'tree', bloom: 'banglang', planter: true });
 // Chỗ trốn học
 for (const [x, y] of [[1730, 60], [1880, 90], [1750, 250], [1890, 260]]) trees.push({ x, y, kind: 'tree' });
 // Bờ cây trước dãy 5 tầng
