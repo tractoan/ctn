@@ -1,0 +1,12 @@
+{
+  "name": "Trường THPT Chuyên Thái Nguyên",
+  "short_name": "Chuyên Thái Nguyên",
+  "description": "Họp lớp online: gặp bạn cũ, viết lưu bút, thi đua giữa các khóa.",
+  "start_url": "/?s=app",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1B2A4E",
+  "theme_color": "#1B2A4E",
+  "lang": "vi",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

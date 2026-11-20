@@ -1,0 +1,14 @@
+name = "chuyen-thai-nguyen"
+main = "src/worker.js"
+compatibility_date = "2025-06-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ctn"
+# Chạy `npx wrangler d1 create ctn` rồi dán database_id vào đây
+database_id = "00000000-0000-0000-0000-000000000000"
