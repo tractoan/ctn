@@ -298,7 +298,7 @@ function moreSheet() {
       getMode() === 'offline' ? h('p', { class: 'note' }, 'Đang ở chế độ ngoại tuyến: dữ liệu chỉ lưu trên trình duyệt này, không thấy bạn bè online. Triển khai lên Cloudflare (xem README) để dùng chung.') : null,
       h('div', { class: 'stack' },
         h('button', { class: 'btn primary', onclick: () => panels.mirror() }, '👕 Đổi kiểu tóc, đồng phục'),
-        h('a', { class: 'btn ghost', href: '/pages/gioi-thieu.html' }, 'Giới thiệu trang'),
+        h('a', { class: 'btn ghost', href: 'pages/gioi-thieu.html' }, 'Giới thiệu trang'),
         h('button', { class: 'btn ghost', onclick: () => { world.teleport(SPAWN.x, SPAWN.y); closeSheet(); } }, 'Về cổng trường'),
         h('button', { class: 'btn danger', onclick: () => { if (confirm('Thoát nhân vật trên máy này? Hãy chắc chắn bạn đã lưu mã khôi phục.')) { setToken(''); location.reload(); } } }, 'Thoát nhân vật'))));
   });
@@ -364,7 +364,7 @@ const panels = {
           h('li', {}, '🛵 Gửi xe ở nhà xe bên trái cổng để điểm danh và nhận 20k ăn vặt mỗi ngày.'),
           h('li', {}, '🏛️ Đi thẳng là sân trường, cột cờ và nhà A (hiệu bộ).'),
           h('li', {}, '🚪 Nhà B, C, D là các dãy lớp học: mỗi lớp chuyên một cửa.')),
-        h('a', { class: 'btn ghost', href: '/pages/gioi-thieu.html' }, 'Giới thiệu trang'),
+        h('a', { class: 'btn ghost', href: 'pages/gioi-thieu.html' }, 'Giới thiệu trang'),
       );
     });
   },
