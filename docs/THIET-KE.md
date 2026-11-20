@@ -85,8 +85,9 @@ Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối v�
 chính** lên sân trường (sân chỉ lên được bằng hai bậc thang bên trái). Căng tin và chỗ trốn học đi vòng phía
 Đông nhà đa năng.
 
-Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán, Lý (chân chữ L), Hóa, Sinh,
-Văn, Trung; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp (cửa quay ra cổng).
+Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), Lý, Hóa, Sinh,
+Văn, Trung; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp, cửa ở **mặt trong**
+(quay vào sân trường), đi theo hành lang dưới chân tường sân, vào từ lối vào hoặc từ phía nhà đa năng.
 
 ## 4. Chức năng
 

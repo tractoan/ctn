@@ -212,6 +212,7 @@ function drawDoor(ctx, d) {
   if (d.side === 'e') ctx.fillRect(d.x - 27, d.y - 14, 6, 28);
   if (d.side === 'w') ctx.fillRect(d.x + 21, d.y - 14, 6, 28);
   if (d.side === 's') ctx.fillRect(d.x - 14, d.y - 27, 28, 6);
+  if (d.side === 'n') ctx.fillRect(d.x - 14, d.y + 27, 28, 6);
 }
 
 function drawTree(ctx, t, time) {

@@ -12,7 +12,7 @@ ghé lớp cũ, viết lưu bút, đăng ký họp lớp và thi đua giữa cá
 |---|---|
 | Cổng trường (xanh, biển trắng chữ đỏ), bác bảo vệ | Giới thiệu, gửi xe điểm danh mỗi ngày nhận 20k ăn vặt |
 | **Nhà hiệu bộ** (4 tầng, sơn xanh trắng) | Lịch họp lớp (tạo, đăng ký), tri ân thầy cô, phòng giáo viên, phòng truyền thống |
-| **Dãy nhà 5 tầng** (ngay sau cổng) | Lớp chuyên (phải → trái) Tin, Nga, Pháp |
+| **Dãy nhà 5 tầng** (ngay sau cổng) | Lớp chuyên (phải → trái) Tin, Nga, Pháp – cửa ở mặt trong, quay vào sân trường |
 | **Dãy nhà 4 tầng** (chữ L, hàng cau vua) | Lớp chuyên (trái → phải) Toán, Lý, Hóa, Sinh, Văn, Trung |
 | **Dãy nhà 3 tầng** | Lớp chuyên (trái → phải) Anh, Sử, Địa |
 | Trong mỗi lớp | Lưu bút theo từng khóa, sổ đầu bài (ai đã về lớp), đố vui theo môn |

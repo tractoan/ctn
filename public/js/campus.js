@@ -34,7 +34,7 @@ export const BUILDINGS = [
   { id: 'D3', name: 'Dãy nhà 3 tầng', short: 'DÃY NHÀ 3 TẦNG', x: 797, y: 8, w: 891, h: 168, floors: 3, wall: '#F4E2A6', roof: '#EADCAE' },
   { id: 'D3', name: 'Dãy nhà 3 tầng', x: 1507, y: 160, w: 181, h: 149, floors: 3, wall: '#F4E2A6', roof: '#EADCAE' },
   { id: 'HB', name: 'Nhà hiệu bộ', short: 'NHÀ HIỆU BỘ', x: 6, y: 600, w: 363, h: 392, floors: 4, wall: '#F2EEE4', roof: '#DCD6C8', bands: '#3E8E4A' },
-  { id: 'D5', name: 'Dãy nhà 5 tầng', short: 'DÃY NHÀ 5 TẦNG', x: 578, y: 782, w: 1019, h: 202, floors: 5, wall: '#F4E2A6', roof: '#EADCAE' },
+  { id: 'D5', name: 'Dãy nhà 5 tầng', short: 'DÃY NHÀ 5 TẦNG', x: 578, y: 830, w: 1019, h: 160, floors: 5, wall: '#F4E2A6', roof: '#EADCAE' },
   { id: 'DN', name: 'Nhà đa năng', short: 'NHÀ ĐA NĂNG', x: 1501, y: 339, w: 328, h: 426, floors: 1, wall: '#EFE6C8', roof: '#C9C3AE', hall: true },
   { id: 'CT', name: 'Căng tin', short: 'CĂNG TIN', x: 1835, y: 373, w: 98, h: 320, floors: 1, wall: '#EFE6C8', roof: '#C9C3AE', vertical: true },
 ];
@@ -60,18 +60,18 @@ export const EDGES = [
 
 // Lớp chuyên theo dãy nhà (theo trí nhớ của cựu học sinh). side: phía cửa quay ra.
 export const CLASS_DOORS = [
-  // Dãy 4 tầng, trái → phải: 2 lớp ở chân chữ L, 4 lớp ở thân dãy
-  { lop: 'Toán', b: 'D4', x: 70, y: 386, side: 's' },
-  { lop: 'Lý', b: 'D4', x: 190, y: 386, side: 's' },
-  ...['Hóa', 'Sinh', 'Văn', 'Trung'].map((lop, i) => ({ lop, b: 'D4', x: 300 + i * 110 + (i === 3 ? 100 : 0), y: 202, side: 's' })),
+  // Dãy 4 tầng, trái → phải: Toán ở chân chữ L, các lớp còn lại dọc thân dãy (cửa nằm giữa các cây cau)
+  { lop: 'Toán', b: 'D4', x: 128, y: 386, side: 's' },
+  ...['Lý', 'Hóa', 'Sinh', 'Văn'].map((lop, i) => ({ lop, b: 'D4', x: 315 + i * 70, y: 202, side: 's' })),
+  { lop: 'Trung', b: 'D4', x: 640, y: 202, side: 's' },
   // Dãy 3 tầng, trái → phải
   { lop: 'Anh', b: 'D3', x: 840, y: 202, side: 's' },
   { lop: 'Sử', b: 'D3', x: 940, y: 202, side: 's' },
   { lop: 'Địa', b: 'D3', x: 1400, y: 202, side: 's' },
-  // Dãy 5 tầng, phải → trái; cửa quay ra phía cổng
-  { lop: 'Tin', b: 'D5', x: 1450, y: 1010, side: 's' },
-  { lop: 'Nga', b: 'D5', x: 1200, y: 1010, side: 's' },
-  { lop: 'Pháp', b: 'D5', x: 950, y: 1010, side: 's' },
+  // Dãy 5 tầng, phải → trái; cửa ở mặt trong (quay vào sân trường), đi theo hành lang dưới chân tường sân
+  { lop: 'Tin', b: 'D5', x: 1450, y: 800, side: 'n' },
+  { lop: 'Nga', b: 'D5', x: 1200, y: 800, side: 'n' },
+  { lop: 'Pháp', b: 'D5', x: 950, y: 800, side: 'n' },
 ];
 
 // Điểm tương tác: chạm nhãn → nhân vật đi tới (x, y) → mở bảng `panel`. `map`: nhãn ngắn trên bản đồ.
