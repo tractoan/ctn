@@ -94,7 +94,8 @@ npm run static           # http://localhost:8080
 npx wrangler login
 npx wrangler d1 create ctn          # dán database_id vào wrangler.toml
 npm run db:init:remote
-npm run deploy                      # https://chuyen-thai-nguyen.<tài-khoản>.workers.dev
+npm run deploy                      # https://thpt.<subdomain>.workers.dev
+# Đặt subdomain workers.dev là "chuyenthainguyen" (Workers & Pages → Settings) để có thpt.chuyenthainguyen.workers.dev
 ```
 
 Ghi chú: vị trí người chơi được đồng bộ bằng cách hỏi máy chủ mỗi 2,5 giây (không dùng WebSocket),
