@@ -281,3 +281,129 @@ body.page { overflow: auto; background: var(--bg); }
 .gb-item p { font-family: Pangolin, "Be Vietnam Pro", cursive; font-size: 17px; line-height: 1.55; color: #25407A; }
 
 .fabs { gap: 10px; }
+
+/* ===================== Đợt 6: giao diện giống trang mẫu ===================== */
+.hud-icon { position: relative; width: 38px; height: 38px; border-radius: 12px; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 18px; display: grid; place-items: center; }
+.badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; font: 800 11px/18px var(--font); font-style: normal; box-shadow: 0 0 0 2px var(--navy); }
+.chip.wallet { border: 0; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.online-pill { border: 0; cursor: pointer; font-family: var(--font); }
+
+/* khung chat nổi */
+.chat-feed { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(124px + var(--sab)); max-width: min(70vw, 420px); display: grid; gap: 6px; pointer-events: none; z-index: 5; }
+.feed-row { background: rgba(255,255,255,.95); color: var(--ink); border-radius: 14px; padding: 7px 12px; font-size: 13.5px; box-shadow: 0 2px 10px rgba(0,0,0,.12); transition: opacity .6s, transform .6s; word-break: break-word; }
+.feed-row.mine { background: #E8F0FB; }
+.feed-row.fade { opacity: 0; transform: translateY(6px); }
+.music-box ~ .chat-feed, body:has(.music-box) .chat-feed { bottom: calc(260px + var(--sab)); }
+
+/* banner chuông trống */
+.banner { position: absolute; left: 50%; transform: translateX(-50%); top: calc(64px + var(--sat)); width: min(560px, calc(100% - 24px)); background: var(--navy); color: #fff; border-radius: 16px; padding: 10px 10px 10px 14px; display: flex; align-items: center; gap: 8px; z-index: 20; box-shadow: 0 8px 24px rgba(0,0,0,.25); font-size: 14px; font-weight: 600; }
+.banner span { flex: 1; }
+.banner .btn { margin: 0; white-space: nowrap; }
+.banner .icon-btn { background: rgba(255,255,255,.15); color: #fff; flex: none; }
+
+.fab.shield.on { background: #DBEAFE; box-shadow: 0 0 0 3px #60A5FA; }
+
+/* nhiệm vụ & thành tựu */
+.quest-list { display: grid; gap: 8px; }
+.quest { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px; padding: 10px 12px; box-shadow: 0 1px 0 var(--line); }
+.quest.claimed { opacity: .6; }
+.q-ico { font-size: 24px; width: 32px; text-align: center; flex: none; }
+.q-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.q-body small { color: var(--muted); font-size: 12px; }
+.q-body .q-reward { color: #B8862B; font-weight: 700; }
+.q-done { color: var(--ok); font-weight: 700; font-size: 12px; white-space: nowrap; }
+.q-todo { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.quest .btn { margin: 0; }
+.bar { height: 6px; background: #EEF1F6; border-radius: 3px; overflow: hidden; margin: 2px 0; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--orange)); border-radius: 3px; }
+.tier { background: #fff; border-radius: 14px; padding: 4px 12px; margin-bottom: 8px; }
+.tier summary { padding: 10px 0; color: var(--navy); }
+.tier .quest { box-shadow: none; background: var(--bg); }
+.tier .quest-list { padding-bottom: 10px; }
+
+/* ví */
+.wallet-big { font-size: 40px; font-weight: 800; color: var(--navy); text-align: center; padding: 10px 0 0; font-variant-numeric: tabular-nums; }
+.ledger { display: grid; gap: 4px; }
+.ledger-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; background: #fff; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; }
+.ledger-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.ledger-row small { color: var(--muted); font-size: 11px; grid-column: 1 / -1; }
+
+/* vé xe */
+.transport { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.ticket { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,.1); margin: 8px 0; border: 2px dashed #D6DCE6; }
+.ticket-head { background: var(--navy); color: var(--gold); font-weight: 800; letter-spacing: .08em; padding: 8px 14px; font-size: 13px; }
+.ticket-body { display: flex; gap: 12px; align-items: center; padding: 12px 14px; }
+.ticket-ico { font-size: 34px; }
+.ticket-body b { display: block; font-size: 17px; }
+.ticket-body small { color: var(--muted); }
+.ticket-foot { padding: 8px 14px; background: #FFF7E6; color: #B8862B; font-weight: 700; font-size: 13px; }
+
+/* tỏ tình */
+.love-card { background: linear-gradient(135deg, #FFE4EC, #FFF1F2); border-radius: 16px; padding: 16px; margin-bottom: 8px; }
+.love-line { font: 24px/1.4 Pangolin, var(--font); color: #BE185D; margin: 6px 0 0; }
+.love-opt { text-align: left; }
+
+/* âm thanh */
+.range-row { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 10px; }
+.range-row span { font-size: 13px; color: var(--muted); font-weight: 600; }
+.range-row b { font-size: 13px; color: var(--navy); }
+.range { width: 100%; accent-color: var(--red); }
+.card + .card { margin-top: 10px; }
+
+/* trò chơi */
+.game-head { font-weight: 800; color: var(--navy); margin: 0 0 8px; }
+.game-stage { display: grid; gap: 10px; }
+.game-card { background: #fff; border-radius: 16px; padding: 18px; text-align: center; display: grid; gap: 8px; justify-items: center; }
+.game-card .btn { width: auto; min-width: 160px; }
+.game-lv { font-size: 22px; font-weight: 800; color: var(--navy); }
+.game-lv.ok { color: var(--ok); }
+.game-lv.bad { color: var(--red); }
+.game-score { font-size: 54px; font-weight: 800; color: var(--red); line-height: 1; }
+.game-canvas { display: block; margin: 0 auto; border-radius: 14px; touch-action: none; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.chem-goal { font-weight: 700; color: var(--navy); background: #fff; border-radius: 12px; padding: 10px 12px; margin: 0; }
+.beaker { width: 110px; height: 120px; margin: 4px auto; border: 4px solid #9DB4D6; border-top: 0; border-radius: 0 0 26px 26px; position: relative; overflow: hidden; background: rgba(255,255,255,.7); }
+.beaker .liquid { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: #D6E4F0; transition: height .8s ease, background .8s ease; }
+.beaker.filled .liquid { height: 70%; }
+.beaker.bubbles::after { content: '∘ ° ∘ ° ∘'; position: absolute; left: 0; right: 0; top: 20%; text-align: center; color: #fff; font-size: 18px; animation: rise 1s infinite; }
+@keyframes rise { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(-10px); opacity: 1; } }
+.bottles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bottle { border: 2px solid var(--line); background: #fff; border-radius: 12px; padding: 8px 6px; display: grid; gap: 2px; justify-items: center; font-weight: 700; font-size: 13px; color: var(--ink); }
+.bottle.on { border-color: var(--blue); background: #E8F0FB; }
+.flask { font-size: 22px; }
+.mines { display: grid; gap: 3px; max-width: 360px; margin: 0 auto; width: 100%; }
+.mine { aspect-ratio: 1; border: 0; border-radius: 6px; background: #9DB4D6; box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); font-weight: 800; font-size: 15px; color: var(--navy); padding: 0; }
+.mine.open { background: #EEF1F6; box-shadow: none; }
+.mine[data-k="1"] { color: #2563EB; } .mine[data-k="2"] { color: #16A34A; } .mine[data-k="3"] { color: #DC2626; } .mine[data-k="4"] { color: #7C3AED; }
+.btn.on { background: #FDECEC; color: var(--red); }
+.quick .pill.on { background: var(--navy); color: #fff; }
+
+/* tri ân & 20/11 */
+.flower-box { background: linear-gradient(135deg, #FFF1F2, #FFF8EC); border-radius: 16px; padding: 14px; display: grid; gap: 8px; }
+.flower-count { font-size: 15px; color: #BE185D; }
+.flower-count b { font-size: 26px; }
+.card.td { background: linear-gradient(135deg, #FFF1F2, #FFF8EC); }
+
+/* đẹp hơn: sheet, nút, thanh dưới */
+.sheet { box-shadow: 0 -10px 40px rgba(15,22,40,.25); }
+.sheet-head { padding: 16px 16px 8px; }
+.sheet-head h2 { font-size: 19px; }
+.backdrop { backdrop-filter: blur(2px); }
+.btn.primary { box-shadow: 0 3px 0 #A8242A; }
+.btn.primary:active { box-shadow: 0 1px 0 #A8242A; transform: translateY(2px); }
+.place { transition: transform .1s; }
+.place:active { transform: scale(.97); }
+.fab { transition: transform .1s; }
+.fab:active { transform: scale(.92); }
+@media (max-width: 480px) { .hud-icon { width: 34px; height: 34px; } .chat-feed { max-width: calc(100% - 96px); } }
+.chip.wallet .short { display: none; }
+@media (max-width: 480px) {
+  .hud .chip.warn { display: none; }
+  .chip.wallet .long { display: none; }
+  .chip.wallet .short { display: inline; }
+  .music-btn, .hud-icon { width: 32px; height: 32px; font-size: 15px; border-radius: 10px; }
+  .hud-avatar { width: 34px; height: 34px; }
+  .online-pill { padding: 4px 8px; }
+  .logo { width: 34px; height: 34px; }
+  .brand b { font-size: 14px; }
+  .brand small { font-size: 11px; }
+}

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.3 – nhiều cảnh (sân trường, lớp học), ngồi ghế, sổ lưu bút, ảnh kỷ yếu, logo trường |
+| Phiên bản | 1.4 – nhiệm vụ & thành tựu, ví, hộp thư (đãi bạn, tỏ tình), chào cờ, 20/11, trò chơi 5 vòng, NPC, ngày/đêm, âm thanh |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -254,6 +254,66 @@ Logo là file cùng nguồn nên canvas không bị "nhiễm bẩn" và xuất �
 | `--bg` | `#F4F6FA` | Nền sheet |
 | Font | Be Vietnam Pro 400/600/700/800 | Toàn bộ (hỗ trợ tiếng Việt tốt) |
 
+### 5.8 Tiến trình người chơi (nhiệm vụ, thành tựu, ví)
+
+Tất cả tính trên máy chủ (`logic.js`), máy khách chỉ hiển thị. Mỗi lần xác thực, `ensure(u, now)` bổ sung các
+trường còn thiếu và đặt lại phần "hôm nay" khi sang ngày mới (5 giờ sáng giờ Việt Nam, `questDay`).
+
+| Trường trong `user` | Ý nghĩa |
+|---|---|
+| `stats` | Bộ đếm trọn đời: `checkins, streak, bestStreak, classDays, buys, treats, gb, games, gameKinds[], sports80, perfect, hits, photos, flagWeeks, loveYes, events, diploma, flowers, zones[]` |
+| `today` | Việc đã làm hôm nay: `checkin, classSit, buy, game, zones[], gb, treat, hit, hitCount, flower, loves` |
+| `claimed` | Nhiệm vụ ngày đã nhận thưởng `{day, list[]}` |
+| `achClaimed` | Thành tựu đã nhận |
+| `ledger` | 30 giao dịch ví gần nhất `{at, amount, text}` – mọi thay đổi tiền đi qua `credit()` |
+
+Nhiệm vụ ngày (`DAILY_QUESTS`) mỗi mục có hàm `done(today)`; thành tựu (`ACHIEVEMENTS`) có `stat` + ngưỡng `n`;
+`tierState()` mở cấp sau khi đã nhận ≥ (số thành tựu của cấp − 1). `privateUser()` trả thêm `badge` = số phần
+thưởng đang chờ, để thanh trên hiện chấm đỏ.
+
+Sự kiện chỉ máy khách biết được gửi qua `act`: `zone` (vào khu mới, một lần mỗi khu mỗi phiên), `classSit`
+(ngồi ghế trong lớp; chỉ tính đúng lớp của mình, thầy cô/khách lớp nào cũng được), `hit` (ném trúng bóng nước,
+tối đa 40 lần/ngày), `diploma`. Các sự kiện khác (điểm danh, mua, đãi, viết lưu bút, chơi, đố vui, đăng ảnh,
+đăng ký họp lớp) tự cộng trong handler tương ứng.
+
+### 5.9 Hộp thư: đãi bạn và tỏ tình
+
+```
+B mua ở căng tin (buy {forUid: A})  ──►  inbox A: {kind: 'gift', fromName, icon, item}
+B tỏ tình (love {to: A, line})      ──►  inbox A: {kind: 'love', id, fromName, line}
+A trả lời (loveReply {id, ans})     ──►  inbox B: {kind: 'loveReply', fromName, ans}   (ans = 0 → B.stats.loveYes++)
+Mỗi lượt presence trả kèm inbox của người gọi rồi xoá (nhận một lần).
+```
+
+### 5.10 Trò chơi theo vòng (`minigames.js`)
+
+`runRounds(root, {tip, play, continueOnFail})` dựng khung chung: thẻ giới thiệu vòng → `play(stage, lv, done)` →
+"Qua vòng! ✅ / Trượt rồi!" → kết quả (0–100 điểm, 20 điểm/vòng) → `score` lên máy chủ.
+
+| Trò | Cơ chế | Độ khó theo vòng |
+|---|---|---|
+| ⚽ Sút penalty | Chạm vào khung thành; thủ môn chọn 1 trong 6 ô, đoán trúng ô của mình với xác suất | Thời gian 5 → 2,5 giây; thủ môn đoán đúng 20% → 60%; đá đủ 5 quả |
+| 🏀 Bóng rổ | Thanh lực dao động; chạm khi vạch nằm trong vùng sáng và rổ gần giữa | Cần 2 → 4 quả trong 20 giây; vùng sáng hẹp dần; rổ chạy nhanh, xa hơn |
+| 🧪 Pha chế | Chọn đúng 2 trong 6 lọ cho hiện tượng yêu cầu (12 phản ứng: kết tủa, đổi màu chỉ thị, sủi bọt…) | Mỗi vòng 1 phản ứng; chọn sai vẫn đi tiếp, đếm số đúng |
+| 💣 Dò mìn | Ô đầu tiên luôn an toàn (mìn đặt sau lượt mở đầu), mở lan ô trống, chế độ cắm cờ | 5×5/3 mìn → 8×8/13 mìn |
+| 👩‍🏫 Kiểm tra bài cũ | 2 câu đố môn chuyên của lớp, mỗi câu 5 điểm | – |
+
+### 5.11 Nhân vật phụ, chuông trống, ngày/đêm, âm thanh
+
+- `npcs.js`: NPC `{id, scene, name, sub, look, lines[], update(n, dt), panel}`; `walker(points)` cho đi qua lại giữa
+  các điểm. `World` cập nhật NPC của cảnh hiện tại, cứ 9–21 giây NPC ở gần (≤ 500 px) nói một câu; chạm NPC →
+  `npcSheet` (nói tiếp + hành động theo `panel`: vào nhà hiệu bộ, căng tin, đá cầu, pha chế, kiểm tra bài cũ).
+- Chuông trống: `checkBell()` chạy mỗi 20 giây, so `periodOf()` với lần trước; đổi sang "Ra chơi" hoặc "Tiết …" thì
+  hiện banner + âm thanh. Sáng thứ Hai mở trang thấy banner chào cờ với nút đưa tới đúng hàng ghế lớp mình.
+- Ngày/đêm: `nightLevel()` (0 → 1) theo giờ Việt Nam; `_draw` phủ lớp màu đêm `rgba(14,22,56,0.46·level)` lên
+  cảnh có `lamps`, rồi vẽ quầng sáng đèn bằng `globalCompositeOperation = 'lighter'`; `drawBuilding` thắp cửa sổ.
+  Lớp học không có `lamps` nên luôn sáng. Kiểm thử có thể ép `world.forceNight`.
+- Âm thanh (`sound.js`): bộ dao động + nhiễu Web Audio cho `click, coin, pop, whoosh, splash, drum, bell, win,
+  lose, shutter, heart`; âm lượng nhạc nền gửi `setVolume` cho trình phát YouTube qua `postMessage`; lưu ở
+  `localStorage` (`ctn.sound`).
+- Thẻ ảnh (`cards.js`): giấy chứng nhận 900 × 640 và thiệp tri ân 720 × 900 vẽ bằng canvas; `shareCanvas` dùng
+  Web Share (gửi file) nếu máy hỗ trợ, nếu không thì tải về.
+
 ## 6. Kiến trúc
 
 ```
@@ -282,7 +342,11 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 
 | File | Trách nhiệm |
 |---|---|
-| `main.js` | Khởi động, ghi danh, thanh trên/dưới, vòng đồng bộ, chuyển cảnh, toàn bộ bảng chức năng, nhạc nền, tiếng trống, chọn người ném bóng, ảnh kỷ yếu + album, sổ lưu bút |
+| `main.js` | Khởi động, ghi danh, thanh trên/dưới, vòng đồng bộ, hộp thư, chuông trống, chuyển cảnh, toàn bộ bảng chức năng (nhiệm vụ, ví, online, âm thanh, căng tin, gửi xe, nhà hiệu bộ…), ảnh kỷ yếu + album, sổ lưu bút |
+| `minigames.js` | Khung trò chơi 5 vòng + penalty, bóng rổ, pha chế hóa học, dò mìn, kiểm tra bài cũ |
+| `cards.js` | Giấy chứng nhận, thiệp tri ân dạng ảnh, chia sẻ/tải về |
+| `npcs.js` | Nhân vật phụ sân trường và cô chủ nhiệm từng lớp |
+| `sound.js` | Hiệu ứng âm thanh Web Audio, cài đặt âm lượng |
 | `classroom.js` | Cảnh lớp học: bố cục, vật cản, chỗ ngồi, điểm tương tác, vẽ bàn ghế/bảng đen |
 | `world.js` | `Grid` (lưới va chạm 20 px, A* 8 hướng + làm mượt) theo từng cảnh, `CAMPUS_SCENE`, camera (căn giữa cảnh nhỏ), vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, ngồi ghế, chụp ảnh (`capture`), bản đồ toàn cảnh |
 | `campus.js` | Dữ liệu sơ đồ (mục 3) |
@@ -318,7 +382,11 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `user` | id | `{id, token, code, name, role, khoa, lop, school, look, wallet, points, lastCheckin, quizDay, quizCount, createdAt}` |
 | `tok` | token | id người dùng |
 | `code` | mã khôi phục `CTN-XXXX-XXXX` | id người dùng |
-| `presence` | id | `{id, name, role, khoa, lop, school, look, x, y, zone, scene, sit, sitBack, dir, say, sayAt, throw: {x, y, target, at}, at}` |
+| `presence` | id | `{id, name, role, khoa, lop, school, look, x, y, zone, scene, sit, sitBack, dir, noBalloon, say, sayAt, throw: {x, y, target, at}, at}` |
+| `inbox` | `uid nhận\|thời gian-id` | `{id, kind: gift\|love\|loveReply, from, fromName, …}` – xoá khi đã trả về |
+| `love` | id | `{id, from, fromName, to, toName, line, ans?, at}` |
+| `counter` | `flower\|ngày` | `{n}` – số bó hoa tặng thầy cô trong ngày |
+| `flowerlog` | `thời gian-id` | `{name, khoa, lop, to, at}` |
 | `photo` | `thời gian-id` | `{id, uid, by, khoa, lop, caption, people[], thumb, at}` – ảnh nhỏ cho album |
 | `photofull` | id | `{id, full}` – ảnh lớn, chỉ tải khi xem |
 | `gb` | `phòng\|thời gian-id` | `{id, room, uid, name, role, khoa, lop, body, at}` |
@@ -341,26 +409,35 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `recover` | – | `code` | `{token, user}` |
 | `me` | ✔ | – | `{user}` |
 | `look` | ✔ | `look, name` | `{user}` |
-| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, say?, throw? {x, y, target}` | `{others[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
+| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, noBalloon, say?, throw? {x, y, target}` | `{others[], inbox[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
 | `online` | – | – | `{others[], now}` |
 | `guestbook` | – | `room` | `{items[]}` (100 mới nhất) |
 | `sign` | ✔ | `room, body` (≤ 600 ký tự) | `{item, user}` |
 | `roster` | – | `room` | `{items[]}` |
 | `attend` | ✔ | `room` (`lop:*`) | `{ok}` |
-| `checkin` | ✔ | – | `{already, gained, user}` |
+| `checkin` | ✔ | `transport` (xedap/xemay/oto/bus/dibo) | `{already, gained, bonus, streak, transport, user}` |
 | `menu` | – | – | `{sale, items[]}` |
-| `buy` | ✔ | `item, forName?` | `{item, user}` |
+| `buy` | ✔ | `item, forUid?` (đãi bạn) | `{item, user}` |
 | `purchases` | – | – | `{items[]}` (20 mới nhất) |
 | `events` | – | – | `{items[]}` |
 | `createEvent` | ✔ | `title, date (YYYY-MM-DD), time, place, note` | `{item, user}` |
 | `joinEvent` | ✔ | `id` | `{item, joined, user}` |
-| `quiz` | ✔ | `correct` | `{award, user}` |
+| `quiz` | ✔ | `correct, total` | `{award, user}` |
 | `score` | ✔ | `game, score` | `{best, user}` |
 | `leaderboard` | – | `game` | `{items[]}` (top 20) |
 | `khoaBoard` | – | – | `{khoa[], lop[]}` |
 | `albumPost` | ✔ | `full, thumb` (JPEG data URL), `caption?`, `people[]?` | `{item, user}`; ≤ 5 ảnh/ngày, thân ≤ 400 KB |
 | `album` | – | – | `{items[]}` (60 mới nhất, chỉ ảnh nhỏ) |
 | `photo` | – | `id` | `{id, full}` |
+| `act` | ✔ | `kind` (zone/classSit/hit/diploma), `value` | `{ok, msg, user}` |
+| `quests` | ✔ | – | `{daily[], bonus, tiers[], achievements[], user}` |
+| `claim` | ✔ | `kind` (daily/ach), `id` | `{user}` |
+| `wallet` | ✔ | – | `{wallet, streak, ledger[], user}` |
+| `flag` | ✔ | – | `{fresh, user}`; chỉ sáng thứ Hai |
+| `flower` | ✔ | `to?` | `{fresh, today, user}` |
+| `flowers` | – | – | `{today, recent[]}` |
+| `love` | ✔ | `to, line` | `{ok}`; ≤ 10/ngày |
+| `loveReply` | ✔ | `id, ans` | `{ok}` |
 
 ## 9. Bảo mật và riêng tư
 
@@ -378,7 +455,7 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 
 | Lệnh | Việc |
 |---|---|
-| `npm test` | 9 nhóm kiểm thử nghiệp vụ (`node --test`), gồm presence (cảnh, ngồi, ném bóng nước), album kỷ yếu, thời khoá biểu |
+| `npm test` | 13 nhóm kiểm thử nghiệp vụ (`node --test`): ghi danh, presence (cảnh, ngồi, ném bóng), album, chuỗi điểm danh và ví, nhiệm vụ & thành tựu, hộp thư đãi bạn/tỏ tình, chào cờ, tặng hoa… |
 | `npm run db:init` + `npm run dev` | Worker + D1 cục bộ, `http://localhost:8787` |
 | `npx wrangler dev --ip 0.0.0.0` | Cho điện thoại cùng Wi-Fi truy cập |
 | `npm run static` | Chỉ giao diện, chế độ ngoại tuyến, `http://localhost:8080` |

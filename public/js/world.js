@@ -1,8 +1,19 @@
 // Sân trường: vẽ bản đồ, camera, tìm đường (A* trên lưới), nhân vật mình + người khác.
-import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, SEATS, FLOWERBEDS, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
+import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, SEATS, CHAIR_ROWS, ROOM_DOORS, FLOWERBEDS, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
 import { drawAvatar } from './avatar.js';
 
 const CELL = 20;
+const AV = 1.2; // tỉ lệ nhân vật
+// Mức tối của trời theo giờ Việt Nam: 0 = ban ngày, 1 = đêm
+export function nightLevel(now = Date.now()) {
+  const d = new Date(now + 7 * 3600e3), m = d.getUTCHours() * 60 + d.getUTCMinutes();
+  if (m < 5 * 60) return 1;
+  if (m < 6 * 60) return 1 - (m - 5 * 60) / 60;
+  if (m < 17 * 60 + 30) return 0;
+  if (m < 19 * 60) return (m - (17 * 60 + 30)) / 90;
+  return 1;
+}
+let NIGHT = 0;
 // Logo trường (vẽ trên biển cổng)
 const LOGO = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: 'logo.jpg' }) : null;
 const SPEED = 190; // px/giây
@@ -187,8 +198,11 @@ function drawBuilding(ctx, b) {
     for (let r = 0; r < rows; r++) {
       const ry = fy + 4 + r * rowH;
       if (b.trim) { ctx.fillStyle = b.trim; ctx.fillRect(b.x, ry - 2, b.w, 2); }
-      ctx.fillStyle = b.bands ? '#8C5A3C' : '#7FA7CF';
-      for (let x = b.x + 10; x < b.x + b.w - 14; x += 22) ctx.fillRect(x, ry, 12, Math.max(3, rowH - 4));
+      for (let x = b.x + 10; x < b.x + b.w - 14; x += 22) {
+        const lit = NIGHT > 0.4 && ((x * 7 + r * 13) % 5) < 3;
+        ctx.fillStyle = lit ? '#FFD97A' : b.bands ? '#8C5A3C' : '#7FA7CF';
+        ctx.fillRect(x, ry, 12, Math.max(3, rowH - 4));
+      }
     }
     if (b.bands) { ctx.fillStyle = b.bands; for (const f of [0.18, 0.82]) ctx.fillRect(b.x + b.w * f - 12, fy, 24, depth); }
   }
@@ -298,6 +312,30 @@ function drawFlowerbed(ctx, f) {
   ctx.restore();
 }
 
+// Ghế nhựa chào cờ (nhìn từ phía sau) + biển tên lớp
+function drawChairGroup(ctx, g) {
+  ctx.fillStyle = '#6B7280'; ctx.fillRect(g.x + 4, g.y - 26, 3, 26);
+  ctx.fillStyle = '#8E1F1F'; rr(ctx, g.x - 12, g.y - 42, 34, 17, 3); ctx.fill();
+  ctx.strokeStyle = '#F2B233'; ctx.lineWidth = 1; ctx.strokeRect(g.x - 10, g.y - 40, 30, 13);
+  label(ctx, g.lop, g.x + 5, g.y - 33.5, { size: 8, color: '#FFE08A', weight: 800 });
+  for (let k = 0; k < 4; k++) {
+    const cx = g.x + 30 + k * 24, cy = g.y;
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(cx - 9, cy + 1, 18, 3);
+    ctx.fillStyle = '#9CA3AF'; ctx.fillRect(cx - 8, cy - 4, 2, 6); ctx.fillRect(cx + 6, cy - 4, 2, 6);
+    ctx.fillStyle = k % 2 ? '#2F6FB5' : '#D8343A'; rr(ctx, cx - 9, cy - 9, 18, 6, 2); ctx.fill();
+    ctx.fillStyle = '#F4F4F2'; rr(ctx, cx - 8, cy - 20, 16, 11, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.08)'; ctx.fillRect(cx - 8, cy - 12, 16, 2);
+  }
+}
+
+// Giá sổ lưu bút của trường
+function drawLectern(ctx, x, y) {
+  ctx.fillStyle = '#6B4A2E'; ctx.fillRect(x - 3, y - 24, 6, 24);
+  ctx.fillStyle = '#8A5A35'; rr(ctx, x - 20, y - 40, 40, 18, 3); ctx.fill();
+  ctx.fillStyle = '#FFFDF6'; ctx.fillRect(x - 17, y - 38, 16, 13); ctx.fillRect(x + 1, y - 38, 16, 13);
+  ctx.fillStyle = '#9DB4D6'; for (let i = 0; i < 3; i++) { ctx.fillRect(x - 15, y - 35 + i * 4, 12, 1); ctx.fillRect(x + 3, y - 35 + i * 4, 12, 1); }
+}
+
 function drawLamp(ctx, l) {
   ctx.fillStyle = '#6B7280'; ctx.fillRect(l.x - 2, l.y - 70, 4, 70);
   ctx.fillRect(l.x - 2, l.y - 70, 18, 3);
@@ -395,7 +433,9 @@ export const CAMPUS_SCENE = {
     // tường rào thấp màu kem
     for (const w of WALLS) { ctx.fillStyle = '#E8E1CF'; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(w.x, w.y + w.h - 2, w.w, 2); }
     for (const d of CLASS_DOORS) drawDoor(ctx, d);
+    for (const d of ROOM_DOORS) drawDoor(ctx, d);
   },
+  lamps: LAMPS,
   statics(ctx, now) {
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
@@ -406,6 +446,8 @@ export const CAMPUS_SCENE = {
     items.push({ y: BOARD.y + BOARD.h, draw: () => drawBoard(ctx) });
     items.push({ y: STAGE.y + STAGE.h, draw: () => drawStage(ctx) });
     for (const l of LAMPS) items.push({ y: l.y, draw: () => drawLamp(ctx, l) });
+    for (const g of CHAIR_ROWS) items.push({ y: g.y - 1, draw: () => drawChairGroup(ctx, g) });
+    items.push({ y: 650, draw: () => drawLectern(ctx, 735, 650) });
     items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
     return items;
   },
@@ -430,6 +472,9 @@ export class World {
     this.wet = new Map(); // id ('me' hoặc id người khác) -> ướt đến lúc nào
     this.myId = '';
     this.onWet = () => {};
+    this.onHitOther = () => {};
+    this.onTapNpc = () => {};
+    this.shield = false;
     this.bg = null;
     this.scene = null;
     this.grid = null;
@@ -462,7 +507,7 @@ export class World {
     this.bg = c;
     this.others.clear(); this.fx = []; this.path = []; this.target = null;
     // lớp học: thu nhỏ cho vừa chiều ngang màn hình; ra sân thì về mức bình thường
-    this.zoom = scene.fit ? Math.max(0.4, Math.min(1, this.vw / (scene.w * this.baseZoom))) : 1;
+    this.zoom = scene.fit ? Math.max(0.68, Math.min(1, this.vw / (scene.w * this.baseZoom))) : 1;
     if (this.me && pos) { this.me.x = pos.x; this.me.y = pos.y; this.me.sit = null; this._snapCam(); }
     this.onSceneChange(scene);
   }
@@ -499,6 +544,7 @@ export class World {
   sitOn(seat) {
     const m = this.me;
     m.x = seat.x; m.y = seat.y; m.dir = seat.dir || 1; m.sit = seat; m.moving = false;
+    this.onSit?.(seat);
   }
 
   seatAt(wx, wy) {
@@ -522,6 +568,7 @@ export class World {
       if (p.say && p.sayAt && (!this._saidAt?.[p.id] || this._saidAt[p.id] < p.sayAt)) {
         (this._saidAt ||= {})[p.id] = p.sayAt;
         this.say(p.id, p.say);
+        this.onSay?.(p, p.say);
       }
       if (p.throw && p.throw.at && (!this._threwAt?.[p.id] || this._threwAt[p.id] < p.throw.at)) {
         const first = !this._threwAt?.[p.id];
@@ -562,7 +609,7 @@ export class World {
       const sx = e.clientX - r.left, sy = e.clientY - r.top;
       for (const lr of this.labelRects) {
         if (sx >= lr.x && sx <= lr.x + lr.w && sy >= lr.y && sy <= lr.y + lr.h) {
-          if (lr.player) this.onTapPlayer(lr.player); else this.goToHotspot(lr.h);
+          if (lr.player) this.onTapPlayer(lr.player); else if (lr.npc) this.onTapNpc(lr.npc); else this.goToHotspot(lr.h);
           return;
         }
       }
@@ -615,7 +662,15 @@ export class World {
       if (d > 1) { o.moving = true; const k = Math.min(1, s / d); o.x += dx * k; o.y += dy * k; if (Math.abs(dx) > 1) o.dir = dx > 0 ? 1 : -1; o.back = dy < -Math.abs(dx); }
       else o.moving = false;
     }
-    for (const n of this.npcs) n.update?.(dt, now);
+    for (const n of this.npcs) {
+      if ((n.scene || 'campus') !== this.scene.id) continue;
+      n.update?.(n, dt, now);
+      // thỉnh thoảng NPC nói một câu
+      if (n.lines && now > (n.nextSay ||= now + 3000 + Math.random() * 9000)) {
+        n.nextSay = now + 9000 + Math.random() * 12000;
+        if (this.me && Math.hypot(n.x - this.me.x, n.y - this.me.y) < 500) this.say(n.id, n.lines[Math.floor(Math.random() * n.lines.length)]);
+      }
+    }
 
     // camera bám theo
     const z = this.baseZoom * this.zoom;
@@ -640,6 +695,7 @@ export class World {
 
   _draw(now) {
     const ctx = this.ctx, z = this.baseZoom * this.zoom;
+    NIGHT = this.forceNight ?? nightLevel();
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.fillStyle = this.scene.bgColor; ctx.fillRect(0, 0, this.vw, this.vh);
     ctx.save();
@@ -658,9 +714,9 @@ export class World {
 
     // các vật thể sắp theo chiều y để che khuất đúng
     const items = this.scene.statics(ctx, now);
-    for (const n of this.npcs) if ((n.scene || 'campus') === this.scene.id) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir }); if (n.tag !== false) this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57'); } });
-    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { const osit = o.data.sit && !o.moving; drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: osit ? o.data.dir || 1 : o.dir, back: osit ? o.data.sitBack : o.back, sit: osit }); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
-    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.sit ? m.sit.back : m.back, sit: !!m.sit }); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._wetFx(ctx, 'me', m.x, m.y, now); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
+    for (const n of this.npcs) if ((n.scene || 'campus') === this.scene.id) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir, sit: !!n.sit && !n.moving, scale: AV }); this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57', false, true); this._bubble(ctx, n.id, n.x, n.y, now); } });
+    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { const osit = o.data.sit && !o.moving; drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: osit ? o.data.dir || 1 : o.dir, back: osit ? o.data.sitBack : o.back, sit: osit, scale: AV }); if (o.data.noBalloon) this._shieldFx(ctx, o.x, o.y); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
+    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.sit ? m.sit.back : m.back, sit: !!m.sit, scale: AV }); if (this.shield) this._shieldFx(ctx, m.x, m.y); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._wetFx(ctx, 'me', m.x, m.y, now); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
 
@@ -669,6 +725,18 @@ export class World {
       const k = (now - this.tapFx.t) / 400;
       ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(this.tapFx.x, this.tapFx.y, 6 + k * 16, 3 + k * 8, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    // trời tối: phủ màu đêm, đèn sân trường toả sáng
+    if (NIGHT > 0 && this.scene.lamps) {
+      ctx.fillStyle = `rgba(14,22,56,${0.46 * NIGHT})`;
+      ctx.fillRect(this.cam.x - 50, this.cam.y - 50, this.vw / z + 100, this.vh / z + 100);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (const l of this.scene.lamps) {
+        const g = ctx.createRadialGradient(l.x + 16, l.y - 62, 4, l.x + 16, l.y - 40, 130);
+        g.addColorStop(0, `rgba(255,214,140,${0.55 * NIGHT})`); g.addColorStop(1, 'rgba(255,214,140,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(l.x + 16, l.y - 40, 130, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
     }
     ctx.restore();
 
@@ -689,7 +757,12 @@ export class World {
     // chạm vào người khác
     for (const o of this.others.values()) {
       const sx = (o.x - this.cam.x) * z, sy = (o.y - this.cam.y) * z;
-      this.labelRects.push({ x: sx - 16 * z, y: sy - 56 * z, w: 32 * z, h: 58 * z, player: o.data });
+      this.labelRects.push({ x: sx - 16 * AV * z, y: sy - 58 * AV * z, w: 32 * AV * z, h: 60 * AV * z, player: o.data });
+    }
+    for (const n of this.npcs) {
+      if ((n.scene || 'campus') !== this.scene.id) continue;
+      const sx = (n.x - this.cam.x) * z, sy = (n.y - this.cam.y) * z;
+      this.labelRects.push({ x: sx - 16 * AV * z, y: sy - 58 * AV * z, w: 32 * AV * z, h: 60 * AV * z, npc: n });
     }
   }
 
@@ -760,8 +833,13 @@ export class World {
         if (!f.landed) {
           f.landed = true; f.lx = tx; f.ly = ty;
           if (f.target) {
-            this.wet.set(f.target, now + 4000);
-            if (f.target === 'me' && f.from !== 'me') this.onWet(f.fromName);
+            const shielded = f.target === 'me' ? this.shield : this.others.get(f.target)?.data.noBalloon;
+            if (shielded) { if (f.target === 'me' && f.from !== 'me') this.say('me', '🛡️ Chặn được!'); }
+            else {
+              this.wet.set(f.target, now + 4000);
+              if (f.target === 'me' && f.from !== 'me') this.onWet(f.fromName);
+              if (f.from === 'me' && f.target !== 'me') this.onHitOther(f.target);
+            }
           }
         }
         const s = Math.min(1, (now - f.t0 - f.dur) / 700);
@@ -790,16 +868,17 @@ export class World {
     ctx.fillStyle = 'rgba(79,195,247,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 1, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
   }
 
-  _nameTag(ctx, x, y, name, sub, color, mine = false) {
+  _nameTag(ctx, x, y, name, sub, color, mine = false, npc = false) {
     ctx.font = '700 10px "Be Vietnam Pro", system-ui, sans-serif';
     const w1 = ctx.measureText(name).width;
     ctx.font = '600 8px "Be Vietnam Pro", system-ui, sans-serif';
     const w2 = sub ? ctx.measureText(sub).width : 0;
-    const w = Math.max(w1, w2) + 12, hgt = sub ? 25 : 15, top = y - 58 - hgt;
-    ctx.fillStyle = mine ? '#D8343A' : 'rgba(255,255,255,.94)';
+    const w = Math.max(w1, w2) + 12, hgt = sub ? 25 : 15, top = y - 58 * AV - 2 - hgt;
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; rr(ctx, x - w / 2, top + 1.5, w, hgt, 6); ctx.fill();
+    ctx.fillStyle = mine ? '#2F6FB5' : npc ? '#FFF8E1' : 'rgba(255,255,255,.96)';
     rr(ctx, x - w / 2, top, w, hgt, 6); ctx.fill();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = mine ? '#fff' : color;
+    ctx.fillStyle = mine ? '#fff' : npc ? '#8A5A00' : color;
     ctx.font = '700 10px "Be Vietnam Pro", system-ui, sans-serif';
     ctx.fillText(name, x, top + 8);
     if (sub) { ctx.fillStyle = mine ? 'rgba(255,255,255,.85)' : '#5B6577'; ctx.font = '600 8px "Be Vietnam Pro", system-ui, sans-serif'; ctx.fillText(sub, x, top + 19); }
@@ -812,11 +891,18 @@ export class World {
     ctx.font = '600 11px "Be Vietnam Pro", system-ui, sans-serif';
     const w = Math.min(180, ctx.measureText(b.text).width + 16);
     ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.15)';
-    rr(ctx, x - w / 2, y - 118, w, 24, 10); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x - 5, y - 94); ctx.lineTo(x + 5, y - 94); ctx.lineTo(x, y - 88); ctx.fill();
+    const by = y - 58 * AV - 60;
+    rr(ctx, x - w / 2, by, w, 24, 10); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 5, by + 24); ctx.lineTo(x + 5, by + 24); ctx.lineTo(x, by + 30); ctx.fill();
     ctx.fillStyle = '#1D2433'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     let t = b.text; while (ctx.measureText(t).width > w - 14 && t.length > 1) t = t.slice(0, -2) + '…';
-    ctx.fillText(t, x, y - 106);
+    ctx.fillText(t, x, by + 12);
+  }
+
+  _shieldFx(ctx, x, y) {
+    ctx.strokeStyle = 'rgba(96,165,250,.55)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x, y - 30 * AV, 20 * AV, 36 * AV, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(96,165,250,.08)'; ctx.fill();
   }
 
   // Bản đồ toàn cảnh (trong bảng "Bản đồ trường"); trả về hàm đổi toạ độ màn hình → thế giới

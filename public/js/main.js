@@ -1,9 +1,13 @@
 import { api, getToken, setToken, getMode } from './api.js';
-import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock } from './logic.js';
+import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS } from './logic.js';
 import { World, CAMPUS_SCENE } from './world.js';
 import { classroomScene } from './classroom.js';
 import { SPAWN, HOTSPOTS, PLACES } from './campus.js';
-import { avatarCanvas, SKINS, HAIR_COLORS, HAIR_NAMES, BAG_COLORS } from './avatar.js';
+import { avatarCanvas, SKINS, HAIR_COLORS, HAIR_NAMES, BAG_COLORS, OUTFITS, SHIRT_COLORS } from './avatar.js';
+import { MINIGAMES, oldLesson } from './minigames.js';
+import { drawDiploma, drawThanksCard, shareCanvas, DIPLOMA_QUOTES } from './cards.js';
+import { sfx, settings as soundSettings, saveSettings } from './sound.js';
+import { campusNpcs, classNpcs } from './npcs.js';
 import { h, openSheet, closeSheet, toast, money, ago, tabs } from './ui.js';
 import { startDaCau, QUIZ } from './games.js';
 
@@ -164,7 +168,10 @@ function avatarEditor(look, onChange = () => {}) {
   const el = h('div', { class: 'editor' }, preview,
     h('div', { class: 'opt-list' },
       row('Dáng', [['nam', 'Nam'], ['nu', 'Nữ']], 'gender'),
-      row('Đồng phục', [['quan', 'Quần âu'], ['vay', 'Chân váy']], 'bottom'),
+      row('Trang phục', OUTFITS, 'outfit'),
+      row('Màu áo lớp', SHIRT_COLORS.map((c, i) => [i, c, true]), 'color'),
+      row('Quần / váy', [['quan', 'Quần âu'], ['vay', 'Chân váy']], 'bottom'),
+      row('Khăn quàng đỏ', [[false, 'Không'], [true, 'Có']], 'scarf'),
       row('Kiểu tóc', HAIR_NAMES.map((n, i) => [i, n]), 'hair'),
       row('Màu tóc', HAIR_COLORS.map((c, i) => [i, c, true]), 'hairColor'),
       row('Màu da', SKINS.map((c, i) => [i, c, true]), 'skin'),
@@ -181,10 +188,11 @@ const music = {
   playing: false,
   frame: null,
   box: null,
-  button: h('button', { class: 'music-btn', 'aria-label': 'Phát bài ca truyền thống', title: MUSIC.title, onclick: () => music.toggle() }, '🎵'),
-  cmd(func) {
-    try { this.frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args: [] }), '*'); } catch { /* */ }
+  button: h('button', { class: 'music-btn', 'aria-label': 'Âm thanh: nhạc nền và hiệu ứng', title: 'Âm thanh', onclick: () => soundSheet() }, '🎵'),
+  cmd(func, args = []) {
+    try { this.frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*'); } catch { /* */ }
   },
+  volume(v) { this.cmd('setVolume', [v]); },
   open() {
     const id = MUSIC.youtubeId;
     this.frame = h('iframe', {
@@ -198,6 +206,7 @@ const music = {
       this.frame,
       h('a', { href: `https://www.youtube.com/watch?v=${id}`, target: '_blank', rel: 'noopener' }, 'Không nghe được? Mở trên YouTube ↗'));
     document.body.append(this.box);
+    this.frame.addEventListener('load', () => setTimeout(() => this.volume(soundSettings.music), 800));
     this.playing = true;
   },
   close() { this.box?.remove(); this.box = this.frame = null; this.playing = false; this.sync(); },
@@ -217,7 +226,19 @@ function enterSchool() {
   const canvas = h('canvas', { id: 'world', 'aria-label': 'Sơ đồ sân trường. Chạm để di chuyển, chạm nhãn để mở.' });
   const zoneEl = h('b', {}, 'Sân trường');
   const clockEl = h('small', {});
-  const online = h('span', { class: 'online-pill', title: 'Đang online' }, h('i', {}), h('span', {}, '1'));
+  const online = h('button', { class: 'online-pill', title: 'Ai đang online', onclick: () => onlineSheet() }, h('i', {}), h('span', {}, '1'));
+  const feed = h('div', { class: 'chat-feed', 'aria-live': 'polite' });
+  addFeed = (name, text, mine = false) => {
+    const row = h('div', { class: 'feed-row' + (mine ? ' mine' : '') }, h('b', {}, name + ': '), text);
+    feed.append(row);
+    while (feed.children.length > 4) feed.firstChild.remove();
+    setTimeout(() => { row.classList.add('fade'); setTimeout(() => row.remove(), 600); }, 9000);
+  };
+  const shieldBtn = h('button', { class: 'fab balloon shield', 'aria-label': 'Tạm không chơi bóng nước', 'aria-pressed': 'false', title: 'Bật khiên: không ai ném bóng nước trúng bạn', onclick: () => {
+    world.shield = !world.shield;
+    shieldBtn.classList.toggle('on', world.shield); shieldBtn.setAttribute('aria-pressed', String(world.shield));
+    toast(world.shield ? '🛡️ Đã bật khiên: tạm không chơi bóng nước' : '🎈 Đã tắt khiên, sẵn sàng chơi bóng nước!');
+  } }, '🛡️');
   const right = h('div', { class: 'hud-right' });
   const chatInput = h('input', { class: 'chat-input', maxlength: 80, 'aria-label': 'Trò chuyện' });
   const sendBtn = h('button', { class: 'chat-send', 'aria-label': 'Gửi' }, '➤');
@@ -228,7 +249,10 @@ function enterSchool() {
       getMode() === 'offline' ? h('span', { class: 'chip warn', title: 'Dữ liệu chỉ lưu trên máy này' }, 'Ngoại tuyến') : null,
       me.guest
         ? h('button', { class: 'hud-btn', onclick: () => createFlow() }, 'Ghi danh')
-        : [h('span', { class: 'chip' }, '💰 ' + money(me.wallet)), h('button', { class: 'hud-avatar', 'aria-label': 'Nhân vật của tôi', onclick: () => moreSheet() }, avatarCanvas(me.look, 34))]].flat().filter(Boolean));
+        : [
+          h('button', { class: 'hud-icon', 'aria-label': `Nhiệm vụ${me.badge ? `: ${me.badge} phần thưởng chờ nhận` : ''}`, onclick: () => questSheet() }, '📜', me.badge ? h('i', { class: 'badge' }, String(me.badge)) : null),
+          h('button', { class: 'chip wallet', 'aria-label': 'Ví ăn vặt: ' + money(me.wallet), onclick: () => walletSheet() }, '💰 ', h('span', { class: 'long' }, money(me.wallet)), h('span', { class: 'short' }, shortMoney(me.wallet))),
+          h('button', { class: 'hud-avatar', 'aria-label': 'Nhân vật của bạn', onclick: () => moreSheet() }, avatarCanvas(me.look, 34))]].flat().filter(Boolean));
     chatInput.placeholder = me.guest ? 'Ghi danh để trò chuyện tự do' : 'Nhắn gì đó…';
   };
 
@@ -251,8 +275,11 @@ function enterSchool() {
     h('div', { class: 'fabs' },
       h('button', { class: 'fab balloon', 'aria-label': 'Chụp ảnh kỷ yếu', title: 'Chụp ảnh kỷ yếu', onclick: () => panels.photo() }, '📸'),
       h('button', { class: 'fab balloon', 'aria-label': 'Ném bóng nước', title: 'Chọn bạn để ném bóng nước', onclick: () => balloonPicker() }, '🎈'),
+      shieldBtn,
       h('button', { class: 'fab', 'aria-label': 'Phóng to', onclick: () => world.zoomBy(1.2) }, '+'),
       h('button', { class: 'fab', 'aria-label': 'Thu nhỏ', onclick: () => world.zoomBy(1 / 1.2) }, '−')),
+    feed,
+    h('div', { id: 'banner', class: 'banner', hidden: true }),
     h('footer', { class: 'chatbar' },
       h('div', { class: 'quick-row' },
         ...QUICK.map((q) => h('button', { class: 'pill', onclick: () => send(q) }, q)),
@@ -265,24 +292,28 @@ function enterSchool() {
   world = new World(canvas);
   world.setMe({ ...loadPos(), look: me.look, name: me.name, sub: '' });
   world.me.sub = world.subOf(me);
-  world.npcs = makeNpcs();
+  world.npcs = campusNpcs();
   world.onArrive = (hs) => openHotspot(hs);
   world.onTapPlayer = (p) => playerCard(p);
+  world.onTapNpc = (n) => npcSheet(n);
+  world.onSay = (p, text) => addFeed(p.name, text);
+  world.onSit = (seat) => onSit(seat);
+  world.onHitOther = (id) => { sfx.splash(); if (!me.guest) call('act', { kind: 'hit', value: id }).then((r) => setMe(r.user)).catch(() => {}); };
   world.myId = me.id || '';
   world.onSceneChange = (scene) => {
     zoneEl.textContent = scene.id === 'campus' ? (ZONES[world.zoneOf(world.me.x, world.me.y)] || 'Sân trường') : scene.name;
     canvas.setAttribute('aria-label', scene.id === 'campus' ? 'Sơ đồ sân trường' : scene.name);
   };
-  world.onWet = (fromName) => { toast(`💦 ${fromName || 'Ai đó'} vừa ném bóng nước trúng bạn!`); world.say('me', 'Ướt hết rồi! 💦'); };
+  world.onWet = (fromName) => { sfx.splash(); toast(`💦 ${fromName || 'Ai đó'} vừa ném bóng nước trúng bạn!`); world.say('me', 'Ướt hết rồi! 💦'); };
   world.start();
-  if (new URLSearchParams(location.search).has('debug')) window.ctnWorld = world; // dùng cho kiểm thử tự động
+  if (new URLSearchParams(location.search).has('debug')) { window.ctnWorld = world; window.ctnDebug = { panels, gameSheet, questSheet, walletSheet, onlineSheet, npcSheet }; } // dùng cho kiểm thử tự động
   hud.update();
   updateClock();
   setInterval(updateClock, 15000);
 
   let lastZone = '';
   let pendingSay = null;
-  sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); };
+  sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); addFeed(me.name, t, true); };
   let pendingThrow = null;
   let lastThrow = 0;
   // Ném bóng nước vào người được chọn (targetId), hoặc ra phía trước nếu không chọn ai
@@ -297,6 +328,7 @@ function enterSchool() {
     m.sit = null;
     if (o) m.dir = o.x >= m.x ? 1 : -1;
     world.throwBalloon({ fx: m.x, fy: m.y, tx: t.x, ty: t.y, target: o ? targetId : null });
+    sfx.whoosh();
     if (o) toast(`🎈 Ném vào ${o.data.name}!`);
     if (!me.guest) pendingThrow = t;
   };
@@ -304,34 +336,34 @@ function enterSchool() {
     const pos = { x: Math.round(world.me.x), y: Math.round(world.me.y) };
     const zone = world.zoneOf(pos.x, pos.y);
     if (zone !== lastZone) { lastZone = zone; zoneEl.textContent = world.scene.id === 'campus' ? ZONES[zone] || 'Sân trường' : world.scene.name; }
+    visitZone(zone.startsWith('lop:') ? 'lop' : zone);
     try {
       let r;
       if (me.guest) r = await api('online');
       else {
         const sit = world.me.sit;
-        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1 };
+        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1, noBalloon: world.shield };
         if (pendingSay) { body.say = pendingSay; pendingSay = null; }
         if (pendingThrow) { body.throw = pendingThrow; pendingThrow = null; }
         r = await api('presence', body);
       }
       // chỉ hiện những người cùng cảnh (cùng sân trường, hoặc cùng trong một lớp)
       world.updateOthers(r.others.filter((p) => (p.scene || 'campus') === world.scene.id));
-      online.lastChild.textContent = String(r.others.length + (me.guest ? 0 : 1));
+      lastOnline = r.others;
+      const here = r.others.filter((p) => (p.scene || 'campus') === world.scene.id).length + (me.guest ? 0 : 1);
+      online.lastChild.textContent = String(here);
+      online.title = `${here} người ở khu này · ${r.others.length + (me.guest ? 0 : 1)} người cả trường. Bấm để xem`;
+      for (const it of r.inbox || []) handleInbox(it);
       if (!tick.done) { tick.done = true; hud.update(); }
     } catch { /* thử lại lượt sau */ }
     if (world.scene.id === 'campus') savePos();
   };
   tick();
   setInterval(tick, 2500);
+  setInterval(checkBell, 20000);
+  checkBell(true);
   setInterval(() => { if (world.scene.id !== 'campus') return; const z = world.zoneOf(world.me.x, world.me.y); if (z !== lastZone) { lastZone = z; zoneEl.textContent = ZONES[z] || 'Sân trường'; } }, 400);
   window.addEventListener('beforeunload', () => { if (world.scene.id === 'campus') savePos(); });
-}
-
-function makeNpcs() {
-  const guard = { tag: false, name: 'Bác bảo vệ', sub: 'Cổng trường', x: 1165, y: 1165, look: { gender: 'nam', skin: 2, hair: 4, hairColor: 4, bottom: 'quan', bag: 0 }, dir: -1, moving: false };
-  const cook = { name: 'Cô căng tin', sub: 'Căng tin', x: 1884, y: 745, look: { gender: 'nu', skin: 1, hair: 2, hairColor: 1, bottom: 'vay', bag: 3 }, dir: 1, moving: false };
-  cook.update = (dt, now) => { const nx = 1890 + Math.sin(now / 3000) * 40; cook.moving = Math.abs(nx - cook.x) > 0.05; cook.dir = nx > cook.x ? 1 : -1; cook.x = nx; };
-  return [guard, cook];
 }
 
 // Đang trong lớp thì ra sân trước, đứng ở cửa lớp
@@ -340,6 +372,7 @@ function backToCampus() {
   world.setScene(CAMPUS_SCENE, classReturn || SPAWN);
 }
 let classReturn = null;
+let canteenFriend = null;
 
 function mapSheet() {
   openSheet('Bản đồ trường', (b, { onCleanup }) => {
@@ -363,6 +396,7 @@ function mapSheet() {
   }, { wide: true });
 }
 
+function shortMoney(v) { v = v || 0; return v >= 1e6 ? (v / 1e6).toFixed(1).replace('.0', '') + 'tr' : v >= 1000 ? Math.floor(v / 1000) + 'k' : v + 'đ'; }
 function sayPrompt() {}
 let throwBalloon = () => {};
 
@@ -390,6 +424,9 @@ function playerCard(p) {
         h('button', { class: 'btn ghost', onclick: () => { closeSheet(); throwBalloon(p.id); } }, '🎈 Ném bóng nước')),
       h('div', { class: 'row-btns' },
         h('button', { class: 'btn ghost', onclick: () => bookSheet({ id: p.id, name: p.name }) }, '✍️ Viết sổ lưu bút'),
+        h('button', { class: 'btn ghost', onclick: () => loveSheet(p) }, '💌 Tỏ tình')),
+      h('div', { class: 'row-btns' },
+        h('button', { class: 'btn ghost', onclick: () => { if (!needMe()) return; canteenFriend = p.id; closeSheet(); panels.canteen(); } }, '🍜 Đãi bạn'),
         h('button', { class: 'btn primary', onclick: () => { closeSheet(); const o = world.others.get(p.id); world.walkTo((o ? o.x : p.x) + 30, o ? o.y : p.y); } }, 'Đi tới')));
   });
 }
@@ -465,49 +502,77 @@ const panels = {
   },
 
   async parking() {
-    openSheet('Nhà xe học sinh', async (b) => {
-      b.append(h('p', {}, 'Mỗi ngày gửi xe là một lần điểm danh. Bố mẹ cho 20k ăn vặt!'));
+    openSheet('🛵 Gửi xe · điểm danh', async (b) => {
+      b.append(h('p', {}, 'Mỗi ngày đến trường là một lần điểm danh: bố mẹ cho 20k ăn vặt, đi học đều 5 ngày liền được thưởng thêm.'));
       if (me.guest) { b.append(h('button', { class: 'btn primary', onclick: () => createFlow() }, 'Ghi danh để điểm danh')); return; }
       const out = h('div', {});
-      b.append(out);
-      try {
-        const r = await call('checkin');
-        setMe(r.user);
-        out.append(r.already
-          ? h('p', { class: 'ok' }, 'Hôm nay bạn đã điểm danh rồi. Mai quay lại nhé!')
-          : h('p', { class: 'ok big' }, `✅ Đã điểm danh · +${money(r.gained)} · +2 điểm thi đua`));
-        out.append(h('p', { class: 'muted' }, 'Trong ví: ' + money(me.wallet)));
-      } catch (e) { out.append(h('p', { class: 'err' }, e.message)); }
+      const ticket = (r) => h('div', { class: 'ticket' },
+        h('div', { class: 'ticket-head' }, '🎫 VÉ XE HÔM NAY'),
+        h('div', { class: 'ticket-body' }, h('span', { class: 'ticket-ico' }, TRANSPORTS[r.transport || me.transport]?.icon || '🚲'),
+          h('div', {}, h('b', {}, me.name), h('small', {}, [TRANSPORTS[r.transport || me.transport]?.name, describe(me)].filter(Boolean).join(' · ')))),
+        h('div', { class: 'ticket-foot' }, `🔥 Chuỗi đi học: ${r.streak ?? me.streak} ngày`));
+      if (me.lastCheckin && me.lastCheckin === new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10)) {
+        out.append(ticket({}), h('p', { class: 'ok' }, 'Hôm nay bạn đã điểm danh rồi. Mai quay lại nhé!'));
+        b.append(out); return;
+      }
+      b.append(h('h3', {}, 'Hôm nay bạn đến trường bằng gì?'),
+        h('div', { class: 'transport' }, ...Object.entries(TRANSPORTS).map(([k, t]) => h('button', { class: 'place', onclick: async () => {
+          try {
+            const r = await call('checkin', { transport: k });
+            setMe(r.user);
+            if (r.already) { out.replaceChildren(ticket(r), h('p', { class: 'ok' }, 'Hôm nay bạn đã điểm danh rồi.')); return; }
+            sfx.coin();
+            out.replaceChildren(ticket(r),
+              h('p', { class: 'ok big' }, `👪 Bố mẹ cho ${money(r.gained)} ăn vặt hôm nay!`),
+              r.bonus ? h('p', { class: 'ok' }, `🔥 Đi học đều ${r.streak} ngày: thưởng thêm ${money(r.bonus)}!`) : null,
+              h('p', { class: 'muted' }, k === 'bus' ? '🚌 Xe bus miễn phí! ' : k === 'dibo' ? '🚶 Đi bộ cho khỏe! ' : '', 'Trong ví: ' + money(me.wallet)));
+            world.say('me', `${t.icon} Đến trường rồi!`);
+          } catch (e) { out.replaceChildren(h('p', { class: 'err' }, e.message)); }
+        } }, h('span', {}, t.icon), t.name))), out);
     });
   },
 
   board() {
-    openSheet('Bảng thi đua', (b) => {
-      b.append(h('p', { class: 'muted' }, 'Điểm thi đua: điểm danh +2, viết lưu bút +5, tạo/đăng ký họp lớp +3, đố vui đúng +1.'));
+    openSheet('🏆 Bảng thi đua', (b) => {
+      b.append(h('p', { class: 'muted' }, 'Điểm thi đua: điểm danh, ngồi vào lớp mình, chào cờ, viết lưu bút, chơi trò chơi, đãi bạn, nhận thành tựu…' + (me.guest ? '' : ` Bạn đang có ${me.points} điểm.`)));
+      const gameBoard = async (c, id) => {
+        const r = await call('leaderboard', { game: id });
+        return rankList(r.items.map((x) => ({ name: x.name, sub: `${x.lop || ''} ${x.khoa || ''}`, val: `${x.score} ${GAMES[id].unit}` })), 'Chưa ai chơi.');
+      };
       b.append(tabs([
-        { label: 'Theo khóa', render: async (c) => {
-          c.append(h('p', { class: 'muted' }, 'Đang tải…'));
+        { label: 'Cá nhân', render: async (c) => {
           const r = await call('khoaBoard');
-          c.replaceChildren(rankList(r.khoa.map((x) => ({ name: x.khoa, sub: x.members + ' người', val: x.points })), 'Chưa có khóa nào. Mời bạn cùng khóa vào chơi!'));
+          c.append(rankList(r.people.map((x) => ({ name: x.name, sub: x.khoa ? `${x.lop} ${x.khoa}` : ROLES[x.role], val: x.points })), 'Chưa có ai.'));
         } },
-        { label: 'Theo lớp chuyên', render: async (c) => {
+        { label: 'Theo khóa', render: async (c) => {
+          const r = await call('khoaBoard');
+          c.append(rankList(r.khoa.map((x) => ({ name: x.khoa, sub: x.members + ' người', val: x.points })), 'Chưa có khóa nào. Mời bạn cùng khóa vào chơi!'));
+        } },
+        { label: 'Lớp chuyên', render: async (c) => {
           const r = await call('khoaBoard');
           c.append(rankList(r.lop.map((x) => ({ name: 'Chuyên ' + x.lop, sub: x.members + ' người', val: x.points })), 'Chưa có dữ liệu.'));
         } },
-        { label: 'Đá cầu', render: async (c) => {
-          const r = await call('leaderboard', { game: 'dacau' });
-          c.append(rankList(r.items.map((x) => ({ name: x.name, sub: `${x.lop || ''} ${x.khoa || ''}`, val: x.score + ' quả' })), 'Chưa ai đá cầu.'));
+        { label: 'Trò chơi', render: (c) => {
+          const out = h('div', {});
+          const ids = ['dacau', 'penalty', 'bongro', 'hoahoc', 'domin', 'baicu'];
+          const chips = h('div', { class: 'quick' }, ...ids.map((id) => h('button', { class: 'pill', onclick: async (e) => {
+            chips.querySelectorAll('.pill').forEach((x) => x.classList.remove('on')); e.currentTarget.classList.add('on');
+            out.replaceChildren(await gameBoard(out, id));
+          } }, GAMES[id].icon + ' ' + GAMES[id].name)));
+          c.append(chips, out);
+          chips.firstChild.click();
         } },
       ]));
     });
   },
 
   office() {
-    openSheet('Nhà hiệu bộ', (b) => {
+    openSheet('🏛️ Nhà hiệu bộ', (b) => {
       b.append(tabs([
-        { label: '📅 Lịch họp lớp', render: (c) => eventsView(c) },
-        { label: '💌 Tri ân thầy cô', render: (c) => { c.append(h('p', { class: 'muted' }, 'Gửi lời tri ân tới thầy cô đã dạy mình.')); guestbook(c, 'trian', { placeholder: 'Em gửi lời cảm ơn thầy/cô…' }); } },
-      ]));
+        { label: '📅 Họp lớp', render: (c) => eventsView(c) },
+        { label: '💐 Tri ân', render: (c) => thanksView(c) },
+        { label: '🎓 Phòng cấp bằng', render: (c) => diplomaView(c) },
+      ], isTeachersDay() ? 1 : 0));
     }, { wide: true });
   },
 
@@ -540,7 +605,7 @@ const panels = {
           h('h3', {}, club.icon + ' ' + club.name), h('p', { class: 'muted' }, club.desc));
         guestbook(b, 'clb:' + club.id, { placeholder: 'Nhắn gì đó cho CLB…' });
       };
-      const intro = h('p', { class: 'muted' }, 'Mỗi CLB một gian. Chọn để vào gian CLB.');
+      const intro = h('div', {}, h('button', { class: 'btn primary', onclick: () => gameSheet('bongro') }, '🏀 Ra sân bóng rổ trong nhà'), h('p', { class: 'muted' }, 'Mỗi CLB một gian. Chọn để vào gian CLB.'));
       listEl.append(...CLUBS.map((c) => h('button', { class: 'place', onclick: () => show(c) }, h('span', {}, c.icon), c.name)));
       b.append(intro, listEl);
     });
@@ -550,9 +615,14 @@ const panels = {
     openSheet('Căng tin', async (b) => {
       const head = h('div', {});
       const list = h('div', { class: 'menu' });
-      const forInp = h('input', { class: 'input', placeholder: 'Đãi bạn nào? (không bắt buộc)', maxlength: 40, 'aria-label': 'Đãi bạn' });
+      const friends = friendsHere();
+      const forInp = h('select', { class: 'input', 'aria-label': 'Đãi bạn' }, h('option', { value: '' }, 'Mua cho mình'),
+        ...friends.map((f) => h('option', { value: f.id, selected: f.id === canteenFriend }, `🤝 Đãi ${f.name}${f.khoa ? ' (' + [f.lop, f.khoa].filter(Boolean).join(' ') + ')' : ''}`)));
+      canteenFriend = null;
+      if (!friends.length) forInp.disabled = true;
+      const friendName = () => friends.find((f) => f.id === forInp.value)?.name || '';
       const feed = h('div', { class: 'feed' });
-      b.append(head, forInp, list, h('h3', {}, 'Vừa mua'), feed);
+      b.append(head, h('label', { class: 'lbl' }, friends.length ? 'Đãi một bạn đang ở gần' : 'Đãi bạn: chưa có ai online ở gần'), forInp, list, h('h3', {}, 'Vừa mua'), feed);
       const loadFeed = async () => {
         const r = await call('purchases');
         feed.replaceChildren(...(r.items.length ? r.items.map((x) => h('div', { class: 'feed-item' }, `${x.emoji} ${x.name} mua ${x.item}${x.forName ? ' đãi ' + x.forName : ''} · ${ago(x.at)}`)) : [h('p', { class: 'muted' }, 'Chưa ai mua gì.')]));
@@ -561,11 +631,12 @@ const panels = {
       head.replaceChildren(h('p', {}, 'Trong ví: ', h('b', {}, money(me.wallet))), r.sale ? h('p', { class: 'ok' }, '🎉 Đang giờ ra chơi: giảm 20%!') : h('p', { class: 'muted' }, `Đúng giờ ra chơi thật (${BREAK_TEXT}) được giảm 20%.`));
       list.append(...r.items.map((m) => h('button', { class: 'menu-item', onclick: async () => {
         try {
-          const x = await call('buy', { item: m.id, forName: forInp.value });
-          setMe(x.user);
+          const fn = friendName();
+          const x = await call('buy', { item: m.id, forUid: forInp.value || undefined });
+          setMe(x.user); sfx.coin();
           head.querySelector('b').textContent = money(me.wallet);
-          toast(`${m.emoji} Đã mua ${m.name}${forInp.value ? ' đãi ' + forInp.value : ''}`);
-          sayPrompt.send?.(`${m.emoji} ${forInp.value ? 'Đãi ' + forInp.value + ' ' : 'Ăn '}${m.name.toLowerCase()}!`);
+          toast(fn ? `🤝 Đã đãi ${fn} ${m.emoji} ${m.name}!` : `${m.emoji} Bạn đã mua ${m.name}. Ngon quá!`);
+          sayPrompt.send?.(`${m.emoji} ${fn ? 'Đãi ' + fn + ' ' : 'Ăn '}${m.name.toLowerCase()}!`);
           loadFeed();
         } catch (e) { toast(e.message, 'bad'); }
       } }, h('span', { class: 'emoji' }, m.emoji), h('span', {}, m.name), h('b', {}, money(m.final), m.final !== m.price ? h('s', {}, money(m.price)) : null))));
@@ -574,7 +645,7 @@ const panels = {
   },
 
   football() {
-    openSheet('Sân bóng · Đá cầu', (b, { onCleanup }) => {
+    openSheet('🏸 Sân đá cầu', (b, { onCleanup }) => {
       const cv = h('canvas', { class: 'game' });
       const info = h('p', { class: 'muted' }, 'Chạm vào quả cầu để tâng. Đừng để rơi!');
       const again = h('button', { class: 'btn primary', hidden: true }, 'Chơi lại');
@@ -616,16 +687,28 @@ const panels = {
   },
 
   stage() {
-    openSheet('Sân khấu · Chào cờ', (b) => {
-      b.append(h('div', { class: 'hero-sign' }, 'HIỀN TÀI LÀ NGUYÊN KHÍ CỦA QUỐC GIA'),
-        h('p', { class: 'muted' }, 'Sáng thứ Hai chào cờ, văn nghệ 20/11, 26/3… Kể lại một tiết mục, một lần lên sân khấu nhớ đời.'));
+    openSheet('🎤 Sân khấu · Chào cờ', (b) => {
+      b.append(h('div', { class: 'hero-sign' }, 'HIỀN TÀI LÀ NGUYÊN KHÍ CỦA QUỐC GIA'));
+      if (isTeachersDay()) {
+        const years = new Date().getFullYear() - 1982;
+        b.append(h('div', { class: 'card td' },
+          h('h3', {}, `💐 Lễ kỷ niệm ${years} năm Ngày Nhà giáo Việt Nam 20/11`),
+          h('p', { class: 'speech' }, 'Kính thưa các thầy cô giáo, các thế hệ học sinh thân mến! Hôm nay chúng ta cùng về mái trường Chuyên Thái Nguyên để tri ân những người lái đò thầm lặng…'),
+          h('button', { class: 'btn primary', onclick: () => { closeSheet(); panels.office(); } }, '💐 Tặng hoa tri ân thầy cô')));
+      }
+      b.append(h('div', { class: 'card' },
+        h('h3', {}, '🇻🇳 Chào cờ sáng thứ Hai'),
+        h('p', { class: 'muted' }, 'Sáng thứ Hai (trước 12 giờ trưa), ngồi vào hàng ghế của lớp mình trước sân khấu để điểm danh chào cờ: +20 điểm thi đua, +10.000đ.'),
+        h('button', { class: 'btn ghost', onclick: goToFlagSeat }, `🪑 Tới hàng ghế lớp ${LOPS.includes(me.lop) ? me.lop : 'Toán'}`)),
+        h('h3', {}, '✍️ Kỷ niệm sân khấu'));
       guestbook(b, 'san-khau', { placeholder: 'Kỷ niệm trên sân khấu…' });
     });
   },
 
   tronhoc() {
     openSheet('Chỗ trốn học đá bóng', (b) => {
-      b.append(h('p', { class: 'speech' }, 'Góc sau dãy 3 tầng, khuất tầm nhìn của thầy giám thị. Ai từng trốn tiết ra đây đá bóng thì tự thú đi!'));
+      b.append(h('p', { class: 'speech' }, 'Góc sau dãy 3 tầng, khuất tầm nhìn của thầy giám thị. Ai từng trốn tiết ra đây đá bóng thì tự thú đi!'),
+        h('button', { class: 'btn primary', onclick: () => gameSheet('penalty') }, '⚽ Sút penalty 5 quả'), h('h3', {}, '✍️ Tự thú'));
       guestbook(b, 'tronhoc', { placeholder: 'Tự thú: tôi đã trốn tiết…' });
     });
   },
@@ -636,7 +719,7 @@ const panels = {
       b.append(
         h('p', { class: 'speech' }, `Bây giờ là ${vnClock(now)} · ${periodOf(now).label}. Ba hồi trống là vào học, một hồi là ra chơi – ai đi muộn là nghe thấy từ ngoài cổng.`),
         h('button', { class: 'btn primary big', onclick: () => {
-          beatDrum();
+          sfx.drum(3);
           if (!me.guest) sayPrompt.send?.('🥁 Tùng! Tùng! Tùng!'); else world.say('me', '🥁 Tùng! Tùng! Tùng!');
         } }, '🥁 Đánh trống'));
     });
@@ -660,6 +743,31 @@ const panels = {
     });
   },
 
+  lab() {
+    openSheet('🧪 Phòng thí nghiệm', (b) => {
+      b.append(h('p', { class: 'speech' }, 'Thầy Minh: "Đeo kính bảo hộ vào các em! Rót axit vào nước, không làm ngược lại!"'),
+        h('button', { class: 'btn primary', onclick: () => gameSheet('hoahoc') }, '🧪 Pha chế hóa học 5 vòng'), h('h3', {}, '✍️ Kỷ niệm phòng thí nghiệm'));
+      guestbook(b, 'phong-tn', { placeholder: 'Lần thí nghiệm nhớ đời…' });
+    });
+  },
+
+  computer() {
+    openSheet('💻 Phòng máy', (b) => {
+      b.append(h('p', { class: 'muted' }, 'Những giờ Tin học với máy tính màn hình to, giờ ra chơi lén chơi dò mìn…'),
+        h('button', { class: 'btn primary', onclick: () => gameSheet('domin') }, '💣 Dò mìn 5 vòng'), h('h3', {}, '✍️ Kỷ niệm phòng máy'));
+      guestbook(b, 'phong-may', { placeholder: 'Kỷ niệm giờ Tin học…' });
+    });
+  },
+
+  library() {
+    openSheet('📚 Thư viện', (b) => {
+      b.append(h('p', { class: 'muted' }, 'Góc giới thiệu sách hay: cuốn sách nào đã theo bạn suốt thời Chuyên?'));
+      guestbook(b, 'thu-vien', { placeholder: 'Tên sách – vì sao bạn thích…', empty: 'Chưa ai giới thiệu sách. Bạn mở hàng nhé!' });
+    });
+  },
+
+  schoolbook() { bookSheet({ id: 'truong', name: 'Trường THPT Chuyên Thái Nguyên' }); },
+
   mirror() {
     if (!needMe()) return;
     openSheet('Soi gương · Đổi kiểu', (b) => {
@@ -675,7 +783,9 @@ const panels = {
 
   enterClass(hs) {
     classReturn = { x: hs.x, y: hs.y };
+    world.npcs = [...world.npcs.filter((n) => n.scene === 'campus'), ...classNpcs(hs.lop)];
     world.setScene(classroomScene(hs.lop), classroomScene(hs.lop).spawn);
+    sfx.click();
     toast(`Vào lớp chuyên ${hs.lop}. Chạm ghế để ngồi, chạm bảng đen để đố vui.`);
   },
 
@@ -719,11 +829,11 @@ function balloonPicker() {
     if (!list.length) b.append(h('p', { class: 'muted' }, world.scene.id === 'campus' ? 'Chưa có ai online ở sân trường. Rủ bạn vào chơi nhé!' : 'Trong lớp chưa có ai khác.'));
     else b.append(h('p', { class: 'muted' }, 'Chọn một bạn đang online. Bạn ở xa quá thì lại gần hơn để ném trúng.'));
     b.append(h('div', { class: 'pick-list' }, ...list.map(({ id, o, d }) => {
-      const far = d > 700;
-      return h('button', { class: 'pick', disabled: far, onclick: () => { closeSheet(); throwBalloon(id); } },
+      const far = d > 700, shield = !!o.data.noBalloon;
+      return h('button', { class: 'pick', disabled: far || shield, onclick: () => { closeSheet(); throwBalloon(id); } },
         avatarCanvas(o.data.look, 44),
-        h('span', { class: 'pick-info' }, h('b', {}, o.data.name), h('small', {}, [world.subOf(o.data), far ? 'xa quá, lại gần hơn' : `cách ${Math.max(1, Math.round(d / 20))} bước`].filter(Boolean).join(' · '))),
-        h('span', { class: 'pick-go', 'aria-hidden': 'true' }, far ? '🚶' : '🎈'));
+        h('span', { class: 'pick-info' }, h('b', {}, o.data.name), h('small', {}, [world.subOf(o.data), shield ? '🛡️ đang bật khiên' : far ? 'xa quá, lại gần hơn' : `cách ${Math.max(1, Math.round(d / 20))} bước`].filter(Boolean).join(' · '))),
+        h('span', { class: 'pick-go', 'aria-hidden': 'true' }, shield ? '🛡️' : far ? '🚶' : '🎈'));
     })),
     h('button', { class: 'btn ghost', onclick: () => { closeSheet(); throwBalloon(null); } }, 'Ném ra phía trước'));
   });
@@ -891,24 +1001,291 @@ function bookSheet(owner) {
   }, { wide: true });
 }
 
-// Tiếng trống tổng hợp bằng Web Audio (không cần file âm thanh)
-let audioCtx = null;
-function beatDrum(times = 3) {
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const t0 = audioCtx.currentTime + 0.05;
-    for (let i = 0; i < times; i++) {
-      const t = t0 + i * 0.55;
-      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(110, t);
-      osc.frequency.exponentialRampToValueAtTime(45, t + 0.4);
-      gain.gain.setValueAtTime(0.9, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(t); osc.stop(t + 0.5);
-    }
-  } catch { /* trình duyệt không hỗ trợ âm thanh */ }
+// ======================= Khung chat, online, âm thanh, chuông trống =======================
+let addFeed = () => {};
+let lastOnline = [];
+const visited = new Set();
+function visitZone(z) {
+  if (me.guest || !ZONE_IDS.includes(z) || visited.has(z)) return;
+  visited.add(z);
+  call('act', { kind: 'zone', value: z }).then((r) => setMe(r.user)).catch(() => {});
+}
+
+// Banner trên cùng (chuông trống, chào cờ) – có thể kèm một nút hành động
+function banner(text, action) {
+  const el = document.getElementById('banner');
+  if (!el) return;
+  el.replaceChildren(h('span', {}, text), action ? h('button', { class: 'btn sm primary', onclick: () => { el.hidden = true; action.run(); } }, action.label) : null,
+    h('button', { class: 'icon-btn sm', 'aria-label': 'Ẩn thông báo', onclick: () => { el.hidden = true; } }, '✕'));
+  el.hidden = false;
+  clearTimeout(banner.t); banner.t = setTimeout(() => { el.hidden = true; }, 15000);
+}
+function isMondayMorning(now = Date.now()) {
+  const d = new Date(now + 7 * 3600e3);
+  return d.getUTCDay() === 1 && d.getUTCHours() < 12;
+}
+function goToFlagSeat() {
+  backToCampus();
+  const lop = LOPS.includes(me.lop) ? me.lop : 'Toán';
+  const seat = CAMPUS_SCENE.seats.find((st) => st.chao === lop && !world.others.size) || CAMPUS_SCENE.seats.find((st) => st.chao === lop);
+  closeSheet();
+  world.walkTo(seat.x, seat.y, { sit: seat });
+}
+let lastPeriod = '';
+function checkBell(first = false) {
+  const p = periodOf(Date.now()).label;
+  if (first && isMondayMorning()) { banner('🥁 Tùng tùng tùng! Sáng thứ Hai tập trung chào cờ ở sân trường.', { label: 'Ra chào cờ', run: goToFlagSeat }); lastPeriod = p; return; }
+  if (!first && p !== lastPeriod) {
+    if (p === 'Ra chơi') { sfx.bell(); banner('🔔 Tùng tùng tùng! Ra chơi rồi, căng tin đang giảm giá 20%.', { label: 'Ra căng tin', run: () => { backToCampus(); world.goToHotspot(HOTSPOTS.find((x) => x.id === 'canteen')); } }); }
+    else if (p.startsWith('Tiết')) { sfx.drum(3); banner(`🔔 Trống vào lớp: ${p}`, LOPS.includes(me.lop) ? { label: 'Vào lớp', run: () => { backToCampus(); world.goToHotspot(HOTSPOTS.find((x) => x.id === 'lop-' + me.lop)); } } : null); }
+  }
+  lastPeriod = p;
+}
+
+function onSit(seat) {
+  sfx.click();
+  if (world.scene.id.startsWith('lop:')) {
+    if (me.guest) return;
+    call('act', { kind: 'classSit', value: world.scene.lop }).then((r) => { setMe(r.user); if (r.msg) { sfx.coin(); toast(r.msg); } }).catch(() => {});
+  } else if (seat.chao) {
+    if (isMondayMorning() && !me.guest) {
+      call('flag').then((r) => { setMe(r.user); if (r.fresh) { sfx.coin(); toast('🇻🇳 Đã điểm danh chào cờ: +20 điểm thi đua, +10.000đ vào ví!'); } else toast('Bạn đã chào cờ tuần này rồi.'); }).catch(() => {});
+    } else toast(`🪑 Ghế lớp chuyên ${seat.chao}. Sáng thứ Hai ra đây chào cờ nhé!`);
+  }
+}
+
+function handleInbox(it) {
+  if (it.kind === 'gift') {
+    sfx.coin();
+    toast(`🎁 ${it.fromName} đã đãi bạn ${it.icon} ${it.item}!`);
+    world.say('me', `Cảm ơn ${it.fromName} đã đãi ${it.icon}!`);
+  } else if (it.kind === 'love') {
+    sfx.heart();
+    openSheet('💌 Lời tỏ tình', (b) => {
+      b.append(h('div', { class: 'love-card' }, h('p', { class: 'muted' }, `${it.fromName} gửi bạn:`), h('p', { class: 'love-line' }, LOVE_LINES[it.line])),
+        h('div', { class: 'stack' }, ...LOVE_REPLIES.map((r, i) => h('button', { class: 'btn ' + (i === 0 ? 'primary' : 'ghost'), onclick: () => {
+          call('loveReply', { id: it.id, ans: i }).then(() => { closeSheet(); toast('Đã trả lời ' + it.fromName); }).catch((e) => toast(e.message, 'bad'));
+        } }, r))));
+    });
+  } else if (it.kind === 'loveReply') {
+    if (it.ans === 0) sfx.heart();
+    toast(`💌 ${it.fromName} trả lời: ${LOVE_REPLIES[it.ans]}`);
+  }
+}
+
+function onlineSheet() {
+  const here = lastOnline.filter((p) => (p.scene || 'campus') === world.scene.id);
+  const others = lastOnline.filter((p) => (p.scene || 'campus') !== world.scene.id);
+  const where = (p) => (p.scene || 'campus') === 'campus' ? (ZONES[p.zone] || 'Sân trường') : 'Lớp chuyên ' + p.scene.slice(4);
+  const row = (p) => h('button', { class: 'pick', onclick: () => { closeSheet(); if ((p.scene || 'campus') === world.scene.id) world.walkTo(p.x + 30, p.y); else toast(`${p.name} đang ở ${where(p)}`); } },
+    avatarCanvas(p.look, 40), h('span', { class: 'pick-info' }, h('b', {}, p.name), h('small', {}, [world.subOf(p), where(p)].filter(Boolean).join(' · '))), h('span', { class: 'pick-go' }, p.sit ? '🪑' : '🚶'));
+  openSheet(`👥 ${lastOnline.length + (me.guest ? 0 : 1)} người đang online`, (b) => {
+    b.append(h('p', { class: 'muted' }, 'Số người cập nhật mỗi vài giây. Chạm vào một bạn ở cùng khu để đi tới.'),
+      h('h3', {}, `Ở khu này (${here.length + (me.guest ? 0 : 1)})`), h('div', { class: 'pick-list' }, ...here.map(row)),
+      others.length ? [h('h3', {}, `Ở khu khác (${others.length})`), h('div', { class: 'pick-list' }, ...others.map(row))] : null);
+  });
+}
+
+function soundSheet() {
+  openSheet('🎵 Âm thanh', (b) => {
+    const slider = (label, key, onInput) => {
+      const val = h('b', {}, soundSettings[key] + '%');
+      const inp = h('input', { type: 'range', min: 0, max: 100, value: soundSettings[key], class: 'range', 'aria-label': label });
+      inp.addEventListener('input', () => { soundSettings[key] = Number(inp.value); val.textContent = inp.value + '%'; saveSettings(); onInput?.(); });
+      return h('div', { class: 'range-row' }, h('span', {}, label), inp, val);
+    };
+    b.append(
+      h('div', { class: 'card' },
+        h('h3', {}, '🎶 ' + MUSIC.title),
+        h('p', { class: 'muted' }, 'Phát qua trình phát YouTube, hiện ở góc dưới bên trái.'),
+        h('button', { class: 'btn primary', onclick: () => { music.toggle(); closeSheet(); } }, music.playing ? '⏸ Tạm dừng nhạc' : '▶️ Phát nhạc'),
+        slider('Âm lượng nhạc nền', 'music', () => music.volume(soundSettings.music))),
+      h('div', { class: 'card' }, h('h3', {}, '🔔 Hiệu ứng'), slider('Âm lượng hiệu ứng', 'sfx', () => sfx.click()),
+        h('button', { class: 'btn ghost', onclick: () => sfx.bell() }, 'Nghe thử tiếng chuông')));
+  });
+}
+
+// ======================= Nhiệm vụ, thành tựu, ví =======================
+function questSheet() {
+  if (!needMe()) return;
+  openSheet('📜 Nhiệm vụ', async (b) => {
+    const box = h('div', {}, h('p', { class: 'muted' }, 'Đang tải…'));
+    b.append(box);
+    const load = async (tabIdx = 0) => {
+      const q = await call('quests');
+      setMe(q.user);
+      const claim = async (kind, id) => {
+        try { const r = await call('claim', { kind, id }); setMe(r.user); sfx.coin(); toast('Đã nhận thưởng!'); load(kind === 'daily' ? 0 : 1); }
+        catch (e) { toast(e.message, 'bad'); }
+      };
+      const qRow = (x, kind) => h('div', { class: 'quest' + (x.claimed ? ' claimed' : '') },
+        h('span', { class: 'q-ico' }, x.icon || '🏆'),
+        h('div', { class: 'q-body' }, h('b', {}, x.title), h('small', {}, x.desc),
+          kind === 'ach' && !x.claimed ? h('div', { class: 'bar' }, h('i', { style: { width: Math.round(x.progress / x.n * 100) + '%' } })) : null,
+          h('small', { class: 'q-reward' }, `🎁 ${money(x.reward)}${kind === 'ach' ? ` · ${x.progress}/${x.n}` : ''}`)),
+        x.claimed ? h('span', { class: 'q-done' }, '✓ Đã nhận')
+          : (kind === 'daily' ? x.done : x.progress >= x.n && x.unlocked) ? h('button', { class: 'btn sm primary', onclick: () => claim(kind, x.id) }, 'Nhận')
+            : h('span', { class: 'q-todo' }, kind === 'ach' && !x.unlocked ? '🔒' : 'Chưa xong'));
+      box.replaceChildren(tabs([
+        { label: '📅 Hôm nay', render: (c) => {
+          c.append(h('p', { class: 'muted' }, 'Làm mới lúc 5 giờ sáng mỗi ngày. Xong nhiệm vụ thì bấm "Nhận" để cộng tiền vào ví.'),
+            h('div', { class: 'quest-list' }, ...q.daily.map((x) => qRow(x, 'daily')),
+              qRow({ ...q.bonus, done: q.bonus.got >= q.bonus.need, desc: `${q.bonus.desc} (${Math.min(q.bonus.got, q.bonus.need)}/${q.bonus.need})` }, 'daily')));
+        } },
+        { label: '🏆 Thành tựu', render: (c) => {
+          const total = q.achievements.filter((a) => a.claimed).length;
+          c.append(h('p', { class: 'muted' }, `Đã nhận ${total}/${q.achievements.length} thành tựu. Nhận gần đủ thành tựu của cấp hiện tại để mở cấp sau.`));
+          q.tiers.forEach((t, i) => {
+            const list = q.achievements.filter((a) => a.tier === i);
+            c.append(h('details', { class: 'tier', open: t.unlocked && t.got < t.total },
+              h('summary', {}, h('b', {}, (t.unlocked ? '🎓 ' : '🔒 ') + t.name), h('span', { class: 'muted' }, ` ${t.got}/${t.total}${t.unlocked ? '' : ` · cần ${q.tiers[i - 1]?.need ?? 0} thành tựu ${q.tiers[i - 1]?.name ?? ''}`}`)),
+              h('div', { class: 'quest-list' }, ...list.map((a) => qRow(a, 'ach')))));
+          });
+        } },
+      ], tabIdx));
+    };
+    try { await load(); } catch (e) { box.replaceChildren(h('p', { class: 'err' }, e.message)); }
+  }, { wide: true });
+}
+
+function walletSheet() {
+  if (!needMe()) return;
+  openSheet('💰 Ví ăn vặt', async (b) => {
+    try {
+      const w = await call('wallet');
+      setMe(w.user);
+      b.append(h('div', { class: 'wallet-big' }, money(w.wallet)),
+        h('p', { class: 'muted' }, `🔥 Chuỗi đi học: ${w.streak || 0} ngày · đi học đều mỗi 5 ngày được thưởng thêm 10.000đ.`),
+        h('h3', {}, 'Lịch sử'),
+        w.ledger.length ? h('div', { class: 'ledger' }, ...w.ledger.map((x) => h('div', { class: 'ledger-row' }, h('span', {}, x.text), h('b', { class: x.amount >= 0 ? 'ok' : 'err' }, (x.amount >= 0 ? '+' : '') + money(x.amount)), h('small', {}, ago(x.at)))))
+          : h('p', { class: 'muted' }, 'Chưa có giao dịch. Gửi xe ở cổng để nhận tiền ăn vặt!'));
+    } catch (e) { b.append(h('p', { class: 'err' }, e.message)); }
+  });
+}
+
+// ======================= Nhân vật phụ =======================
+const NPC_ACTIONS = {
+  office: ['🏛️ Vào nhà hiệu bộ', () => panels.office()],
+  canteen: ['🍜 Mua đồ ăn', () => panels.canteen()],
+  football: ['🏸 Chơi đá cầu', () => panels.football()],
+  lab: ['🧪 Pha chế hóa học', () => gameSheet('hoahoc')],
+  oldLesson: ['📝 Kiểm tra bài cũ', (n) => oldLessonSheet(n)],
+};
+function npcSheet(n) {
+  openSheet(n.name, (b) => {
+    const line = h('p', { class: 'speech' }, n.lines[Math.floor(Math.random() * n.lines.length)]);
+    const act = NPC_ACTIONS[n.panel];
+    b.append(h('div', { class: 'me-card' }, avatarCanvas(n.look, 72), h('div', {}, h('b', {}, n.name), h('div', { class: 'muted' }, n.sub))), line,
+      h('div', { class: 'row-btns' },
+        h('button', { class: 'btn ghost', onclick: () => { line.textContent = n.lines[Math.floor(Math.random() * n.lines.length)]; } }, '💬 Nói chuyện tiếp'),
+        act ? h('button', { class: 'btn primary', onclick: () => act[1](n) }, act[0]) : null));
+  });
+}
+
+function oldLessonSheet(n) {
+  openSheet('📝 Kiểm tra bài cũ', (b) => {
+    const root = h('div', { class: 'quiz' });
+    b.append(h('p', { class: 'muted' }, `${n.name} gọi em lên bảng trả bài môn chuyên ${n.lop}.`), root);
+    oldLesson(root, n.lop, (score) => {
+      if (me.guest) return;
+      call('score', { game: 'baicu', score }).then((r) => { setMe(r.user); toast(`${n.name} đã ghi ${score / 10}/10 vào sổ đầu bài hôm nay.`); }).catch(() => {});
+    });
+  });
+}
+
+// ======================= Trò chơi theo vòng =======================
+function gameSheet(id) {
+  const g = MINIGAMES[id];
+  openSheet(g.title, (b, { onCleanup }) => {
+    const root = h('div', { class: 'game-root' });
+    const board = h('div', {});
+    const loadBoard = async () => {
+      const r = await call('leaderboard', { game: id });
+      board.replaceChildren(rankList(r.items.map((x) => ({ name: x.name, sub: `${x.lop || ''} ${x.khoa || ''}`, val: x.score + ' điểm' })), 'Chưa ai chơi. Lên bảng đầu tiên nào!'));
+    };
+    b.append(h('p', { class: 'muted' }, g.intro), root, h('h3', {}, '🏆 Bảng xếp hạng'), board);
+    const stop = g.start(root, (pts) => {
+      if (me.guest) { toast('Ghi danh để lưu điểm lên bảng xếp hạng.'); return; }
+      call('score', { game: id, score: pts }).then((r) => { setMe(r.user); loadBoard(); if (pts >= r.best) toast(`🏆 Kỷ lục mới: ${pts} điểm!`); }).catch(() => {});
+    });
+    onCleanup(() => stop?.());
+    visitZone({ hoahoc: 'lab', domin: 'computer' }[id] || 'dacau');
+    loadBoard().catch(() => {});
+  }, { wide: true });
+}
+
+// ======================= Đãi bạn, tỏ tình =======================
+function friendsHere() {
+  return [...world.others.entries()].map(([id, o]) => ({ id, ...o.data }));
+}
+function loveSheet(p) {
+  if (!needMe()) return;
+  openSheet(`💌 Tỏ tình với ${p.name}`, (b) => {
+    b.append(h('p', { class: 'muted' }, 'Chọn một lời muốn nói. Bạn ấy sẽ chọn cách trả lời.'),
+      h('div', { class: 'stack' }, ...LOVE_LINES.map((ln, i) => h('button', { class: 'btn ghost love-opt', onclick: () => {
+        call('love', { to: p.id, line: i }).then(() => { sfx.heart(); closeSheet(); toast(`💌 Đã gửi lời tỏ tình tới ${p.name}`); }).catch((e) => toast(e.message, 'bad'));
+      } }, ln))));
+  });
+}
+
+// ======================= Giấy chứng nhận, thiệp tri ân, tặng hoa =======================
+function imageActions(canvas, filename, text) {
+  const url = canvas.toDataURL('image/jpeg', 0.9);
+  const img = h('img', { class: 'shot', src: url, alt: text });
+  const dl = h('a', { class: 'btn ghost', href: url, download: filename }, '⬇️ Tải ảnh');
+  const share = h('button', { class: 'btn primary', onclick: async () => {
+    const r = await shareCanvas(canvas, filename, text);
+    if (r === 'download') { dl.click(); toast('Máy này chưa chia sẻ trực tiếp được – đã tải ảnh về.'); }
+  } }, '📤 Chia sẻ');
+  return { img, buttons: h('div', { class: 'row-btns' }, share, dl) };
+}
+
+function diplomaView(c) {
+  const kind = me.role === 'gv' ? 'gv' : me.role === 'khach' || me.role === 'em' ? 'khach' : 'hs';
+  let q = Math.floor(Math.random() * DIPLOMA_QUOTES[kind].length);
+  const box = h('div', {});
+  const render = async () => {
+    const cv = await drawDiploma(me.guest ? { ...me, name: 'Khách ghé trường', role: 'khach' } : me, q);
+    const { img, buttons } = imageActions(cv, 'giay-chung-nhan-chuyen-thai-nguyen.jpg', 'Giấy chứng nhận kỷ niệm – Trường THPT Chuyên Thái Nguyên');
+    box.replaceChildren(img, buttons);
+  };
+  c.append(h('p', { class: 'muted' }, 'Bản kỷ niệm, không có giá trị pháp lý. Mẹo: soi gương đổi sang áo dài hoặc vest kỷ yếu cho hợp không khí!'),
+    h('button', { class: 'btn ghost', onclick: () => { q++; render(); } }, '🔄 Đổi câu đề tặng'), box);
+  render();
+  if (!me.guest) call('act', { kind: 'diploma' }).then((r) => setMe(r.user)).catch(() => {});
+}
+
+function thanksView(c) {
+  const to = h('input', { class: 'input', maxlength: 60, placeholder: 'Kính gửi… (vd: Cô Thu, chủ nhiệm Văn K20)', 'aria-label': 'Kính gửi' });
+  const msg = h('textarea', { class: 'input', rows: 4, maxlength: 300, placeholder: 'Em cảm ơn cô vì…', 'aria-label': 'Lời tri ân' });
+  const out = h('div', {});
+  const flowerBox = h('div', { class: 'flower-box' }, h('p', { class: 'muted' }, 'Đang tải…'));
+  const loadFlowers = async () => {
+    const f = await call('flowers');
+    flowerBox.replaceChildren(
+      h('div', { class: 'flower-count' }, '💐 ', h('b', {}, String(f.today)), ' bó hoa đã được tặng thầy cô hôm nay'),
+      h('button', { class: 'btn primary', onclick: async () => {
+        if (!needMe()) return;
+        try { const r = await call('flower', { to: to.value }); setMe(r.user); sfx.heart(); toast(r.fresh ? '💐 Đã tặng hoa tri ân thầy cô!' : 'Hôm nay bạn đã tặng hoa rồi, mai tặng tiếp nhé!'); sayPrompt.send?.('💐 Chúc mừng thầy cô 20/11!'); loadFlowers(); }
+        catch (e) { toast(e.message, 'bad'); }
+      } }, '💐 Tặng hoa tri ân thầy cô'),
+      f.recent.length ? h('div', { class: 'feed' }, ...f.recent.slice(0, 5).map((x) => h('div', { class: 'feed-item' }, `💐 ${x.name}${x.khoa ? ' (' + [x.lop, x.khoa].filter(Boolean).join(' ') + ')' : ''} tặng hoa${x.to ? ' ' + x.to : ''} · ${ago(x.at)}`))) : null);
+  };
+  c.append(flowerBox,
+    h('h3', {}, '💌 Thiệp tri ân'), to, msg,
+    h('button', { class: 'btn ghost', onclick: async () => {
+      const cv = await drawThanksCard({ to: to.value.trim(), message: msg.value.trim(), from: me.guest ? 'Một học trò' : me.name, label: me.guest ? '' : describe(me) });
+      const { img, buttons } = imageActions(cv, 'thiep-tri-an.jpg', 'Thiệp tri ân thầy cô từ Trường THPT Chuyên Thái Nguyên online');
+      out.replaceChildren(img, buttons);
+    } }, '🎨 Tạo thiệp'), out,
+    h('h3', {}, '✍️ Lời tri ân'));
+  guestbook(c, 'trian', { placeholder: 'Em gửi lời cảm ơn thầy/cô…' });
+  loadFlowers().catch(() => {});
+}
+
+function isTeachersDay(now = Date.now()) {
+  const d = new Date(now + 7 * 3600e3);
+  return d.getUTCMonth() === 10 && d.getUTCDate() >= 18 && d.getUTCDate() <= 21;
 }
 
 function rankList(rows, empty) {
@@ -968,7 +1345,7 @@ function quizView(c, lop) {
   const show = () => {
     if (i >= qs.length) {
       box.replaceChildren(h('p', { class: 'ok big' }, `Đúng ${correct}/${qs.length} câu!`));
-      (me.guest ? Promise.reject(new Error('khách')) : api('quiz', { correct })).then((r) => { setMe(r.user); box.append(h('p', { class: 'muted' }, r.award ? `+${r.award} điểm thi đua cho khóa ${me.khoa || ''}` : 'Hôm nay bạn đã nhận đủ điểm đố vui (10 điểm/ngày).')); }).catch(() => {});
+      (me.guest ? Promise.reject(new Error('khách')) : api('quiz', { correct, total: qs.length })).then((r) => { setMe(r.user); box.append(h('p', { class: 'muted' }, r.award ? `+${r.award} điểm thi đua cho khóa ${me.khoa || ''}` : 'Hôm nay bạn đã nhận đủ điểm đố vui (10 điểm/ngày).')); }).catch(() => {});
       box.append(h('button', { class: 'btn ghost', onclick: () => { i = 0; correct = 0; show(); } }, 'Làm lại'));
       return;
     }

@@ -73,6 +73,13 @@ export const CLASS_DOORS = [
   { lop: 'Pháp', b: 'D5', x: 950, y: 800, side: 'n' },
 ];
 
+// Phòng chức năng (chưa có vị trí chính xác – đặt tạm, sửa tại đây)
+export const ROOM_DOORS = [
+  { id: 'lab', icon: '🧪', label: 'Phòng thí nghiệm', x: 1482, y: 262, side: 'w' },
+  { id: 'computer', icon: '💻', label: 'Phòng máy', x: 700, y: 800, side: 'n' },
+  { id: 'library', icon: '📚', label: 'Thư viện', x: 830, y: 800, side: 'n' },
+];
+
 // Điểm tương tác: chạm nhãn → nhân vật đi tới (x, y) → mở bảng `panel`. `map`: nhãn ngắn trên bản đồ.
 export const HOTSPOTS = [
   { id: 'gate', x: 910, y: 1215, icon: '🚪', label: 'Cổng trường', map: 'Cổng', panel: 'gate' },
@@ -84,15 +91,17 @@ export const HOTSPOTS = [
   { id: 'history', x: 396, y: 930, icon: '📸', label: 'Phòng truyền thống', map: 'Truyền thống', panel: 'history' },
   { id: 'entry', x: 470, y: 1060, icon: '➡️', label: 'Lối vào', panel: 'entry', small: true },
   { id: 'board', x: 690, y: 461, icon: '📋', label: 'Bảng tin · Thi đua', map: 'Bảng tin', panel: 'board' },
-  { id: 'stage', x: 1151, y: 300, icon: '🎤', label: 'Sân khấu · Chào cờ', map: 'Sân khấu', panel: 'stage' },
-  { id: 'yard', x: 1040, y: 560, icon: '🌳', label: 'Sân trường · Ghế đá', map: 'Sân trường', panel: 'garden' },
+  { id: 'stage', x: 1151, y: 290, icon: '🎤', label: 'Sân khấu · Chào cờ', map: 'Sân khấu', panel: 'stage' },
+  { id: 'yard', x: 1040, y: 590, icon: '🌳', label: 'Sân trường · Ghế đá', map: 'Sân trường', panel: 'garden' },
+  { id: 'schoolbook', x: 735, y: 650, icon: '✍️', label: 'Sổ lưu bút', map: 'Sổ lưu bút', panel: 'schoolbook' },
   { id: 'dacau', x: 417, y: 400, icon: '🏸', label: 'Sân đá cầu', map: 'Đá cầu', panel: 'football' },
   { id: 'clubs', x: 1665, y: 792, icon: '🎭', label: 'Nhà đa năng · CLB', map: 'Đa năng', panel: 'clubs' },
   { id: 'canteen', x: 1884, y: 718, icon: '🍜', label: 'Căng tin', panel: 'canteen' },
   { id: 'tronhoc', x: 1805, y: 150, icon: '⚽', label: 'Chỗ trốn học đá bóng', map: 'Trốn học', panel: 'tronhoc' },
-  { id: 'photo', x: 1151, y: 340, icon: '📸', label: 'Chụp ảnh kỷ yếu', map: 'Chụp ảnh', panel: 'photo' },
+  { id: 'photo', x: 1370, y: 300, icon: '📸', label: 'Chụp ảnh kỷ yếu', map: 'Chụp ảnh', panel: 'photo' },
   { id: 'drum', x: 1087, y: 790, icon: '🥁', label: 'Trống trường', map: 'Trống', panel: 'drum' },
   { id: 'wish', x: 1400, y: 1150, icon: '🌠', label: 'Tường "Ước mơ vào Chuyên"', map: 'Ước mơ', panel: 'wish' },
+  ...ROOM_DOORS.map((d) => ({ id: d.id, x: d.x, y: d.y, icon: d.icon, label: d.label, panel: d.id, small: true })),
   ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'enterClass', lop: d.lop, small: true })),
 ];
 
@@ -115,20 +124,28 @@ for (const [x, y] of [[1730, 60], [1880, 90], [1750, 250], [1890, 260]]) trees.p
 for (let x = 640; x <= 1560; x += 120) if (x < 860 || x > 960) trees.push({ x, y: 1070, kind: 'bonsai' });
 export const TREES = trees;
 
-export const LAMPS = [{ x: 960, y: 470 }, { x: 1180, y: 470 }];
+export const LAMPS = [{ x: 940, y: 560 }, { x: 1140, y: 560 }, { x: 760, y: 1110 }, { x: 1300, y: 1110 }];
 // Ghế đá – chạm vào để ngồi. Mỗi ghế có 2 chỗ.
 export const BENCHES = [
-  { x: 860, y: 600 }, { x: 1230, y: 600 }, { x: 900, y: 360 }, { x: 1380, y: 380 }, { x: 760, y: 640 }, { x: 1330, y: 640 },
+  { x: 830, y: 640 }, { x: 1250, y: 640 },
   { x: 1700, y: 1000 }, { x: 1840, y: 1000 }, { x: 115, y: 1040 }, { x: 1500, y: 1150 },
 ];
-export const SEATS = BENCHES.flatMap((b) => [
-  { x: b.x - 14, y: b.y + 8, dir: 1, back: false },
-  { x: b.x + 14, y: b.y + 8, dir: -1, back: false },
-]);
+// Hàng ghế nhựa chào cờ trước sân khấu: mỗi lớp chuyên một cụm 4 ghế, có biển tên lớp.
+export const CHAIR_ROWS = (() => {
+  const order = ['Toán', 'Tin', 'Lý', 'Hóa', 'Sinh', 'Văn', 'Sử', 'Địa', 'Anh', 'Nga', 'Pháp', 'Trung'];
+  return order.map((lop, i) => ({ lop, x: 780 + (i % 4) * 140, y: 345 + Math.floor(i / 4) * 70 }));
+})();
+export const SEATS = [
+  ...BENCHES.flatMap((b) => [
+    { x: b.x - 14, y: b.y + 8, dir: 1, back: false },
+    { x: b.x + 14, y: b.y + 8, dir: -1, back: false },
+  ]),
+  ...CHAIR_ROWS.flatMap((g) => [0, 1, 2, 3].map((k) => ({ x: g.x + 30 + k * 24, y: g.y, dir: 1, back: true, chao: g.lop }))),
+];
 
 // Bồn hoa (là vật cản). round: bồn tròn bán kính r; còn lại hình chữ nhật.
 export const FLOWERBEDS = [
-  { round: true, x: 800, y: 470, r: 34 }, { round: true, x: 1300, y: 470, r: 34 }, { round: true, x: 1040, y: 650, r: 38 },
+  { round: true, x: 735, y: 560, r: 26 }, { round: true, x: 1375, y: 560, r: 26 }, { round: true, x: 1040, y: 655, r: 36 },
   { x: 720, y: 728, w: 700, h: 18 },
   { x: 600, y: 1086, w: 250, h: 16 }, { x: 970, y: 1086, w: 600, h: 16 },
   { x: 1650, y: 1120, w: 200, h: 26, colors: ['#E5382F', '#F2B233', '#FFFFFF'] },
@@ -151,6 +168,7 @@ export function solids() {
   for (const t of TREES) s.push({ x: t.x - 6, y: t.y - 4, w: 12, h: 8 });
   for (const f of FLOWERBEDS) s.push(f.round ? { x: f.x - f.r * 0.8, y: f.y - f.r * 0.8, w: f.r * 1.6, h: f.r * 1.6 } : { x: f.x, y: f.y, w: f.w, h: f.h });
   s.push({ x: BOARD.x, y: BOARD.y, w: BOARD.w, h: BOARD.h });
+  for (const g of CHAIR_ROWS) s.push({ x: g.x + 2, y: g.y - 6, w: 6, h: 6 }); // cột biển tên lớp
   s.push({ x: STAGE.x, y: STAGE.y, w: STAGE.w, h: STAGE.h - 20 });
   return s;
 }

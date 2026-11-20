@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.1 – logo trường, lớp học có bàn ghế, ngồi ghế, sổ lưu bút, ảnh kỷ yếu, chọn người ném bóng, thêm hoa |
+| Phiên bản | 1.2 – nhiệm vụ & thành tựu, ví, đãi bạn, tỏ tình, chào cờ, 20/11, 4 trò chơi mới, NPC, ngày/đêm, âm thanh |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -189,13 +189,41 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-TT-02 | Ghi rõ đây là trang cộng đồng, **không phải website chính thức** của nhà trường, có link tới website chính thức | P1 | ✅ |
 | YC-TT-03 | Nhắc người dùng không đăng số điện thoại, địa chỉ nhà | P2 | ✅ |
 
+### 4.10 Tiến trình, ví và kết nối (theo trang mẫu)
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-TT2-01 | **Nhiệm vụ hằng ngày** (làm mới 5 giờ sáng): điểm danh vào trường, ngồi vào lớp mình, ghé căng tin, chơi một trò, dạo 3 khu, viết lưu bút, đãi bạn, ném trúng bóng nước; mỗi nhiệm vụ bấm "Nhận" để cộng tiền vào ví; nhận đủ 6 thì có thưởng "Chăm chỉ cả ngày" | P1 | ✅ |
+| YC-TT2-02 | **Thành tựu** 37 mục chia 7 cấp: Lớp 10 → Lớp 11 → Lớp 12 → Ôn thi → Tốt nghiệp → Niềm tự hào → Huyền thoại; có thanh tiến độ; phải nhận gần đủ cấp hiện tại mới mở cấp sau; nhận thành tựu được tiền và +20 điểm thi đua | P1 | ✅ |
+| YC-TT2-03 | Nút 📜 trên thanh trên có **chấm đỏ** báo số phần thưởng đang chờ nhận | P2 | ✅ |
+| YC-TT2-04 | **Ví ăn vặt**: bấm số tiền trên thanh trên để xem số dư, chuỗi đi học và **lịch sử 30 giao dịch** gần nhất | P2 | ✅ |
+| YC-TT2-05 | **Đến trường**: chọn xe đạp / xe máy điện / ô tô / xe bus / đi bộ; nhận **vé xe** có tên; **chuỗi đi học** liên tục, mỗi 5 ngày liền thưởng thêm 10.000đ | P1 | ✅ |
+| YC-TT2-06 | **Đãi bạn**: ở căng tin chọn một bạn đang online cùng khu; bạn ấy nhận thông báo "🎁 … đã đãi bạn …" và nhân vật tự cảm ơn | P1 | ✅ |
+| YC-TT2-07 | **Tỏ tình**: từ thẻ của một bạn chọn 1 trong 5 câu; người nhận thấy bảng "Lời tỏ tình" và chọn 💕 Đồng ý / 🤔 Để mình suy nghĩ / 🤝 Mình coi cậu là bạn thôi; người gửi nhận câu trả lời; tối đa 10 lần/ngày | P2 | ✅ |
+| YC-TT2-08 | **Chào cờ thứ Hai**: 48 ghế nhựa (12 lớp chuyên × 4) có biển tên lớp trước sân khấu; sáng thứ Hai (trước 12 giờ) ngồi vào ghế → +20 điểm, +10.000đ, mỗi tuần một lần; mở trang sáng thứ Hai có banner "Tập trung chào cờ" | P2 | 🟡 |
+| YC-TT2-09 | **Chuông trống**: khi tới giờ ra chơi / vào tiết hiện banner (kèm nút "Ra căng tin" / "Vào lớp") và tiếng trống, chuông | P2 | ✅ |
+| YC-TT2-10 | **20/11**: tặng hoa tri ân (mỗi người 1 bó/ngày, đếm số bó cả trường trong ngày, danh sách người tặng gần đây); **thiệp tri ân** dạng ảnh ("Kính gửi…", lời cảm ơn, "Từ…"); sân khấu có lễ kỷ niệm Ngày Nhà giáo trong dịp 18–21/11 | P1 | ✅ |
+| YC-TT2-11 | **Phòng cấp bằng** (nhà hiệu bộ): giấy chứng nhận tốt nghiệp / nhà giáo / tham quan dạng ảnh có logo, tên, khóa – lớp, câu đề tặng (đổi được), ngày, con dấu "Chuyên Thái Nguyên", ghi rõ "Bản kỷ niệm – không có giá trị pháp lý"; chia sẻ hoặc tải về | P2 | ✅ |
+| YC-TT2-12 | **Trò chơi 5 vòng** (mỗi vòng 20 điểm): ⚽ sút penalty (chỗ trốn học), 🏀 bóng rổ (nhà đa năng), 🧪 pha chế hóa học (phòng thí nghiệm, 12 phản ứng thật), 💣 dò mìn (phòng máy); mỗi trò có bảng xếp hạng | P1 | ✅ |
+| YC-TT2-13 | **Nhân vật phụ** có tên và lời thoại riêng, thỉnh thoảng tự nói: bác bảo vệ, đội cờ đỏ, cô văn phòng, cô căng tin, các anh chị cựu học sinh, thầy dạy Hóa; trong mỗi lớp có **cô chủ nhiệm** gọi lên **kiểm tra bài cũ** (2 câu, chấm /10) | P2 | ✅ |
+| YC-TT2-14 | **Khiên** 🛡️: bật thì không ai ném bóng nước trúng mình; người khác thấy vòng khiên và trong danh sách ném bóng hiện "đang bật khiên" | P2 | ✅ |
+| YC-TT2-15 | **Khung chat** góc trái hiện 4 lời nói gần nhất (tên + nội dung), tự mờ sau ~9 giây | P2 | ✅ |
+| YC-TT2-16 | **Ai đang online**: bấm số người trên thanh trên để xem danh sách theo khu, chạm để đi tới | P2 | ✅ |
+| YC-TT2-17 | **Âm thanh**: bảng chỉnh âm lượng nhạc nền và hiệu ứng (lưu trên máy); hiệu ứng tổng hợp: chuông, trống, tiền, bóng nước, tim… | P2 | 🟡 |
+| YC-TT2-18 | **Ngày / đêm** theo giờ Việt Nam: chạng vạng 17:30–19:00, đêm tới 5:00; ban đêm sân tối lại, đèn sân toả sáng, cửa sổ các dãy nhà sáng đèn (trong lớp học vẫn sáng) | P3 | ✅ |
+| YC-TT2-19 | **Trang phục**: sơ mi trắng, áo dài trắng, áo khoác trường, áo lớp (5 màu), vest kỷ yếu, áo phông; khăn quàng đỏ; 9 kiểu tóc | P2 | ✅ |
+| YC-TT2-20 | **Phòng chức năng**: phòng thí nghiệm, phòng máy, thư viện (góc giới thiệu sách hay); **Sổ lưu bút của trường** đặt trên giá ở sân | P2 | ✅ |
+
+> YC-TT2-08: chưa kiểm thử vào đúng sáng thứ Hai trên trình duyệt (kiểm thử tự động đã giả lập giờ thứ Hai cho máy chủ).
+> YC-TT2-17: chưa nghe thử trên thiết bị thật.
+
 ## 5. Yêu cầu phi chức năng
 
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
 | YC-PN-01 | **Điện thoại là chính**: dùng tốt ở màn hình rộng 360–430 px, thao tác bằng chạm; không cuộn ngang; tôn trọng vùng an toàn (tai thỏ, thanh điều hướng) | P1 | ✅ |
 | YC-PN-02 | Chạy trên Chrome/Safari/Edge bản gần đây, cả Android và iOS, không cần cài đặt | P1 | 🟡 |
-| YC-PN-03 | Tải trang nhẹ: không thư viện ngoài, không bước build; tổng mã JavaScript + CSS < 200 KB chưa nén (hiện ~180 KB) | P2 | ✅ |
+| YC-PN-03 | Tải trang nhẹ: không thư viện ngoài, không bước build; tổng mã JavaScript + CSS < 300 KB chưa nén (hiện ~280 KB) | P2 | ✅ |
 | YC-PN-04 | Vẽ mượt ~60 khung hình/giây trên điện thoại tầm trung | P2 | 🟡 |
 | YC-PN-05 | Vị trí người khác cập nhật mỗi 2,5 giây; độ trễ chấp nhận được ≤ 3 giây | P2 | ✅ |
 | YC-PN-06 | **Chế độ ngoại tuyến**: khi không có máy chủ, trang vẫn chạy đầy đủ chức năng một người, dữ liệu lưu trên trình duyệt, có nhãn cảnh báo | P2 | ✅ |
@@ -232,6 +260,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-HD | `logic.js` (`checkin`, `menu`, `buy`, `events`, `createEvent`, `joinEvent`, `score`, `albumPost`, `album`, `photo`), `games.js`, `main.js` (`bookSheet`, `panels.photo`, `composeYearbook`, `albumSheet`) | "đăng ký… điểm danh, mua đồ", "giờ ra chơi giảm 20%", "họp lớp: tạo, đăng ký, huỷ", "album kỷ yếu…" | Điểm danh, mua đồ, tạo họp lớp, đá cầu, chụp và đăng ảnh, ký sổ lưu bút |
 | YC-TD | `logic.js` (`khoaBoard`, `leaderboard`, `POINTS`) | "lưu bút, sổ đầu bài, bảng thi đua" | Mở bảng tin |
 | YC-AT | `logic.js` (`SCHEDULE`, `periodOf`), `main.js` (`music`, `beatDrum`) | "giờ ra chơi giảm 20%" (gồm `periodOf`) | Bấm 🎵 phát/dừng/tắt |
+| YC-TT2 | `logic.js` (`DAILY_QUESTS`, `ACHIEVEMENTS`, `act`, `quests`, `claim`, `wallet`, `flag`, `flower`, `love`, `loveReply`, hộp thư trong `presence`), `minigames.js`, `cards.js`, `npcs.js`, `sound.js`, `main.js` | "điểm danh: chuỗi ngày…", "nhiệm vụ ngày và thành tựu…", "đãi bạn và tỏ tình…", "chào cờ chỉ sáng thứ Hai…" | 2 người: vé xe bus, nhận thưởng, đãi trà đá, tỏ tình – đồng ý, dò mìn, pha chế, penalty 5 quả, giấy chứng nhận, tặng hoa, ngồi lớp, kiểm tra bài cũ, khiên, ví |
 | YC-PN | `ui.js` (`h`), `worker.js`, `api.js` (chế độ ngoại tuyến), `style.css` | "…chức năng lạ trả 404" | Chạy ngoại tuyến bằng `npm run static` |
 
 ## 8. Vấn đề mở

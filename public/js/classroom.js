@@ -24,7 +24,7 @@ export function classroomScene(lop) {
   }
 
   const hotspots = [
-    { id: 'c-board', x: 480, y: 130, icon: '❓', label: 'Bảng đen · Đố vui', panel: 'class', lop, tab: 2 },
+    { id: 'c-board', x: 300, y: 150, icon: '❓', label: 'Bảng đen · Đố vui', panel: 'class', lop, tab: 2 },
     { id: 'c-desk', x: 770, y: 190, icon: '📋', label: 'Sổ đầu bài', panel: 'class', lop, tab: 1 },
     { id: 'c-book', x: 130, y: 650, icon: '📒', label: 'Lưu bút lớp', panel: 'class', lop, tab: 0 },
     { id: 'c-exit', x: 480, y: 690, icon: '🚪', label: 'Ra khỏi lớp', panel: 'exitClass' },

@@ -36,6 +36,13 @@ vài giây, mọi người cùng thấy. Nút 📸 **chụp ảnh kỷ yếu** c
 Mỗi người có một **sổ lưu bút** dạng quyển sổ để bạn bè ký vào. Chạm vào **ghế đá** (hoặc ghế trong lớp) để ngồi.
 Sân trường có bồn hoa, phượng, bằng lăng, hoa sữa.
 
+**Giống trang mẫu**: nhiệm vụ hằng ngày và 37 thành tựu theo cấp (📜), ví ăn vặt có lịch sử, chọn phương tiện đến
+trường và chuỗi đi học, đãi bạn và tỏ tình (có thông báo cho người nhận), 48 ghế chào cờ thứ Hai theo lớp, chuông
+trống giờ ra chơi/vào lớp, tặng hoa và thiệp tri ân 20/11, giấy chứng nhận tốt nghiệp kỷ niệm, 4 trò chơi 5 vòng
+(penalty, bóng rổ, pha chế hóa học, dò mìn), cô chủ nhiệm kiểm tra bài cũ, nhân vật phụ biết nói, khung chat,
+danh sách người online, khiên chặn bóng nước, ngày/đêm theo giờ thật, chỉnh âm lượng, áo dài – vest kỷ yếu –
+khăn quàng đỏ.
+
 Điều khiển: chạm/nhấp vào sân để đi (tự tìm đường quanh các dãy nhà), chạm nhãn để mở,
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
 Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.

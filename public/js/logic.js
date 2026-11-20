@@ -34,7 +34,136 @@ export const MENU = [
 export const DAILY_ALLOWANCE = 20000;
 const PRESENCE_TTL = 20000;
 
-const POINTS = { checkin: 2, guestbook: 5, event: 3, join: 3, quiz: 1, game: 1 };
+const POINTS = { checkin: 2, guestbook: 5, event: 3, join: 3, quiz: 1, game: 1, classSit: 10, flag: 20, treat: 3, flower: 5, ach: 20 };
+
+// ---------- Tiến trình: nhiệm vụ ngày, thành tựu, ví ----------
+export const TRANSPORTS = {
+  xedap: { icon: '🚲', name: 'Xe đạp' }, xemay: { icon: '🛵', name: 'Xe máy điện' }, oto: { icon: '🚗', name: 'Ô tô (bố mẹ đưa)' },
+  bus: { icon: '🚌', name: 'Xe bus' }, dibo: { icon: '🚶', name: 'Đi bộ' },
+};
+export const GAMES = {
+  dacau: { name: 'Đá cầu', icon: '🏸', unit: 'quả', sport: true, high: 20 },
+  penalty: { name: 'Sút penalty', icon: '⚽', unit: 'điểm', sport: true, high: 80 },
+  bongro: { name: 'Bóng rổ', icon: '🏀', unit: 'điểm', sport: true, high: 80 },
+  hoahoc: { name: 'Pha chế hóa học', icon: '🧪', unit: 'điểm', high: 80 },
+  domin: { name: 'Dò mìn', icon: '💣', unit: 'điểm', high: 80 },
+  dovui: { name: 'Đố vui', icon: '❓', unit: 'câu' },
+  baicu: { name: 'Kiểm tra bài cũ', icon: '👩‍🏫', unit: 'điểm' },
+};
+export const ZONE_IDS = ['san', 'dacau', 'tronhoc', 'cong', 'khuon', 'D3', 'D4', 'D5', 'HB', 'DN', 'CT', 'lop', 'lab', 'library', 'computer'];
+
+export const DAILY_QUESTS = [
+  { id: 'checkin', icon: '🛵', title: 'Điểm danh vào trường', desc: 'Gửi xe hoặc đi bus vào trường hôm nay.', reward: 5000, done: (t) => t.checkin },
+  { id: 'class', icon: '🪑', title: 'Ngồi vào lớp mình', desc: 'Vào lớp của mình (thầy cô, khách: lớp bất kỳ) và ngồi vào ghế.', reward: 5000, done: (t) => t.classSit },
+  { id: 'buy', icon: '🍜', title: 'Ghé căng tin', desc: 'Mua 1 món ở căng tin.', reward: 3000, done: (t) => t.buy },
+  { id: 'game', icon: '🎮', title: 'Chơi một trò', desc: 'Chơi xong 1 trò bất kỳ: đá cầu, penalty, bóng rổ, pha chế, dò mìn, đố vui.', reward: 5000, done: (t) => t.game },
+  { id: 'zones', icon: '🗺️', title: 'Dạo quanh trường', desc: 'Ghé 3 khu khác nhau (sân, lớp, căng tin, nhà đa năng…).', reward: 3000, done: (t) => (t.zones || []).length >= 3 },
+  { id: 'gb', icon: '✍️', title: 'Viết lưu bút', desc: 'Viết 1 dòng lưu bút ở bất kỳ sổ nào.', reward: 5000, done: (t) => t.gb },
+  { id: 'treat', icon: '🤝', title: 'Đãi bạn', desc: 'Mời một bạn đang online 1 món ở căng tin.', reward: 5000, done: (t) => t.treat },
+  { id: 'hit', icon: '🎈', title: 'Ném trúng bóng nước', desc: 'Ném trúng một bạn bằng bóng nước.', reward: 3000, done: (t) => t.hit },
+];
+export const ALL_DAILY_BONUS = { id: 'all', icon: '🏅', title: 'Chăm chỉ cả ngày', desc: 'Nhận thưởng 6 nhiệm vụ ngày khác.', reward: 10000, need: 6 };
+
+export const TIERS = ['Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi', 'Tốt nghiệp', 'Niềm tự hào', 'Huyền thoại'];
+const A = (tier, id, title, desc, stat, n) => ({ tier, id, title, desc, stat, n, reward: 10000 * (tier + 1) });
+export const ACHIEVEMENTS = [
+  A(0, 'gb1', 'Dòng lưu bút đầu tiên', 'Viết 1 dòng lưu bút.', 'gb', 1),
+  A(0, 'checkin3', 'Học sinh mới', 'Điểm danh 3 ngày.', 'checkins', 3),
+  A(0, 'zones5', 'Làm quen trường mới', 'Ghé 5 khu khác nhau.', 'zones', 5),
+  A(0, 'treat1', 'Mời bạn lần đầu', 'Đãi bạn 1 món.', 'treats', 1),
+  A(0, 'class1', 'Buổi học đầu tiên', 'Ngồi vào lớp mình 1 ngày.', 'classDays', 1),
+  A(0, 'flag1', 'Buổi chào cờ đầu tiên', 'Có mặt chào cờ sáng thứ Hai.', 'flagWeeks', 1),
+  A(1, 'checkin7', 'Một tuần chăm chỉ', 'Điểm danh 7 ngày.', 'checkins', 7),
+  A(1, 'games10', 'Ham chơi', 'Chơi 10 lượt trò chơi.', 'games', 10),
+  A(1, 'buys10', 'Khách quen căng tin', 'Mua 10 món.', 'buys', 10),
+  A(1, 'kinds5', 'Thử hết các trò', 'Chơi 5 trò khác nhau.', 'gameKinds', 5),
+  A(1, 'love1', 'Lời tỏ tình đầu tiên', 'Tỏ tình thành công 1 lần.', 'loveYes', 1),
+  A(1, 'photo1', 'Người giữ kỷ niệm', 'Đăng 1 ảnh vào album kỷ yếu.', 'photos', 1),
+  A(2, 'streak5', 'Đi học đều', 'Đi học 5 ngày liền.', 'bestStreak', 5),
+  A(2, 'gb5', 'Cây bút lưu bút', 'Viết 5 dòng lưu bút.', 'gb', 5),
+  A(2, 'sports5', 'Năng khiếu thể thao', 'Đạt điểm cao trò thể thao 5 lần.', 'sports80', 5),
+  A(2, 'perfect10', 'Cây đố vui', 'Trả lời đúng hết 10 lượt đố.', 'perfect', 10),
+  A(2, 'hits10', 'Tay ném bóng nước', 'Ném trúng bóng nước 10 lần.', 'hits', 10),
+  A(2, 'points500', 'Thi đua khởi động', 'Đạt 500 điểm thi đua.', 'points', 500),
+  A(3, 'checkin14', 'Hai tuần đều đặn', 'Điểm danh 14 ngày.', 'checkins', 14),
+  A(3, 'class10', 'Chuyên cần', 'Ngồi vào lớp mình 10 ngày.', 'classDays', 10),
+  A(3, 'treats10', 'Hào phóng', 'Đãi bạn 10 lần.', 'treats', 10),
+  A(3, 'games30', 'Game thủ tập sự', 'Chơi 30 lượt trò chơi.', 'games', 30),
+  A(3, 'events1', 'Hẹn họp lớp', 'Đăng ký tham dự 1 buổi họp lớp.', 'events', 1),
+  A(3, 'diploma', 'Nhận bằng kỷ niệm', 'Nhận giấy chứng nhận kỷ niệm ở phòng cấp bằng.', 'diploma', 1),
+  A(4, 'checkin30', 'Một tháng chuyên cần', 'Điểm danh 30 ngày.', 'checkins', 30),
+  A(4, 'streak10', 'Mười ngày không nghỉ', 'Đi học 10 ngày liền.', 'bestStreak', 10),
+  A(4, 'gb15', 'Văn hay chữ tốt', 'Viết 15 dòng lưu bút.', 'gb', 15),
+  A(4, 'perfect25', 'Thủ khoa đố vui', 'Trả lời đúng hết 25 lượt đố.', 'perfect', 25),
+  A(4, 'hits50', 'Xạ thủ bóng nước', 'Ném trúng bóng nước 50 lần.', 'hits', 50),
+  A(4, 'points1000', 'Học sinh tiên tiến', 'Đạt 1.000 điểm thi đua.', 'points', 1000),
+  A(5, 'checkin100', 'Một trăm ngày', 'Điểm danh 100 ngày.', 'checkins', 100),
+  A(5, 'class30', 'Không bỏ tiết', 'Ngồi vào lớp mình 30 ngày.', 'classDays', 30),
+  A(5, 'love5', 'Trái tim chuyên', 'Tỏ tình thành công 5 lần.', 'loveYes', 5),
+  A(5, 'buys50', 'Sành ăn', 'Mua 50 món.', 'buys', 50),
+  A(5, 'flag10', 'Mười buổi chào cờ', 'Chào cờ 10 tuần.', 'flagWeeks', 10),
+  A(5, 'points5000', 'Học bổng toàn phần', 'Đạt 5.000 điểm thi đua.', 'points', 5000),
+];
+ACHIEVEMENTS.push({ tier: 6, id: 'legend', title: 'Huyền thoại Chuyên Thái Nguyên', desc: `Nhận đủ ${ACHIEVEMENTS.length} thành tựu khác.`, stat: 'achCount', n: ACHIEVEMENTS.length, reward: 200000 });
+
+export const LOVE_LINES = [
+  'Cậu là crush của mình đó, biết không?',
+  'Cuối tuần đi trà sữa với mình nhé? 🧋',
+  'Làm người thương của mình nhé? 💕',
+  'Ngồi ghế đá với mình một lát được không?',
+  'Cảm ơn cậu đã luôn ở bên mình suốt những năm cấp 3 ❤️',
+];
+export const LOVE_REPLIES = ['💕 Đồng ý', '🤔 Để mình suy nghĩ', '🤝 Mình coi cậu là bạn thôi'];
+
+// Ngày nhiệm vụ đổi lúc 5 giờ sáng giờ Việt Nam
+function questDay(now) { return vnDate(now - 5 * 3600e3); }
+function vnWeekday(now) { return new Date(now + 7 * 3600e3).getUTCDay(); }
+
+function ensure(u, now) {
+  const st = (u.stats ||= {});
+  for (const k of ['checkins', 'streak', 'bestStreak', 'classDays', 'buys', 'treats', 'gb', 'games', 'sports80', 'perfect', 'hits', 'photos', 'flagWeeks', 'loveYes', 'events', 'diploma', 'flowers']) st[k] ||= 0;
+  st.gameKinds ||= []; st.zones ||= [];
+  const day = questDay(now);
+  if (!u.today || u.today.day !== day) u.today = { day, zones: [] };
+  if (!u.claimed || u.claimed.day !== day) u.claimed = { day, list: [] };
+  u.achClaimed ||= []; u.ledger ||= [];
+}
+function statValue(u, stat) {
+  const st = u.stats;
+  if (stat === 'points') return u.points || 0;
+  if (stat === 'achCount') return u.achClaimed.filter((x) => x !== 'legend').length;
+  if (stat === 'gameKinds' || stat === 'zones') return st[stat].length;
+  return st[stat] || 0;
+}
+function tierState(u) {
+  // Mở cấp sau khi đã nhận ít nhất (số thành tựu của cấp − 1) ở cấp hiện tại
+  const out = [];
+  let unlocked = true;
+  for (let t = 0; t < TIERS.length; t++) {
+    const list = ACHIEVEMENTS.filter((a) => a.tier === t);
+    const got = list.filter((a) => u.achClaimed.includes(a.id)).length;
+    out.push({ name: TIERS[t], unlocked, got, total: list.length, need: Math.max(1, list.length - 1) });
+    if (got < Math.max(1, list.length - 1)) unlocked = false;
+  }
+  return out;
+}
+function badgeCount(u) {
+  if (!u.stats) return 0;
+  let n = DAILY_QUESTS.filter((q) => q.done(u.today) && !u.claimed.list.includes(q.id)).length;
+  const claimedDaily = u.claimed.list.filter((x) => x !== 'all').length;
+  if (claimedDaily >= ALL_DAILY_BONUS.need && !u.claimed.list.includes('all')) n++;
+  const tiers = tierState(u);
+  n += ACHIEVEMENTS.filter((a) => tiers[a.tier].unlocked && !u.achClaimed.includes(a.id) && statValue(u, a.stat) >= a.n).length;
+  return n;
+}
+function credit(u, amount, text, now) {
+  u.wallet = (u.wallet || 0) + amount;
+  u.ledger.unshift({ at: now, amount, text });
+  if (u.ledger.length > 30) u.ledger.length = 30;
+}
+async function sendInbox(ctx, toId, item) {
+  await ctx.store.put('inbox', `${toId}|${String(ctx.now).padStart(15, '0')}-${item.id}`, item);
+}
 
 class ApiError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -90,10 +219,13 @@ function sanitizeLook(l) {
   return {
     gender: l.gender === 'nu' ? 'nu' : 'nam',
     skin: num(l.skin, 0, 4, 1) | 0,
-    hair: num(l.hair, 0, 5, 0) | 0,
+    hair: num(l.hair, 0, 8, 0) | 0,
     hairColor: num(l.hairColor, 0, 4, 0) | 0,
     bottom: l.bottom === 'vay' ? 'vay' : 'quan',
     bag: num(l.bag, 0, 3, 0) | 0,
+    outfit: ['somi', 'aodai', 'khoac', 'aolop', 'vest', 'phong'].includes(l.outfit) ? l.outfit : 'somi',
+    color: num(l.color, 0, 4, 0) | 0,
+    scarf: !!l.scarf,
   };
 }
 
@@ -101,7 +233,10 @@ function publicUser(u) {
   return { id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', look: u.look, points: u.points || 0 };
 }
 function privateUser(u) {
-  return { ...publicUser(u), wallet: u.wallet, lastCheckin: u.lastCheckin || null, code: u.code, quizToday: u.quizCount || 0 };
+  return {
+    ...publicUser(u), wallet: u.wallet, lastCheckin: u.lastCheckin || null, code: u.code, quizToday: u.quizCount || 0,
+    streak: u.stats?.streak || 0, transport: u.transport || '', badge: badgeCount(u),
+  };
 }
 
 async function auth(ctx) {
@@ -110,6 +245,7 @@ async function auth(ctx) {
   if (!id) throw new ApiError(401, 'Phiên không hợp lệ');
   const u = await ctx.store.get('user', id);
   if (!u) throw new ApiError(401, 'Không tìm thấy nhân vật');
+  ensure(u, ctx.now);
   return u;
 }
 async function addPoints(ctx, u, kind, mult = 1) {
@@ -174,6 +310,7 @@ const handlers = {
       x: num(b.x, 0, 4000), y: num(b.y, 0, 4000), zone: str(b.zone, 40), at: ctx.now,
       // cảnh đang đứng: 'campus' (sân trường) hoặc 'lop:<Lớp>' (trong lớp học)
       scene: str(b.scene, 40) || 'campus', sit: !!b.sit, sitBack: !!b.sitBack, dir: b.dir === -1 ? -1 : 1,
+      noBalloon: !!b.noBalloon,
     };
     const old = await ctx.store.get('presence', u.id);
     if (typeof b.say === 'string' && b.say.trim()) { p.say = str(b.say, 80); p.sayAt = ctx.now; }
@@ -189,7 +326,10 @@ const handlers = {
       if (ctx.now - v.at > PRESENCE_TTL) { if (ctx.now - v.at > 600e3) await ctx.store.del('presence', k); continue; }
       if (v.id !== u.id) others.push(v);
     }
-    return { others, now: ctx.now };
+    // hộp thư: quà được đãi, lời tỏ tình, câu trả lời – lấy ra là xoá
+    const inbox = [];
+    for (const { k, v } of await ctx.store.list('inbox', u.id + '|', 20)) { inbox.push(v); await ctx.store.del('inbox', k); }
+    return { others, inbox: inbox.reverse(), now: ctx.now };
   },
 
   // Khách chưa ghi danh: chỉ xem ai đang online, không hiện mình
@@ -214,6 +354,7 @@ const handlers = {
     await ctx.store.put('gb', key, item);
     // Ghi danh vào "sổ đầu bài" của lớp
     if (room.startsWith('lop:')) await ctx.store.put('roster', `${room}|${u.id}`, { id: u.id, name: u.name, khoa: u.khoa, at: ctx.now });
+    u.stats.gb++; u.today.gb = true;
     await addPoints(ctx, u, 'guestbook');
     return { item, user: privateUser(u) };
   },
@@ -232,14 +373,23 @@ const handlers = {
     return { ok: true };
   },
 
-  async checkin(ctx) {
+  async checkin(ctx, b) {
     const u = await auth(ctx);
-    const today = vnDate(ctx.now);
+    const today = questDay(ctx.now);
     if (u.lastCheckin === today) return { already: true, user: privateUser(u) };
+    const yesterday = questDay(ctx.now - 86400e3);
+    const st = u.stats;
+    st.streak = u.lastCheckin === yesterday ? st.streak + 1 : 1;
+    st.bestStreak = Math.max(st.bestStreak, st.streak);
+    st.checkins++;
     u.lastCheckin = today;
-    u.wallet = (u.wallet || 0) + DAILY_ALLOWANCE;
+    u.transport = TRANSPORTS[b.transport] ? b.transport : 'xedap';
+    u.today.checkin = true;
+    credit(u, DAILY_ALLOWANCE, '👪 Bố mẹ cho tiền ăn vặt', ctx.now);
+    let bonus = 0;
+    if (st.streak % 5 === 0) { bonus = 10000; credit(u, bonus, `🔥 Thưởng đi học đều ${st.streak} ngày`, ctx.now); }
     await addPoints(ctx, u, 'checkin');
-    return { already: false, gained: DAILY_ALLOWANCE, user: privateUser(u) };
+    return { already: false, gained: DAILY_ALLOWANCE, bonus, streak: st.streak, transport: u.transport, user: privateUser(u) };
   },
 
   async menu(ctx) {
@@ -254,11 +404,20 @@ const handlers = {
     const sale = isBreakTime(ctx.now);
     const price = sale ? Math.round(m.price * 0.8 / 500) * 500 : m.price;
     if ((u.wallet || 0) < price) throw new ApiError(400, 'Không đủ tiền. Gửi xe ở cổng để nhận 20k mỗi ngày!');
-    u.wallet -= price;
+    // đãi bạn: người được đãi phải là người đã ghi danh
+    let friend = null;
+    if (b.forUid) {
+      friend = await ctx.store.get('user', str(b.forUid, 20));
+      if (!friend || friend.id === u.id) throw new ApiError(400, 'Không tìm thấy bạn này');
+    }
+    credit(u, -price, `${m.emoji} ${friend ? 'Đãi ' + friend.name + ' ' : 'Mua '}${m.name}`, ctx.now);
+    u.stats.buys++; u.today.buy = true;
+    if (friend) { u.stats.treats++; u.today.treat = true; u.points = (u.points || 0) + POINTS.treat; }
     await ctx.store.put('user', u.id, u);
-    const forName = str(b.forName, 40);
+    const forName = friend ? friend.name : str(b.forName, 40);
     const rec = { id: randId(8), uid: u.id, name: u.name, item: m.name, emoji: m.emoji, price, forName, at: ctx.now };
     await ctx.store.put('buy', `${String(ctx.now).padStart(15, '0')}-${rec.id}`, rec);
+    if (friend) await sendInbox(ctx, friend.id, { id: rec.id, kind: 'gift', from: u.id, fromName: u.name, icon: m.emoji, item: m.name, at: ctx.now });
     return { item: rec, user: privateUser(u) };
   },
 
@@ -272,6 +431,7 @@ const handlers = {
     if (u.photoDay !== today) { u.photoDay = today; u.photoCount = 0; }
     if (u.photoCount >= 5) throw new ApiError(400, 'Mỗi ngày đăng tối đa 5 ảnh kỷ yếu');
     u.photoCount += 1;
+    u.stats.photos++;
     await ctx.store.put('user', u.id, u);
     const id = randId(8);
     const meta = {
@@ -326,7 +486,7 @@ const handlers = {
     if (!ev) throw new ApiError(404, 'Không tìm thấy buổi họp lớp');
     const i = ev.joins.findIndex((j) => j.id === u.id);
     if (i >= 0) ev.joins.splice(i, 1);
-    else { ev.joins.push({ id: u.id, name: u.name }); await addPoints(ctx, u, 'join'); }
+    else { ev.joins.push({ id: u.id, name: u.name }); u.stats.events++; await addPoints(ctx, u, 'join'); }
     await ctx.store.put('event', ev.id, ev);
     return { item: ev, joined: i < 0, user: privateUser(u) };
   },
@@ -336,6 +496,10 @@ const handlers = {
     const today = vnDate(ctx.now);
     if (u.quizDay !== today) { u.quizDay = today; u.quizCount = 0; }
     const correct = num(b.correct, 0, 10, 0) | 0;
+    const total = num(b.total, 1, 10, 3) | 0;
+    if (correct >= total) u.stats.perfect++;
+    u.stats.games++; u.today.game = true;
+    if (!u.stats.gameKinds.includes('dovui')) u.stats.gameKinds.push('dovui');
     const award = Math.max(0, Math.min(correct, 10 - u.quizCount));
     u.quizCount += award;
     await addPoints(ctx, u, 'quiz', award);
@@ -353,8 +517,154 @@ const handlers = {
       best = score;
       await ctx.store.put('score', key, { id: u.id, name: u.name, khoa: u.khoa, lop: u.lop, score, at: ctx.now });
     }
-    if (score >= 5) await addPoints(ctx, u, 'game');
+    const g = GAMES[game];
+    u.stats.games++; u.today.game = true;
+    if (g && !u.stats.gameKinds.includes(game)) u.stats.gameKinds.push(game);
+    if (g && g.sport && score >= g.high) u.stats.sports80++;
+    if (g && game !== 'dacau' && score >= 100) u.stats.perfect++;
+    await addPoints(ctx, u, 'game', g && g.high && score >= g.high ? 3 : 1);
     return { best, user: privateUser(u) };
+  },
+
+  // Sự kiện ghi nhận từ máy khách: ghé khu, ngồi vào lớp, ném trúng bóng nước, nhận bằng
+  async act(ctx, b) {
+    const u = await auth(ctx);
+    const kind = str(b.kind, 20);
+    const t = u.today, st = u.stats;
+    let msg = '';
+    if (kind === 'zone') {
+      const z = str(b.value, 20);
+      if (!ZONE_IDS.includes(z)) throw new ApiError(400, 'Khu không hợp lệ');
+      if (!t.zones.includes(z)) t.zones.push(z);
+      if (!st.zones.includes(z)) st.zones.push(z);
+    } else if (kind === 'classSit') {
+      const lop = str(b.value, 10);
+      const ok = NO_CLASS.includes(u.role) ? LOPS.includes(lop) : lop === u.lop;
+      if (!ok) return { ok: false, user: privateUser(u) };
+      if (!t.classSit) {
+        t.classSit = true; st.classDays++;
+        u.points = (u.points || 0) + POINTS.classSit;
+        msg = `✍️ Đã điểm danh có mặt ở lớp ${lop}. +${POINTS.classSit} điểm`;
+      }
+    } else if (kind === 'hit') {
+      t.hitCount = (t.hitCount || 0) + 1;
+      if (t.hitCount <= 40) { st.hits++; t.hit = true; }
+    } else if (kind === 'diploma') {
+      st.diploma = 1;
+    } else throw new ApiError(400, 'Sự kiện không hợp lệ');
+    await ctx.store.put('user', u.id, u);
+    return { ok: true, msg, user: privateUser(u) };
+  },
+
+  async quests(ctx) {
+    const u = await auth(ctx);
+    const tiers = tierState(u);
+    return {
+      day: u.today.day,
+      daily: DAILY_QUESTS.map((q) => ({ id: q.id, icon: q.icon, title: q.title, desc: q.desc, reward: q.reward, done: !!q.done(u.today), claimed: u.claimed.list.includes(q.id) })),
+      bonus: { ...ALL_DAILY_BONUS, got: u.claimed.list.filter((x) => x !== 'all').length, claimed: u.claimed.list.includes('all') },
+      tiers,
+      achievements: ACHIEVEMENTS.map((a) => ({ id: a.id, tier: a.tier, title: a.title, desc: a.desc, reward: a.reward, n: a.n, progress: Math.min(a.n, statValue(u, a.stat)), claimed: u.achClaimed.includes(a.id), unlocked: tiers[a.tier].unlocked })),
+      user: privateUser(u),
+    };
+  },
+
+  async claim(ctx, b) {
+    const u = await auth(ctx);
+    const id = str(b.id, 20, true, 'nhiệm vụ');
+    if (b.kind === 'daily') {
+      if (u.claimed.list.includes(id)) throw new ApiError(400, 'Đã nhận thưởng rồi');
+      if (id === 'all') {
+        if (u.claimed.list.filter((x) => x !== 'all').length < ALL_DAILY_BONUS.need) throw new ApiError(400, 'Chưa đủ nhiệm vụ');
+        credit(u, ALL_DAILY_BONUS.reward, `🏅 ${ALL_DAILY_BONUS.title}`, ctx.now);
+      } else {
+        const q = DAILY_QUESTS.find((x) => x.id === id);
+        if (!q) throw new ApiError(404, 'Không có nhiệm vụ này');
+        if (!q.done(u.today)) throw new ApiError(400, 'Chưa xong nhiệm vụ');
+        credit(u, q.reward, `📜 Nhiệm vụ: ${q.title}`, ctx.now);
+      }
+      u.claimed.list.push(id);
+    } else {
+      const a = ACHIEVEMENTS.find((x) => x.id === id);
+      if (!a) throw new ApiError(404, 'Không có thành tựu này');
+      if (u.achClaimed.includes(id)) throw new ApiError(400, 'Đã nhận rồi');
+      if (!tierState(u)[a.tier].unlocked) throw new ApiError(400, 'Cấp này chưa mở');
+      if (statValue(u, a.stat) < a.n) throw new ApiError(400, 'Chưa đạt thành tựu');
+      u.achClaimed.push(id);
+      credit(u, a.reward, `🏆 Thành tựu: ${a.title}`, ctx.now);
+      u.points = (u.points || 0) + POINTS.ach;
+    }
+    await ctx.store.put('user', u.id, u);
+    return { user: privateUser(u) };
+  },
+
+  async wallet(ctx) {
+    const u = await auth(ctx);
+    return { wallet: u.wallet || 0, streak: u.stats.streak, ledger: u.ledger, user: privateUser(u) };
+  },
+
+  // Chào cờ sáng thứ Hai (trước 12 giờ trưa, giờ Việt Nam), mỗi tuần một lần
+  async flag(ctx) {
+    const u = await auth(ctx);
+    if (vnWeekday(ctx.now) !== 1 || vnMinutes(ctx.now) >= 12 * 60) throw new ApiError(400, 'Chào cờ vào sáng thứ Hai (trước 12 giờ trưa). Hẹn bạn thứ Hai nhé!');
+    const week = vnDate(ctx.now);
+    if (u.lastFlag === week) return { fresh: false, user: privateUser(u) };
+    u.lastFlag = week; u.stats.flagWeeks++;
+    credit(u, 10000, '🇻🇳 Có mặt chào cờ thứ Hai', ctx.now);
+    await addPoints(ctx, u, 'flag');
+    return { fresh: true, user: privateUser(u) };
+  },
+
+  // Tặng hoa tri ân thầy cô: mỗi người một bó mỗi ngày; đếm số bó cả trường trong ngày
+  async flower(ctx, b) {
+    const u = await auth(ctx);
+    const day = vnDate(ctx.now);
+    const key = 'flower|' + day;
+    const c = (await ctx.store.get('counter', key)) || { n: 0 };
+    if (u.today.flower) return { fresh: false, today: c.n, user: privateUser(u) };
+    u.today.flower = true; u.stats.flowers++;
+    c.n += 1;
+    await ctx.store.put('counter', key, c);
+    const to = str(b.to, 60);
+    await ctx.store.put('flowerlog', `${String(ctx.now).padStart(15, '0')}-${randId(6)}`, { name: u.name, khoa: u.khoa, lop: u.lop, to, at: ctx.now });
+    await addPoints(ctx, u, 'flower');
+    return { fresh: true, today: c.n, user: privateUser(u) };
+  },
+
+  async flowers(ctx) {
+    const c = (await ctx.store.get('counter', 'flower|' + vnDate(ctx.now))) || { n: 0 };
+    const rows = await ctx.store.list('flowerlog', '', 12);
+    return { today: c.n, recent: rows.map((r) => r.v) };
+  },
+
+  // Tỏ tình: gửi một trong các câu có sẵn, người nhận chọn 1 trong 3 câu trả lời
+  async love(ctx, b) {
+    const u = await auth(ctx);
+    const to = await ctx.store.get('user', str(b.to, 20, true, 'người nhận'));
+    if (!to || to.id === u.id) throw new ApiError(400, 'Không tìm thấy bạn này');
+    const line = num(b.line, 0, LOVE_LINES.length - 1, 0) | 0;
+    u.today.loves = (u.today.loves || 0) + 1;
+    if (u.today.loves > 10) throw new ApiError(400, 'Hôm nay tỏ tình nhiều quá rồi, mai nhé!');
+    const id = randId(10);
+    await ctx.store.put('love', id, { id, from: u.id, fromName: u.name, to: to.id, toName: to.name, line, at: ctx.now });
+    await sendInbox(ctx, to.id, { id, kind: 'love', from: u.id, fromName: u.name, line, at: ctx.now });
+    await ctx.store.put('user', u.id, u);
+    return { ok: true };
+  },
+
+  async loveReply(ctx, b) {
+    const u = await auth(ctx);
+    const rec = await ctx.store.get('love', str(b.id, 20, true, 'lời tỏ tình'));
+    if (!rec || rec.to !== u.id || rec.ans !== undefined) throw new ApiError(400, 'Lời tỏ tình không còn');
+    const ans = num(b.ans, 0, LOVE_REPLIES.length - 1, 1) | 0;
+    rec.ans = ans;
+    await ctx.store.put('love', rec.id, rec);
+    if (ans === 0) {
+      const from = await ctx.store.get('user', rec.from);
+      if (from) { ensure(from, ctx.now); from.stats.loveYes++; await ctx.store.put('user', from.id, from); }
+    }
+    await sendInbox(ctx, rec.from, { id: rec.id + 'r', kind: 'loveReply', from: u.id, fromName: u.name, line: rec.line, ans, at: ctx.now });
+    return { ok: true };
   },
 
   async leaderboard(ctx, b) {
@@ -381,7 +691,10 @@ const handlers = {
       e.members += 1;
       lopBy.set(v.lop, e);
     }
+    const people = rows.map(({ v }) => ({ name: v.name, khoa: v.khoa, lop: v.lop, role: v.role, points: v.points || 0 }))
+      .sort((a, c) => c.points - a.points).slice(0, 20);
     return {
+      people,
       khoa: [...by.values()].sort((a, c) => c.points - a.points).slice(0, 30),
       lop: [...lopBy.values()].sort((a, c) => c.points - a.points),
     };
