@@ -172,6 +172,42 @@ function avatarEditor(look, onChange = () => {}) {
   return el;
 }
 
+// ======================= Nhạc nền: bài ca truyền thống =======================
+// Phát qua trình phát nhúng của YouTube (không tải file về). Đổi video tại MUSIC.youtubeId.
+const MUSIC = { youtubeId: 'N7Rl5xQd538', title: 'Bài ca truyền thống' };
+const music = {
+  playing: false,
+  frame: null,
+  box: null,
+  button: h('button', { class: 'music-btn', 'aria-label': 'Phát bài ca truyền thống', title: MUSIC.title, onclick: () => music.toggle() }, '🎵'),
+  cmd(func) {
+    try { this.frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args: [] }), '*'); } catch { /* */ }
+  },
+  open() {
+    const id = MUSIC.youtubeId;
+    this.frame = h('iframe', {
+      src: `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&autoplay=1&loop=1&playlist=${id}&playsinline=1&rel=0`,
+      title: MUSIC.title, allow: 'autoplay; encrypted-media', referrerpolicy: 'strict-origin-when-cross-origin',
+    });
+    this.box = h('div', { class: 'music-box', role: 'region', 'aria-label': 'Trình phát nhạc' },
+      h('div', { class: 'music-head' },
+        h('b', {}, '🎵 ' + MUSIC.title),
+        h('button', { class: 'icon-btn sm', 'aria-label': 'Tắt nhạc', onclick: () => this.close() }, '✕')),
+      this.frame,
+      h('a', { href: `https://www.youtube.com/watch?v=${id}`, target: '_blank', rel: 'noopener' }, 'Không nghe được? Mở trên YouTube ↗'));
+    document.body.append(this.box);
+    this.playing = true;
+  },
+  close() { this.box?.remove(); this.box = this.frame = null; this.playing = false; this.sync(); },
+  toggle() {
+    if (!this.box) this.open();
+    else if (this.playing) { this.cmd('pauseVideo'); this.playing = false; }
+    else { this.cmd('playVideo'); this.playing = true; }
+    this.sync();
+  },
+  sync() { this.button.classList.toggle('on', this.playing); this.button.setAttribute('aria-pressed', String(this.playing)); },
+};
+
 // ======================= Sân trường =======================
 const hud = { update() {} };
 
@@ -186,7 +222,7 @@ function enterSchool() {
 
   const updateClock = () => { const now = Date.now(); clockEl.replaceChildren(h('span', { class: 'clock' }, vnClock(now)), ' · ' + periodOf(now).label); };
   hud.update = () => {
-    right.replaceChildren(...[online,
+    right.replaceChildren(...[online, music.button,
       getMode() === 'offline' ? h('span', { class: 'chip warn', title: 'Dữ liệu chỉ lưu trên máy này' }, 'Ngoại tuyến') : null,
       me.guest
         ? h('button', { class: 'hud-btn', onclick: () => createFlow() }, 'Ghi danh')

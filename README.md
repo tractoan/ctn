@@ -28,6 +28,9 @@ vào là thấy ngay sân trường với tư cách khách; muốn viết lưu b
 giờ Việt Nam và tiết học hiện tại; thanh dưới có câu nói nhanh, biểu cảm, ô chat và nút 🗺️ mở bản đồ toàn trường
 (chạm vào đâu trên bản đồ thì nhân vật tự đi tới đó).
 
+Nút 🎵 trên thanh trên phát **bài ca truyền thống** qua trình phát nhúng của YouTube (đổi video ở hằng số `MUSIC`
+trong `public/js/main.js`). Trình phát hiện ở góc dưới bên trái, có nút tắt và link mở trên YouTube.
+
 Điều khiển: chạm/nhấp vào sân để đi (tự tìm đường quanh các dãy nhà), chạm nhãn để mở,
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
 Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.
