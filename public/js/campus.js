@@ -90,9 +90,10 @@ export const HOTSPOTS = [
   { id: 'clubs', x: 1665, y: 792, icon: '🎭', label: 'Nhà đa năng · CLB', map: 'Đa năng', panel: 'clubs' },
   { id: 'canteen', x: 1884, y: 718, icon: '🍜', label: 'Căng tin', panel: 'canteen' },
   { id: 'tronhoc', x: 1805, y: 150, icon: '⚽', label: 'Chỗ trốn học đá bóng', map: 'Trốn học', panel: 'tronhoc' },
+  { id: 'photo', x: 1151, y: 340, icon: '📸', label: 'Chụp ảnh kỷ yếu', map: 'Chụp ảnh', panel: 'photo' },
   { id: 'drum', x: 1087, y: 790, icon: '🥁', label: 'Trống trường', map: 'Trống', panel: 'drum' },
   { id: 'wish', x: 1400, y: 1150, icon: '🌠', label: 'Tường "Ước mơ vào Chuyên"', map: 'Ước mơ', panel: 'wish' },
-  ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'class', lop: d.lop, small: true })),
+  ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'enterClass', lop: d.lop, small: true })),
 ];
 
 // Cây cối (gốc cây là vật cản nhỏ). kind: palm (cau vua), bonsai (chậu cảnh), tree (bàng, xà cừ)
@@ -106,7 +107,8 @@ for (const y of [240, 360, 480, 620]) trees.push({ x: 1440, y, kind: 'palm' });
 // Hàng chậu cảnh dưới sân
 for (let x = 760; x <= 1380; x += 90) trees.push({ x, y: 715, kind: 'bonsai' });
 // Cây to quanh cổng, góc vườn
-for (const [x, y] of [[60, 1070], [170, 1120], [280, 1060], [1660, 860], [1780, 940], [1900, 880], [1700, 1080], [1880, 1110], [1600, 1150]]) trees.push({ x, y, kind: 'tree' });
+// bloom: cây đang ra hoa – phượng đỏ, bằng lăng tím, hoa sữa trắng
+for (const [x, y, bloom] of [[60, 1070, 'phuong'], [170, 1120], [280, 1060, 'banglang'], [1660, 860, 'phuong'], [1780, 940], [1900, 880, 'banglang'], [1700, 1080, 'hoasua'], [1880, 1110, 'phuong'], [1600, 1150, 'phuong']]) trees.push({ x, y, kind: 'tree', bloom });
 // Chỗ trốn học
 for (const [x, y] of [[1730, 60], [1880, 90], [1750, 250], [1890, 260]]) trees.push({ x, y, kind: 'tree' });
 // Bờ cây trước dãy 5 tầng
@@ -114,7 +116,25 @@ for (let x = 640; x <= 1560; x += 120) if (x < 860 || x > 960) trees.push({ x, y
 export const TREES = trees;
 
 export const LAMPS = [{ x: 960, y: 470 }, { x: 1180, y: 470 }];
-export const BENCHES = [{ x: 860, y: 600 }, { x: 1230, y: 600 }, { x: 900, y: 360 }, { x: 1380, y: 380 }];
+// Ghế đá – chạm vào để ngồi. Mỗi ghế có 2 chỗ.
+export const BENCHES = [
+  { x: 860, y: 600 }, { x: 1230, y: 600 }, { x: 900, y: 360 }, { x: 1380, y: 380 }, { x: 760, y: 640 }, { x: 1330, y: 640 },
+  { x: 1700, y: 1000 }, { x: 1840, y: 1000 }, { x: 115, y: 1040 }, { x: 1500, y: 1150 },
+];
+export const SEATS = BENCHES.flatMap((b) => [
+  { x: b.x - 14, y: b.y + 8, dir: 1, back: false },
+  { x: b.x + 14, y: b.y + 8, dir: -1, back: false },
+]);
+
+// Bồn hoa (là vật cản). round: bồn tròn bán kính r; còn lại hình chữ nhật.
+export const FLOWERBEDS = [
+  { round: true, x: 800, y: 470, r: 34 }, { round: true, x: 1300, y: 470, r: 34 }, { round: true, x: 1040, y: 650, r: 38 },
+  { x: 720, y: 728, w: 700, h: 18 },
+  { x: 600, y: 1086, w: 250, h: 16 }, { x: 970, y: 1086, w: 600, h: 16 },
+  { x: 1650, y: 1120, w: 200, h: 26, colors: ['#E5382F', '#F2B233', '#FFFFFF'] },
+  { x: 200, y: 1150, w: 120, h: 24, colors: ['#F06292', '#BA68C8', '#FFFFFF'] },
+  { round: true, x: 1790, y: 860, r: 26 },
+];
 
 // Cột cờ ở giữa sân khấu
 export const FLAG = { x: 1151, y: 250 };
@@ -129,6 +149,7 @@ export const PLACES = HOTSPOTS.filter((h) => !h.small);
 export function solids() {
   const s = [...BUILDINGS.map(({ x, y, w, h }) => ({ x, y, w, h })), ...WALLS, ...EDGES];
   for (const t of TREES) s.push({ x: t.x - 6, y: t.y - 4, w: 12, h: 8 });
+  for (const f of FLOWERBEDS) s.push(f.round ? { x: f.x - f.r * 0.8, y: f.y - f.r * 0.8, w: f.r * 1.6, h: f.r * 1.6 } : { x: f.x, y: f.y, w: f.w, h: f.h });
   s.push({ x: BOARD.x, y: BOARD.y, w: BOARD.w, h: BOARD.h });
   s.push({ x: STAGE.x, y: STAGE.y, w: STAGE.w, h: STAGE.h - 20 });
   return s;

@@ -8,5 +8,5 @@
   "background_color": "#1B2A4E",
   "theme_color": "#1B2A4E",
   "lang": "vi",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "icons": [{ "src": "/logo.jpg", "sizes": "447x447", "type": "image/jpeg" }]
 }

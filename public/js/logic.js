@@ -172,6 +172,8 @@ const handlers = {
     const p = {
       id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', look: u.look,
       x: num(b.x, 0, 4000), y: num(b.y, 0, 4000), zone: str(b.zone, 40), at: ctx.now,
+      // cảnh đang đứng: 'campus' (sân trường) hoặc 'lop:<Lớp>' (trong lớp học)
+      scene: str(b.scene, 40) || 'campus', sit: !!b.sit, sitBack: !!b.sitBack, dir: b.dir === -1 ? -1 : 1,
     };
     const old = await ctx.store.get('presence', u.id);
     if (typeof b.say === 'string' && b.say.trim()) { p.say = str(b.say, 80); p.sayAt = ctx.now; }
@@ -258,6 +260,39 @@ const handlers = {
     const rec = { id: randId(8), uid: u.id, name: u.name, item: m.name, emoji: m.emoji, price, forName, at: ctx.now };
     await ctx.store.put('buy', `${String(ctx.now).padStart(15, '0')}-${rec.id}`, rec);
     return { item: rec, user: privateUser(u) };
+  },
+
+  // ---------- Album ảnh kỷ yếu ----------
+  // Ảnh lớn lưu riêng ('photofull'), danh sách chỉ trả ảnh nhỏ để nhẹ.
+  async albumPost(ctx, b) {
+    const u = await auth(ctx);
+    const isJpeg = (d, max) => typeof d === 'string' && d.startsWith('data:image/jpeg;base64,') && d.length <= max;
+    if (!isJpeg(b.thumb, 40000) || !isJpeg(b.full, 300000)) throw new ApiError(400, 'Ảnh không hợp lệ hoặc quá lớn');
+    const today = vnDate(ctx.now);
+    if (u.photoDay !== today) { u.photoDay = today; u.photoCount = 0; }
+    if (u.photoCount >= 5) throw new ApiError(400, 'Mỗi ngày đăng tối đa 5 ảnh kỷ yếu');
+    u.photoCount += 1;
+    await ctx.store.put('user', u.id, u);
+    const id = randId(8);
+    const meta = {
+      id, uid: u.id, by: u.name, khoa: u.khoa, lop: u.lop, caption: str(b.caption, 120),
+      people: Array.isArray(b.people) ? b.people.slice(0, 12).map((x) => str(String(x), 40)).filter(Boolean) : [],
+      thumb: b.thumb, at: ctx.now,
+    };
+    await ctx.store.put('photo', `${String(ctx.now).padStart(15, '0')}-${id}`, meta);
+    await ctx.store.put('photofull', id, { id, full: b.full });
+    return { item: meta, user: privateUser(u) };
+  },
+
+  async album(ctx) {
+    const rows = await ctx.store.list('photo', '', 60);
+    return { items: rows.map((r) => r.v).sort((a, c) => c.at - a.at).slice(0, 60) };
+  },
+
+  async photo(ctx, b) {
+    const p = await ctx.store.get('photofull', str(b.id, 20, true, 'mã ảnh'));
+    if (!p) throw new ApiError(404, 'Không tìm thấy ảnh');
+    return p;
   },
 
   async purchases(ctx) {

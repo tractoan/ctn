@@ -128,3 +128,38 @@ test('đố vui giới hạn 10 điểm/ngày, chức năng lạ trả 404, chư
   assert.equal((await call(s, 'toString', {})).status, 404);
   assert.equal((await call(s, 'me', {})).status, 401);
 });
+
+test('album kỷ yếu: đăng, giới hạn 5 ảnh/ngày, xem ảnh lớn', async () => {
+  const s = memStore();
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' })).body;
+  const img = 'data:image/jpeg;base64,' + 'A'.repeat(100);
+  assert.equal((await call(s, 'albumPost', { full: 'data:image/png;base64,AA', thumb: img }, a.token)).status, 400);
+  assert.equal((await call(s, 'albumPost', { full: img, thumb: img }, '')).status, 401);
+  const now = Date.UTC(2026, 5, 1, 5);
+  const r = await call(s, 'albumPost', { full: img, thumb: img, caption: 'Họp lớp', people: ['An', 'Bình'] }, a.token, now);
+  assert.equal(r.status, 200);
+  for (let i = 1; i < 5; i++) assert.equal((await call(s, 'albumPost', { full: img, thumb: img }, a.token, now + i)).status, 200);
+  assert.equal((await call(s, 'albumPost', { full: img, thumb: img }, a.token, now + 9)).status, 400);
+  const al = (await call(s, 'album', {})).body.items;
+  assert.equal(al.length, 5);
+  assert.equal(al[4].caption, 'Họp lớp');
+  assert.deepEqual(al[4].people, ['An', 'Bình']);
+  assert.equal(al[0].full, undefined);
+  assert.equal((await call(s, 'photo', { id: r.body.item.id })).body.full, img);
+});
+
+test('presence mang cảnh (sân/lớp) và trạng thái ngồi', async () => {
+  const s = memStore();
+  const a = (await call(s, 'register', { name: 'An', role: 'gv' })).body;
+  const b = (await call(s, 'register', { name: 'Bình', role: 'gv' })).body;
+  await call(s, 'presence', { x: 100, y: 300, scene: 'lop:Toán', sit: true, sitBack: true, dir: -1 }, a.token, 1000);
+  const o = (await call(s, 'presence', { x: 1, y: 1 }, b.token, 1500)).body.others[0];
+  assert.equal(o.scene, 'lop:Toán');
+  assert.equal(o.sit, true);
+  assert.equal(o.sitBack, true);
+  assert.equal(o.dir, -1);
+  await call(s, 'presence', { x: 100, y: 300 }, a.token, 2000);
+  const o2 = (await call(s, 'presence', { x: 1, y: 1 }, b.token, 2500)).body.others[0];
+  assert.equal(o2.scene, 'campus');
+  assert.equal(o2.sit, false);
+});

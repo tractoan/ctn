@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.2 – sơ đồ theo bản vẽ của cựu học sinh, nhạc nền, trống trường, ném bóng nước |
+| Phiên bản | 1.3 – nhiều cảnh (sân trường, lớp học), ngồi ghế, sổ lưu bút, ảnh kỷ yếu, logo trường |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -25,6 +25,7 @@ Tài liệu này mô tả **cách hiện thực**.
 | NT-3 | Sơ đồ là **dữ liệu** (`campus.js`), không lẫn vào mã vẽ | Sửa sơ đồ theo trí nhớ cựu học sinh mà không đụng logic (YC-SD-13) |
 | NT-4 | Đồng bộ bằng hỏi định kỳ (polling) thay vì WebSocket | Chạy được trên gói miễn phí, đơn giản (YC-PN-07) |
 | NT-5 | Nội dung người dùng chỉ gắn bằng `textContent` | Chống chèn mã (YC-PN-09) |
+| NT-6 | Mỗi không gian là một **cảnh** (`scene`) cùng một giao diện: kích thước, vật cản, điểm tương tác, chỗ ngồi, vẽ nền, vẽ vật thể | Thêm phòng mới (lớp học, thư viện…) mà không sửa lõi `World` (YC-LH-01) |
 
 ## 2. Người dùng
 
@@ -69,13 +70,15 @@ dãy 4 tầng. Mỗi pixel của bản vẽ gốc = **1,6 px thế giới**. Th�
 
 | Hằng số | Nội dung |
 |---|---|
+| `FLOWERBEDS` | Bồn hoa tròn (`round`, `r`) hoặc chữ nhật, tuỳ chọn bảng màu `colors`; là vật cản |
+| `BENCHES`, `SEATS` | Ghế đá và chỗ ngồi sinh từ ghế (2 chỗ/ghế) |
 | `GROUNDS` | Mặt đất: đường, vỉa hè, sân bê tông, bãi cỏ, sân đá cầu (`court`), sân trường (`yard`) |
 | `BUILDINGS` | Toà nhà: `id, name, short, x, y, w, h, floors, wall, roof` + tuỳ chọn `trim` (lan can đỏ dãy 4 tầng), `bands` (dải xanh nhà hiệu bộ), `hall` (mái nhà đa năng). Nhà chữ L tách thành nhiều khối cùng `id`; chỉ khối có `short` mới vẽ tên |
 | `YARD`, `STAIRS`, `EDGES` | Sân trường cao; hai bậc thang ở cạnh trái (xuống sân đá cầu, bậc thang chính); tường chắn là vật cản, chừa chỗ bậc thang |
 | `WALLS`, `GATE`, `SIDE_GATE` | Tường rào thấp màu kem, cổng chính (x 693–1130), cổng phụ bên trái |
 | `CLASS_DOORS` | Cửa lớp: lớp chuyên nào ở dãy nào, vị trí đứng trước cửa |
 | `HOTSPOTS` | Điểm tương tác: toạ độ, biểu tượng, nhãn, nhãn ngắn trên bản đồ (`map`), bảng cần mở (`panel`) |
-| `TREES` (`palm`, `bonsai`, `tree`), `LAMPS`, `BENCHES`, `FLAG`, `BOARD`, `STAGE` | Trang trí; gốc cây, cột cờ, bảng tin, bục sân khấu là vật cản |
+| `TREES` (`palm`, `bonsai`, `tree` + `bloom`: `phuong`/`banglang`/`hoasua`), `LAMPS`, `FLAG`, `BOARD`, `STAGE`, `DRUM` | Trang trí; gốc cây, bảng tin, bục sân khấu là vật cản |
 
 Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối vào** giữa nhà hiệu bộ và dãy 5 tầng → **bậc thang
 chính** lên sân trường (sân chỉ lên được bằng hai bậc thang bên trái). Căng tin và chỗ trốn học đi vòng phía
@@ -84,6 +87,40 @@ chính** lên sân trường (sân chỉ lên được bằng hai bậc thang b�
 Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), rồi Lý, Hóa, Sinh,
 Văn, Trung cách đều nhau, cau vua đứng xen giữa; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp, cửa ở **mặt trong**
 (quay vào sân trường), đi theo hành lang dưới chân tường sân, vào từ lối vào hoặc từ phía nhà đa năng.
+
+### 3.1 Cảnh và lớp học
+
+`World` luôn hiển thị **một cảnh**. Cảnh là object:
+
+```js
+{ id, name, w, h, bgColor, fit?,          // fit: thu nhỏ cho vừa chiều ngang màn hình
+  solids: [{x,y,w,h}],                    // vật cản → lưới va chạm 20 px riêng của cảnh (class Grid, có cache)
+  hotspots: [...], seats: [{x,y,dir,back}],
+  spawn: {x,y},
+  drawBg(ctx),                            // nền tĩnh, vẽ một lần vào canvas ngoài màn hình
+  statics(ctx, now) → [{ y, draw() }] }   // vật thể sắp theo y cùng nhân vật
+```
+
+| Cảnh | Nguồn | Ghi chú |
+|---|---|---|
+| `campus` | `CAMPUS_SCENE` trong `world.js`, dữ liệu `campus.js` | 2000 × 1400, 30 điểm tương tác, 20 chỗ ngồi ghế đá |
+| `lop:<Lớp>` | `classroomScene(lop)` trong `classroom.js` | 960 × 740: bảng đen (thứ/ngày/tên lớp), bục giảng, bàn giáo viên, 4 × 3 bàn đôi, 24 chỗ ngồi (ngồi quay lưng về phía người xem, hướng lên bảng), tủ sách, cửa sổ; `fit: true` |
+
+Vào lớp: chạm cửa lớp (`panel: 'enterClass'`) → `world.setScene(classroomScene(lop), spawn)`, nhớ vị trí cửa trong
+`classReturn`. Ra lớp (`exitClass`, mở bản đồ, "Về cổng trường") → `setScene(CAMPUS_SCENE, classReturn)`.
+`setScene` dựng lại nền, lưới va chạm, xoá người khác và hiệu ứng, đặt lại mức phóng to, gọi `onSceneChange`.
+Vị trí chỉ được lưu vào `localStorage` khi đang ở sân trường.
+
+Mỗi lượt `presence` gửi kèm `scene`; máy khách chỉ hiện những người có cùng `scene`, nên ai đang trong lớp Toán
+chỉ thấy người cũng trong lớp Toán (mọi khóa). Số người online trên thanh trên vẫn đếm toàn trường.
+
+### 3.2 Ngồi ghế
+
+Chỗ ngồi là điểm `{x, y, dir, back}` của cảnh (ghế đá: 2 chỗ/ghế, nhìn ra phía người xem; ghế lớp: quay lưng).
+Chạm gần chỗ ngồi (≤ 24 px) → `walkTo(seat, { sit })` → tới nơi thì `sitOn(seat)`: đặt `me.sit`, xoay theo `dir`.
+Bất kỳ chuyển động nào (chạm sân, phím, ném bóng) xoá `me.sit`. `avatar.js` vẽ tư thế ngồi: hạ thân, đùi gập,
+cẳng chân thõng trước ghế (nhìn thẳng) hoặc chỉ thấy lưng (quay lưng). Trạng thái ngồi đi theo `presence`
+(`sit`, `sitBack`, `dir`) để người khác cùng thấy.
 
 ## 4. Chức năng
 
@@ -95,13 +132,18 @@ Văn, Trung cách đều nhau, cau vua đứng xen giữa; **dãy 3 tầng** tr�
 | Bảng tin | `board` | Bảng thi đua theo khóa, theo lớp chuyên, đá cầu | Không |
 | Sân khấu (cột cờ ở giữa) | `stage` | "Hiền tài là nguyên khí của quốc gia", lưu bút chào cờ/văn nghệ | Ghi: có |
 | Trống trường (giữa dãy 5 tầng, sát sân) | `drum` | Xem giờ/tiết, đánh trống (âm thanh Web Audio) | Không |
-| Nút 🎈 (mọi nơi) | – | Ném bóng nước vào người gần nhất | Thấy được bởi người khác: có |
+| Nút 🎈 (mọi nơi) | – | Danh sách người cùng cảnh để chọn ném bóng nước | Thấy được bởi người khác: có |
+| Thẻ người chơi | – | Vẫy tay, ném bóng nước, viết sổ lưu bút, đi tới | Một số: có |
+| Nhân vật của tôi | – | Đổi kiểu, sổ lưu bút của tôi, album kỷ yếu, mã khôi phục | Có |
 | Nút 🎵 (thanh trên) | – | Bài ca truyền thống qua YouTube nhúng | Không |
 | Sân trường · ghế đá | `garden` | Lưu bút tâm sự | Ghi: có |
 | Nhà hiệu bộ | `office` | Lịch họp lớp (tạo, đăng ký/huỷ), thiệp tri ân thầy cô | Ghi: có |
 | Phòng giáo viên | `teachers` | Lưu bút `gv` | Ghi: có |
 | Phòng truyền thống | `history` | Mốc lịch sử cơ sở, góc kỷ niệm | Ghi: có |
-| Cửa lớp | `class` | Chọn khóa → Lưu bút · Sổ đầu bài · Đố vui | Ghi: có |
+| Cửa lớp | `enterClass` | Vào cảnh lớp học | Không |
+| Trong lớp: bảng đen / bàn giáo viên / tủ sách | `class` (tab 2 / 1 / 0) | Đố vui · Sổ đầu bài · Lưu bút lớp, chọn khóa | Ghi: có |
+| Trong lớp: cửa ra | `exitClass` | Về sân, đứng trước cửa lớp | Không |
+| Chụp ảnh kỷ yếu (trước sân khấu, nút 📸) | `photo` | Đếm ngược, khung kỷ yếu, lưu về máy, đăng album | Đăng: có |
 | Sân đá cầu | `football` | Trò đá cầu + bảng xếp hạng | Lưu điểm: có |
 | Nhà đa năng | `clubs` | Gian từng CLB, mỗi gian một lưu bút | Ghi: có |
 | Căng tin | `canteen` | Thực đơn, mua/đãi bạn, giảm 20% giờ ra chơi | Có |
@@ -180,7 +222,28 @@ Người ném (A)            Máy chủ (presence)              Người bị n�
    │                           │                               │ target = B → ướt + thông báo
 ```
 
-### 5.5 Phong cách
+### 5.5 Sổ lưu bút
+
+`bookSheet(owner)` dùng phòng lưu bút `so:<id chủ sổ>` (API `guestbook`/`sign` sẵn có). Trang 0 là bìa (logo, tên
+chủ sổ, số trang), trang 1…n là từng lời lưu bút theo thứ tự cũ → mới, trang n+1 là trang viết. Giấy kẻ dòng
+28 px bằng `repeating-linear-gradient`, lề đỏ, chữ viết tay **Pangolin** (Google Fonts, có tiếng Việt), rơi về
+Be Vietnam Pro nếu không tải được font.
+
+### 5.6 Ảnh kỷ yếu
+
+```
+📸 Chụp → đếm ngược 3·2·1 (presence: "📸 Cười lên nào!")
+       → world.capture(640, 404, zoom 1.6): vẽ lại cảnh quanh nhân vật vào canvas riêng, bỏ nhãn/đường đi
+       → composeYearbook(): khung 720 × 660 – viền xanh than, chỉ vàng, logo tròn, "KỶ YẾU",
+         tên trường, ngày, khóa · lớp, ảnh, lời ghi (Pangolin), tên người trong ảnh (≤ 260 px quanh mình)
+       → JPEG: ảnh lớn ≤ 720 px (≤ 290 KB base64), ảnh nhỏ 240 px (≤ 38 KB)
+       → ⬇️ lưu về máy (<a download>) | 🖼️ albumPost {full, thumb, caption, people}
+```
+
+`world.capture` tạm thay `ctx`, kích thước, camera của `World` rồi gọi `_draw` với cờ `_capturing`, sau đó khôi phục.
+Logo là file cùng nguồn nên canvas không bị "nhiễm bẩn" và xuất được JPEG.
+
+### 5.7 Phong cách
 
 | Token | Giá trị | Dùng cho |
 |---|---|---|
@@ -219,10 +282,11 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 
 | File | Trách nhiệm |
 |---|---|
-| `main.js` | Khởi động, ghi danh, thanh trên/dưới, vòng đồng bộ, toàn bộ bảng chức năng, nhạc nền, tiếng trống, nút ném bóng nước |
-| `world.js` | Lưới va chạm 20 px, tìm đường A* 8 hướng + làm mượt, camera, vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, bản đồ toàn cảnh |
+| `main.js` | Khởi động, ghi danh, thanh trên/dưới, vòng đồng bộ, chuyển cảnh, toàn bộ bảng chức năng, nhạc nền, tiếng trống, chọn người ném bóng, ảnh kỷ yếu + album, sổ lưu bút |
+| `classroom.js` | Cảnh lớp học: bố cục, vật cản, chỗ ngồi, điểm tương tác, vẽ bàn ghế/bảng đen |
+| `world.js` | `Grid` (lưới va chạm 20 px, A* 8 hướng + làm mượt) theo từng cảnh, `CAMPUS_SCENE`, camera (căn giữa cảnh nhỏ), vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, ngồi ghế, chụp ảnh (`capture`), bản đồ toàn cảnh |
 | `campus.js` | Dữ liệu sơ đồ (mục 3) |
-| `avatar.js` | Vẽ nhân vật, ảnh đại diện nhỏ |
+| `avatar.js` | Vẽ nhân vật (đứng, đi, quay lưng, ngồi), ảnh đại diện nhỏ |
 | `games.js` | Đá cầu (canvas, trọng lực), câu hỏi đố vui theo môn |
 | `ui.js` | Tạo phần tử an toàn (`textContent`), sheet, toast, tab |
 | `api.js` | Phát hiện online/offline, gọi API, kho `localStorage` |
@@ -254,14 +318,16 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `user` | id | `{id, token, code, name, role, khoa, lop, school, look, wallet, points, lastCheckin, quizDay, quizCount, createdAt}` |
 | `tok` | token | id người dùng |
 | `code` | mã khôi phục `CTN-XXXX-XXXX` | id người dùng |
-| `presence` | id | `{id, name, role, khoa, lop, school, look, x, y, zone, say, sayAt, throw: {x, y, target, at}, at}` |
+| `presence` | id | `{id, name, role, khoa, lop, school, look, x, y, zone, scene, sit, sitBack, dir, say, sayAt, throw: {x, y, target, at}, at}` |
+| `photo` | `thời gian-id` | `{id, uid, by, khoa, lop, caption, people[], thumb, at}` – ảnh nhỏ cho album |
+| `photofull` | id | `{id, full}` – ảnh lớn, chỉ tải khi xem |
 | `gb` | `phòng\|thời gian-id` | `{id, room, uid, name, role, khoa, lop, body, at}` |
 | `roster` | `phòng\|uid` | `{id, name, khoa, at}` – sổ đầu bài |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
 | `score` | `trò chơi\|uid` | `{id, name, khoa, lop, score, at}` |
 | `buy` | `thời gian-id` | `{id, uid, name, item, emoji, price, forName, at}` |
 
-Tên phòng lưu bút: `lop:<Lớp>:<Khóa>`, `gv`, `trian`, `kyniem`, `clb:<id>`, `ghe-da`, `san-khau`, `tronhoc`, `cong-phu`, `uocmo`.
+Tên phòng lưu bút: `lop:<Lớp>:<Khóa>`, `so:<id người dùng>` (sổ lưu bút cá nhân), `gv`, `trian`, `kyniem`, `clb:<id>`, `ghe-da`, `san-khau`, `tronhoc`, `cong-phu`, `uocmo`. Bản ghi `user` có thêm `photoDay`, `photoCount` (giới hạn 5 ảnh/ngày).
 
 ## 8. API
 
@@ -275,7 +341,7 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `recover` | – | `code` | `{token, user}` |
 | `me` | ✔ | – | `{user}` |
 | `look` | ✔ | `look, name` | `{user}` |
-| `presence` | ✔ | `x, y, zone, say?, throw? {x, y, target}` | `{others[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
+| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, say?, throw? {x, y, target}` | `{others[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
 | `online` | – | – | `{others[], now}` |
 | `guestbook` | – | `room` | `{items[]}` (100 mới nhất) |
 | `sign` | ✔ | `room, body` (≤ 600 ký tự) | `{item, user}` |
@@ -292,6 +358,9 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `score` | ✔ | `game, score` | `{best, user}` |
 | `leaderboard` | – | `game` | `{items[]}` (top 20) |
 | `khoaBoard` | – | – | `{khoa[], lop[]}` |
+| `albumPost` | ✔ | `full, thumb` (JPEG data URL), `caption?`, `people[]?` | `{item, user}`; ≤ 5 ảnh/ngày, thân ≤ 400 KB |
+| `album` | – | – | `{items[]}` (60 mới nhất, chỉ ảnh nhỏ) |
+| `photo` | – | `id` | `{id, full}` |
 
 ## 9. Bảo mật và riêng tư
 
@@ -309,7 +378,7 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 
 | Lệnh | Việc |
 |---|---|
-| `npm test` | 7 nhóm kiểm thử nghiệp vụ (`node --test`), gồm presence + ném bóng nước, thời khoá biểu |
+| `npm test` | 9 nhóm kiểm thử nghiệp vụ (`node --test`), gồm presence (cảnh, ngồi, ném bóng nước), album kỷ yếu, thời khoá biểu |
 | `npm run db:init` + `npm run dev` | Worker + D1 cục bộ, `http://localhost:8787` |
 | `npx wrangler dev --ip 0.0.0.0` | Cho điện thoại cùng Wi-Fi truy cập |
 | `npm run static` | Chỉ giao diện, chế độ ngoại tuyến, `http://localhost:8080` |
@@ -318,7 +387,7 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 Kiểm thử thủ công đã chạy bằng Playwright (Chromium giả lập iPhone 13 và máy tính): hai người chơi và một
 khách cùng lúc; ghi danh, thấy nhau online, lời nói và cú ném bóng nước hiện cho người khác, lưu bút lớp,
 điểm danh, mua đồ, tạo họp lớp, đá cầu, bảng thi đua, đi tới từng địa điểm qua bản đồ toàn cảnh, nút nhạc;
-không có lỗi JavaScript. Khi đổi sơ đồ, chạy script tìm đường từ cổng tới cả 29 điểm tương tác (YC-SD-09).
+không có lỗi JavaScript. Khi đổi sơ đồ, chạy script tìm đường tới mọi điểm tương tác và chỗ ngồi của sân trường và lớp học (YC-SD-09). Lần này còn chạy: 2 người vào lớp Toán thấy nhau, ngồi ghế, chọn người ném bóng, mở đố vui ở bảng đen, ra lớp về đúng cửa, ngồi ghế đá, chụp và đăng ảnh kỷ yếu, xem album, ký sổ lưu bút.
 Bảng truy vết yêu cầu → mã → kiểm thử: [YEU-CAU.md mục 7](YEU-CAU.md#7-truy-vết-yêu-cầu--mã-nguồn--kiểm-thử).
 
 **Chưa kiểm thử:** thiết bị Android/iOS thật, tiếng nhạc YouTube và tiếng trống thật, triển khai thật lên Cloudflare.

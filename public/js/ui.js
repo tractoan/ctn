@@ -66,7 +66,7 @@ export function ago(ts) {
   return new Date(ts).toLocaleDateString('vi-VN');
 }
 
-export function tabs(items) {
+export function tabs(items, initial = 0) {
   // items: [{label, render(container)}]
   const bar = h('div', { class: 'tabs', role: 'tablist' });
   const panel = h('div', { class: 'tab-panel' });
@@ -77,6 +77,6 @@ export function tabs(items) {
     items[i].render(panel);
   }
   bar.append(...btns);
-  select(0);
+  select(Math.min(initial, items.length - 1));
   return h('div', {}, bar, panel);
 }

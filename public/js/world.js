@@ -1,94 +1,103 @@
 // Sân trường: vẽ bản đồ, camera, tìm đường (A* trên lưới), nhân vật mình + người khác.
-import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
+import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, SEATS, FLOWERBEDS, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
 import { drawAvatar } from './avatar.js';
 
 const CELL = 20;
+// Logo trường (vẽ trên biển cổng)
+const LOGO = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: 'logo.jpg' }) : null;
 const SPEED = 190; // px/giây
 
-// ---------- Lưới va chạm & tìm đường ----------
-const GW = Math.ceil(WORLD.w / CELL), GH = Math.ceil(WORLD.h / CELL);
-const blocked = new Uint8Array(GW * GH);
-const SOLIDS = solids();
-(function buildGrid() {
-  const pad = 8;
-  for (const s of SOLIDS) {
-    const x0 = Math.max(0, Math.floor((s.x - pad) / CELL)), x1 = Math.min(GW - 1, Math.floor((s.x + s.w + pad - 1) / CELL));
-    const y0 = Math.max(0, Math.floor((s.y - pad) / CELL)), y1 = Math.min(GH - 1, Math.floor((s.y + s.h + pad - 1) / CELL));
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) blocked[y * GW + x] = 1;
-  }
-})();
-const isBlockedPx = (x, y) => {
-  const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
-  if (cx < 0 || cy < 0 || cx >= GW || cy >= GH) return true;
-  return blocked[cy * GW + cx] === 1;
-};
-
-function nearestFree(cx, cy) {
-  if (!blocked[cy * GW + cx]) return [cx, cy];
-  for (let r = 1; r < 30; r++) {
-    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-      const x = cx + dx, y = cy + dy;
-      if (x >= 0 && y >= 0 && x < GW && y < GH && !blocked[y * GW + x]) return [x, y];
+// ---------- Lưới va chạm & tìm đường (mỗi cảnh một lưới) ----------
+export class Grid {
+  constructor(w, h, solidList) {
+    this.GW = Math.ceil(w / CELL); this.GH = Math.ceil(h / CELL);
+    this.blocked = new Uint8Array(this.GW * this.GH);
+    const pad = 8;
+    for (const s of solidList) {
+      const x0 = Math.max(0, Math.floor((s.x - pad) / CELL)), x1 = Math.min(this.GW - 1, Math.floor((s.x + s.w + pad - 1) / CELL));
+      const y0 = Math.max(0, Math.floor((s.y - pad) / CELL)), y1 = Math.min(this.GH - 1, Math.floor((s.y + s.h + pad - 1) / CELL));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) this.blocked[y * this.GW + x] = 1;
     }
   }
-  return [cx, cy];
+  isBlockedPx(x, y) {
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    if (cx < 0 || cy < 0 || cx >= this.GW || cy >= this.GH) return true;
+    return this.blocked[cy * this.GW + cx] === 1;
+  }
+  nearestFree(cx, cy) {
+    const { GW, GH, blocked } = this;
+    if (!blocked[cy * GW + cx]) return [cx, cy];
+    for (let r = 1; r < 30; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = cx + dx, y = cy + dy;
+        if (x >= 0 && y >= 0 && x < GW && y < GH && !blocked[y * GW + x]) return [x, y];
+      }
+    }
+    return [cx, cy];
+  }
+  lineFree(ax, ay, bx, by) {
+    const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / (CELL / 3));
+    for (let i = 1; i <= n; i++) { const t = i / n; if (this.isBlockedPx(ax + (bx - ax) * t, ay + (by - ay) * t)) return false; }
+    return true;
+  }
+  findPath(sx, sy, tx, ty) {
+    const { GW, GH, blocked } = this;
+    const [scx, scy] = this.nearestFree(Math.max(0, Math.min(GW - 1, Math.floor(sx / CELL))), Math.max(0, Math.min(GH - 1, Math.floor(sy / CELL))));
+    const [tcx, tcy] = this.nearestFree(Math.max(0, Math.min(GW - 1, Math.floor(tx / CELL))), Math.max(0, Math.min(GH - 1, Math.floor(ty / CELL))));
+    const goalExact = !this.isBlockedPx(tx, ty);
+    const start = scy * GW + scx, goal = tcy * GW + tcx;
+    const g = new Float32Array(GW * GH).fill(Infinity), from = new Int32Array(GW * GH).fill(-1);
+    const closed = new Uint8Array(GW * GH);
+    const open = [start]; g[start] = 0;
+    const f = new Map([[start, 0]]);
+    const hfn = (i) => { const x = i % GW, y = (i / GW) | 0; return Math.hypot(x - tcx, y - tcy); };
+    let found = start === goal;
+    while (open.length && !found) {
+      let bi = 0; for (let i = 1; i < open.length; i++) if (f.get(open[i]) < f.get(open[bi])) bi = i;
+      const cur = open[bi]; open[bi] = open[open.length - 1]; open.pop();
+      if (cur === goal) { found = true; break; }
+      closed[cur] = 1;
+      const cx = cur % GW, cy = (cur / GW) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+        const ni = ny * GW + nx;
+        if (blocked[ni] || closed[ni]) continue;
+        if (dx && dy && (blocked[cy * GW + nx] || blocked[ny * GW + cx])) continue;
+        const ng = g[cur] + (dx && dy ? 1.414 : 1);
+        if (ng < g[ni]) { g[ni] = ng; from[ni] = cur; if (!f.has(ni)) open.push(ni); f.set(ni, ng + hfn(ni)); }
+      }
+    }
+    if (!found) return null;
+    const cells = [];
+    for (let i = goal; i !== -1 && i !== start; i = from[i]) cells.push(i);
+    cells.reverse();
+    const pts = cells.map((i) => ({ x: (i % GW) * CELL + CELL / 2, y: ((i / GW) | 0) * CELL + CELL / 2 }));
+    if (goalExact) pts.push({ x: tx, y: ty });
+    // làm mượt: bỏ các điểm trung gian nếu nhìn thẳng được
+    const out = [];
+    let ax = sx, ay = sy, i = 0;
+    while (i < pts.length) {
+      let j = pts.length - 1;
+      while (j > i && !this.lineFree(ax, ay, pts[j].x, pts[j].y)) j--;
+      out.push(pts[j]); ax = pts[j].x; ay = pts[j].y; i = j + 1;
+    }
+    return out;
+  }
 }
 
-function lineFree(ax, ay, bx, by) {
-  const d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d / (CELL / 3));
-  for (let i = 1; i <= n; i++) { const t = i / n; if (isBlockedPx(ax + (bx - ax) * t, ay + (by - ay) * t)) return false; }
-  return true;
-}
-
+let campusGrid = null;
+// Giữ để tương thích: tìm đường trên sân trường
 export function findPath(sx, sy, tx, ty) {
-  let [scx, scy] = nearestFree(Math.floor(sx / CELL), Math.floor(sy / CELL));
-  const [tcx, tcy] = nearestFree(Math.max(0, Math.min(GW - 1, Math.floor(tx / CELL))), Math.max(0, Math.min(GH - 1, Math.floor(ty / CELL))));
-  const goalExact = !isBlockedPx(tx, ty);
-  const start = scy * GW + scx, goal = tcy * GW + tcx;
-  const g = new Float32Array(GW * GH).fill(Infinity), from = new Int32Array(GW * GH).fill(-1);
-  const closed = new Uint8Array(GW * GH);
-  const open = [start]; g[start] = 0;
-  const f = new Map([[start, 0]]);
-  const hfn = (i) => { const x = i % GW, y = (i / GW) | 0; return Math.hypot(x - tcx, y - tcy); };
-  let found = start === goal;
-  while (open.length && !found) {
-    let bi = 0; for (let i = 1; i < open.length; i++) if (f.get(open[i]) < f.get(open[bi])) bi = i;
-    const cur = open[bi]; open[bi] = open[open.length - 1]; open.pop();
-    if (cur === goal) { found = true; break; }
-    closed[cur] = 1;
-    const cx = cur % GW, cy = (cur / GW) | 0;
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-      if (!dx && !dy) continue;
-      const nx = cx + dx, ny = cy + dy;
-      if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
-      const ni = ny * GW + nx;
-      if (blocked[ni] || closed[ni]) continue;
-      if (dx && dy && (blocked[cy * GW + nx] || blocked[ny * GW + cx])) continue;
-      const ng = g[cur] + (dx && dy ? 1.414 : 1);
-      if (ng < g[ni]) { g[ni] = ng; from[ni] = cur; if (!f.has(ni)) open.push(ni); f.set(ni, ng + hfn(ni)); }
-    }
-  }
-  if (!found) return null;
-  const cells = [];
-  for (let i = goal; i !== -1 && i !== start; i = from[i]) cells.push(i);
-  cells.reverse();
-  const pts = cells.map((i) => ({ x: (i % GW) * CELL + CELL / 2, y: ((i / GW) | 0) * CELL + CELL / 2 }));
-  if (goalExact) pts.push({ x: tx, y: ty });
-  // làm mượt: bỏ các điểm trung gian nếu nhìn thẳng được
-  const out = [];
-  let ax = sx, ay = sy, i = 0;
-  while (i < pts.length) {
-    let j = pts.length - 1;
-    while (j > i && !lineFree(ax, ay, pts[j].x, pts[j].y)) j--;
-    out.push(pts[j]); ax = pts[j].x; ay = pts[j].y; i = j + 1;
-  }
-  return out;
+  campusGrid ||= new Grid(WORLD.w, WORLD.h, solids());
+  return campusGrid.findPath(sx, sy, tx, ty);
 }
 
 // ---------- Vẽ ----------
-function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
-function label(ctx, txt, x, y, { size = 12, color = '#1D2433', bg = null, weight = 700, pad = 5 } = {}) {
+export function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+export function label(ctx, txt, x, y, { size = 12, color = '#1D2433', bg = null, weight = 700, pad = 5 } = {}) {
   ctx.font = `${weight} ${size}px "Be Vietnam Pro", system-ui, sans-serif`;
   const w = ctx.measureText(txt).width;
   if (bg) { ctx.fillStyle = bg; rr(ctx, x - w / 2 - pad, y - size / 2 - pad + 1, w + pad * 2, size + pad * 2 - 2, (size + pad * 2) / 2); ctx.fill(); }
@@ -246,11 +255,47 @@ function drawTree(ctx, t, time) {
   ctx.arc(t.x + 17 + sway, t.y - 26, 15, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(t.x - 6 + sway, t.y - 44, 9, 0, Math.PI * 2); ctx.fill();
+  // cây có hoa: phượng đỏ, bằng lăng tím, hoa sữa trắng
+  const bloom = { phuong: '#E5382F', banglang: '#9C6ADE', hoasua: '#F5F3E6' }[t.bloom];
+  if (bloom) {
+    ctx.fillStyle = bloom;
+    for (let i = 0; i < 18; i++) { const a = i * 2.4, r = 6 + (i * 7) % 20; ctx.beginPath(); ctx.arc(t.x + sway + Math.cos(a) * r, t.y - 34 + Math.sin(a) * r * 0.7, 3.2, 0, Math.PI * 2); ctx.fill(); }
+  }
 }
 
+// Ghế đá: mặt đá mài trên hai chân đá
 function drawBench(ctx, b) {
-  ctx.fillStyle = '#9AA0A6'; rr(ctx, b.x - 22, b.y - 6, 44, 12, 3); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(b.x - 22, b.y + 4, 44, 3);
+  ctx.fillStyle = 'rgba(0,0,0,.16)'; ctx.beginPath(); ctx.ellipse(b.x + 3, b.y + 8, 34, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#8D9196'; ctx.fillRect(b.x - 24, b.y - 2, 8, 10); ctx.fillRect(b.x + 16, b.y - 2, 8, 10);
+  ctx.fillStyle = '#B9BDC2'; rr(ctx, b.x - 30, b.y - 10, 60, 12, 3); ctx.fill();
+  ctx.fillStyle = '#D3D6DA'; ctx.fillRect(b.x - 28, b.y - 9, 56, 3);
+  ctx.fillStyle = 'rgba(0,0,0,.08)'; for (const dx of [-14, 3, 17]) ctx.fillRect(b.x + dx, b.y - 7, 2, 2);
+}
+
+// Bồn hoa: viền gạch, đất, hoa nhiều màu
+const FLOWER_COLORS = ['#E5382F', '#F2B233', '#F06292', '#FFFFFF', '#BA68C8', '#FF8A65'];
+function drawFlowerbed(ctx, f) {
+  ctx.save();
+  if (f.round) {
+    ctx.fillStyle = '#B5452F'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r + 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#6E8F3E'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.clip();
+  } else {
+    ctx.fillStyle = '#B5452F'; rr(ctx, f.x - 3, f.y - 3, f.w + 6, f.h + 6, 5); ctx.fill();
+    ctx.fillStyle = '#6E8F3E'; ctx.fillRect(f.x, f.y, f.w, f.h);
+    ctx.beginPath(); ctx.rect(f.x, f.y, f.w, f.h); ctx.clip();
+  }
+  const bx = f.round ? f.x - f.r : f.x, by = f.round ? f.y - f.r : f.y, bw = f.round ? f.r * 2 : f.w, bh = f.round ? f.r * 2 : f.h;
+  const n = Math.max(12, Math.round(bw * bh / 90));
+  ctx.fillStyle = '#4E7F32';
+  for (let i = 0; i < n; i++) { const x = bx + ((i * 7919) % 997) / 997 * bw, y = by + ((i * 104729) % 991) / 991 * bh; ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2); ctx.fill(); }
+  for (let i = 0; i < n; i++) {
+    const x = bx + ((i * 4931 + 17) % 983) / 983 * bw, y = by + ((i * 7757 + 3) % 977) / 977 * bh;
+    ctx.fillStyle = (f.colors || FLOWER_COLORS)[i % (f.colors || FLOWER_COLORS).length];
+    ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,150,.9)'; ctx.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
+  }
+  ctx.restore();
 }
 
 function drawLamp(ctx, l) {
@@ -326,11 +371,45 @@ function drawGate(ctx, time) {
   ctx.fillStyle = '#FBFBF7'; rr(ctx, g.x - 38, top + 6, g.w + 76, 40, 3); ctx.fill();
   label(ctx, 'SỞ GIÁO DỤC & ĐÀO TẠO TỈNH THÁI NGUYÊN', g.x + g.w / 2, top + 14, { size: 7.5, color: '#C62828', weight: 800 });
   label(ctx, g.sign, g.x + g.w / 2, top + 31, { size: 16, color: '#C62828', weight: 800 });
+  // logo trường hai đầu biển
+  if (LOGO && LOGO.complete && LOGO.naturalWidth) {
+    for (const lx of [g.x - 18, g.x + g.w + 18]) {
+      ctx.save(); ctx.beginPath(); ctx.arc(lx, top + 26, 17, 0, Math.PI * 2); ctx.clip();
+      ctx.drawImage(LOGO, lx - 17, top + 9, 34, 34); ctx.restore();
+    }
+  }
   // băng rôn xanh
   const wave = Math.sin(time / 600) * 1;
   ctx.fillStyle = '#1E5BB8'; rr(ctx, g.x + 10, top + 56 + wave, g.w - 20, 16, 2); ctx.fill();
   label(ctx, 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ THẦY TRÒ VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 64 + wave, { size: 7.5, color: '#fff', weight: 800 });
 }
+
+// Cảnh SÂN TRƯỜNG
+export const CAMPUS_SCENE = {
+  id: 'campus', w: WORLD.w, h: WORLD.h, bgColor: '#8FBF73', name: 'Sân trường',
+  solids: solids(), hotspots: HOTSPOTS, seats: SEATS, spawn: null,
+  drawBg(ctx) {
+    for (const g of GROUNDS) drawGround(ctx, g);
+    for (const st of STAIRS) drawStairs(ctx, st);
+    for (const fb of FLOWERBEDS) drawFlowerbed(ctx, fb);
+    // tường rào thấp màu kem
+    for (const w of WALLS) { ctx.fillStyle = '#E8E1CF'; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(w.x, w.y + w.h - 2, w.w, 2); }
+    for (const d of CLASS_DOORS) drawDoor(ctx, d);
+  },
+  statics(ctx, now) {
+    const items = [];
+    for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
+    for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
+    for (const b of BENCHES) items.push({ y: b.y - 1, draw: () => drawBench(ctx, b) });
+    items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
+    items.push({ y: DRUM.y, draw: () => drawDrum(ctx) });
+    items.push({ y: BOARD.y + BOARD.h, draw: () => drawBoard(ctx) });
+    items.push({ y: STAGE.y + STAGE.h, draw: () => drawStage(ctx) });
+    for (const l of LAMPS) items.push({ y: l.y, draw: () => drawLamp(ctx, l) });
+    items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
+    return items;
+  },
+};
 
 export class World {
   constructor(canvas) {
@@ -352,6 +431,10 @@ export class World {
     this.myId = '';
     this.onWet = () => {};
     this.bg = null;
+    this.scene = null;
+    this.grid = null;
+    this._grids = new Map();
+    this.onSceneChange = () => {};
     this._last = performance.now();
     this._loop = this._loop.bind(this);
     this.keys = new Set();
@@ -368,21 +451,23 @@ export class World {
     this.baseZoom = r.width < 640 ? 0.95 : 1.2;
   }
 
-  // Vẽ sẵn lớp nền tĩnh (mặt đất) vào canvas ngoài màn hình
-  _buildBg() {
+  // Đổi cảnh (sân trường ↔ lớp học). Vẽ sẵn nền tĩnh vào canvas ngoài màn hình.
+  setScene(scene, pos) {
+    this.scene = scene;
+    if (!this._grids.has(scene.id)) this._grids.set(scene.id, new Grid(scene.w, scene.h, scene.solids));
+    this.grid = this._grids.get(scene.id);
     const c = document.createElement('canvas');
-    c.width = WORLD.w; c.height = WORLD.h;
-    const ctx = c.getContext('2d');
-    for (const g of GROUNDS) drawGround(ctx, g);
-    for (const st of STAIRS) drawStairs(ctx, st);
-    // tường rào thấp màu kem
-    for (const w of WALLS) { ctx.fillStyle = '#E8E1CF'; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(w.x, w.y + w.h - 2, w.w, 2); }
-    for (const d of CLASS_DOORS) drawDoor(ctx, d);
-    for (const b of BENCHES) drawBench(ctx, b);
+    c.width = scene.w; c.height = scene.h;
+    scene.drawBg(c.getContext('2d'));
     this.bg = c;
+    this.others.clear(); this.fx = []; this.path = []; this.target = null;
+    // lớp học: thu nhỏ cho vừa chiều ngang màn hình; ra sân thì về mức bình thường
+    this.zoom = scene.fit ? Math.max(0.4, Math.min(1, this.vw / (scene.w * this.baseZoom))) : 1;
+    if (this.me && pos) { this.me.x = pos.x; this.me.y = pos.y; this.me.sit = null; this._snapCam(); }
+    this.onSceneChange(scene);
   }
 
-  start() { this._buildBg(); requestAnimationFrame(this._loop); }
+  start(scene = CAMPUS_SCENE) { if (!this.scene) this.setScene(scene); requestAnimationFrame(this._loop); }
 
   setMe(me) {
     this.me = { ...me, dir: 1, moving: false };
@@ -394,15 +479,31 @@ export class World {
     this.cam.x = this.me.x - this.vw / z / 2; this.cam.y = this.me.y - this.vh / z / 2 - 40;
   }
 
-  zoomBy(f) { this.zoom = Math.max(0.5, Math.min(1.8, this.zoom * f)); }
+  zoomBy(f) { this.zoom = Math.max(0.4, Math.min(1.8, this.zoom * f)); }
 
   walkTo(x, y, hotspot = null) {
     if (!this.me) return;
-    const p = findPath(this.me.x, this.me.y, x, y);
+    const p = this.grid.findPath(this.me.x, this.me.y, x, y);
     this.target = hotspot;
     if (!p) { this.path = []; return; }
     this.path = p;
-    if (!p.length && hotspot) { this.target = null; this.onArrive(hotspot); }
+    if (!p.length && hotspot) { this.target = null; this._arrive(hotspot); }
+  }
+
+  _arrive(h) {
+    if (h.sit) { this.sitOn(h.sit); return; }
+    this.onArrive(h);
+  }
+
+  // Ngồi xuống ghế đá / ghế trong lớp
+  sitOn(seat) {
+    const m = this.me;
+    m.x = seat.x; m.y = seat.y; m.dir = seat.dir || 1; m.sit = seat; m.moving = false;
+  }
+
+  seatAt(wx, wy) {
+    for (const st of this.scene.seats || []) if (Math.hypot(st.x - wx, st.y - 8 - wy) < 24) return st;
+    return null;
   }
 
   goToHotspot(h) { this.walkTo(h.x, h.y, h); }
@@ -437,6 +538,7 @@ export class World {
   }
 
   zoneOf(x, y) {
+    if (this.scene && this.scene.id !== 'campus') return this.scene.id;
     const inR = (r, m = 0) => x > r.x - m && x < r.x + r.w + m && y > r.y - m && y < r.y + r.h + m;
     if (y > GATE.y) return 'duong';
     if (inR(YARD)) return 'san';
@@ -465,6 +567,8 @@ export class World {
         }
       }
       const z = this.baseZoom * this.zoom;
+      const seat = this.seatAt(this.cam.x + sx / z, this.cam.y + sy / z);
+      if (seat) { this.walkTo(seat.x, seat.y, { sit: seat }); return; }
       this.walkTo(this.cam.x + sx / z, this.cam.y + sy / z);
       this.tapFx = { x: this.cam.x + sx / z, y: this.cam.y + sy / z, t: performance.now() };
     });
@@ -489,17 +593,18 @@ export class World {
       if (this.keys.has('arrowdown') || this.keys.has('s')) vy += 1;
       const l = Math.hypot(vx, vy) || 1; vx /= l; vy /= l;
       const nx = me.x + vx * SPEED * dt, ny = me.y + vy * SPEED * dt;
-      if (!isBlockedPx(nx, me.y)) me.x = nx;
-      if (!isBlockedPx(me.x, ny)) me.y = ny;
+      if (!this.grid.isBlockedPx(nx, me.y)) me.x = nx;
+      if (!this.grid.isBlockedPx(me.x, ny)) me.y = ny;
     } else if (this.path.length) {
       const p = this.path[0];
       const dx = p.x - me.x, dy = p.y - me.y, d = Math.hypot(dx, dy);
       const s = SPEED * dt;
       if (d <= s) { me.x = p.x; me.y = p.y; this.path.shift(); }
       else { vx = dx / d; vy = dy / d; me.x += vx * s; me.y += vy * s; }
-      if (!this.path.length && this.target) { const h = this.target; this.target = null; this.onArrive(h); }
+      if (!this.path.length && this.target) { const h = this.target; this.target = null; this._arrive(h); }
     }
     me.moving = !!(vx || vy);
+    if (me.moving) me.sit = null;
     if (vx) me.dir = vx > 0 ? 1 : -1;
     me.back = vy < -0.6 && Math.abs(vx) < 0.5;
 
@@ -517,8 +622,12 @@ export class World {
     const tx = me.x - this.vw / z / 2, ty = me.y - this.vh / z / 2 - 40;
     this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 6);
     this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 6);
-    this.cam.x = Math.max(-100, Math.min(WORLD.w - this.vw / z + 100, this.cam.x));
-    this.cam.y = Math.max(-100, Math.min(WORLD.h - this.vh / z + 60, this.cam.y));
+    const W = this.scene.w, H = this.scene.h;
+    // cảnh nhỏ hơn màn hình thì căn giữa
+    if (W * z < this.vw) this.cam.x = (W - this.vw / z) / 2;
+    else this.cam.x = Math.max(-100, Math.min(W - this.vw / z + 100, this.cam.x));
+    if (H * z < this.vh) this.cam.y = (H - this.vh / z) / 2;
+    else this.cam.y = Math.max(-100, Math.min(H - this.vh / z + 60, this.cam.y));
   }
 
   _loop(now) {
@@ -532,14 +641,14 @@ export class World {
   _draw(now) {
     const ctx = this.ctx, z = this.baseZoom * this.zoom;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.fillStyle = '#8FBF73'; ctx.fillRect(0, 0, this.vw, this.vh);
+    ctx.fillStyle = this.scene.bgColor; ctx.fillRect(0, 0, this.vw, this.vh);
     ctx.save();
     ctx.scale(z, z);
     ctx.translate(-this.cam.x, -this.cam.y);
     if (this.bg) ctx.drawImage(this.bg, 0, 0);
 
     // đường đi
-    if (this.path.length && this.me) {
+    if (this.path.length && this.me && !this._capturing) {
       ctx.strokeStyle = 'rgba(47,111,181,.45)'; ctx.lineWidth = 4; ctx.setLineDash([2, 10]); ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(this.me.x, this.me.y); for (const p of this.path) ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.setLineDash([]);
       const last = this.path[this.path.length - 1];
@@ -548,23 +657,15 @@ export class World {
     }
 
     // các vật thể sắp theo chiều y để che khuất đúng
-    const items = [];
-    for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
-    for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
-    items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
-    items.push({ y: DRUM.y, draw: () => drawDrum(ctx) });
-    items.push({ y: BOARD.y + BOARD.h, draw: () => drawBoard(ctx) });
-    items.push({ y: STAGE.y + STAGE.h, draw: () => drawStage(ctx) });
-    for (const l of LAMPS) items.push({ y: l.y, draw: () => drawLamp(ctx, l) });
-    items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
-    for (const n of this.npcs) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir }); if (n.tag !== false) this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57'); } });
-    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: o.dir, back: o.back }); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
-    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.back }); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._wetFx(ctx, 'me', m.x, m.y, now); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
+    const items = this.scene.statics(ctx, now);
+    for (const n of this.npcs) if ((n.scene || 'campus') === this.scene.id) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir }); if (n.tag !== false) this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57'); } });
+    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { const osit = o.data.sit && !o.moving; drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: osit ? o.data.dir || 1 : o.dir, back: osit ? o.data.sitBack : o.back, sit: osit }); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
+    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.sit ? m.sit.back : m.back, sit: !!m.sit }); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._wetFx(ctx, 'me', m.x, m.y, now); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
 
     this._drawFx(ctx, now);
-    if (this.tapFx && now - this.tapFx.t < 400) {
+    if (this.tapFx && now - this.tapFx.t < 400 && !this._capturing) {
       const k = (now - this.tapFx.t) / 400;
       ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(this.tapFx.x, this.tapFx.y, 6 + k * 16, 3 + k * 8, 0, 0, Math.PI * 2); ctx.stroke();
@@ -572,9 +673,10 @@ export class World {
     ctx.restore();
 
     // nhãn điểm tương tác (vẽ theo toạ độ màn hình để luôn dễ đọc)
+    if (this._capturing) return;
     this.labelRects = [];
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    for (const h of HOTSPOTS) {
+    for (const h of this.scene.hotspots) {
       const near = this.me && Math.hypot(this.me.x - h.x, this.me.y - h.y) < 60;
       // khi nhân vật đứng tại điểm, đẩy nhãn xuống dưới chân để không che người
       const sx = (h.x - this.cam.x) * z, sy = (h.y - this.cam.y) * z + (near ? 24 : h.small ? -18 : -34) * z;
@@ -589,6 +691,28 @@ export class World {
       const sx = (o.x - this.cam.x) * z, sy = (o.y - this.cam.y) * z;
       this.labelRects.push({ x: sx - 16 * z, y: sy - 56 * z, w: 32 * z, h: 58 * z, player: o.data });
     }
+  }
+
+  // Chụp ảnh khung cảnh quanh nhân vật (không có nhãn, đường đi). Trả về canvas w × h.
+  capture(w = 640, h = 480, zoom = 1.5) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const saved = { ctx: this.ctx, vw: this.vw, vh: this.vh, dpr: this.dpr, cam: { ...this.cam }, baseZoom: this.baseZoom, zoom: this.zoom, labelRects: this.labelRects };
+    try {
+      Object.assign(this, { ctx: c.getContext('2d'), vw: w, vh: h, dpr: 1, baseZoom: zoom, zoom: 1, _capturing: true });
+      this.cam = { x: this.me.x - w / zoom / 2, y: this.me.y - h / zoom / 2 - 30 };
+      this._draw(performance.now());
+    } finally {
+      Object.assign(this, saved, { _capturing: false });
+    }
+    return c;
+  }
+
+  // Những người đang đứng trong khung hình chụp
+  peopleNear(range = 260) {
+    const out = [this.me.name];
+    for (const o of this.others.values()) if (Math.hypot(o.x - this.me.x, o.y - this.me.y) < range) out.push(o.data.name);
+    return out;
   }
 
   subOf(p) {

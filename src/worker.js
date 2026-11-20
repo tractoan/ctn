@@ -34,7 +34,7 @@ export default {
       let body = {};
       try {
         const raw = await request.text();
-        if (raw.length > 8000) return new Response(JSON.stringify({ error: 'Dữ liệu quá lớn' }), { status: 413, headers: JSON_HEADERS });
+        if (raw.length > (action === 'albumPost' ? 400000 : 8000)) return new Response(JSON.stringify({ error: 'Dữ liệu quá lớn' }), { status: 413, headers: JSON_HEADERS });
         body = raw ? JSON.parse(raw) : {};
       } catch {
         return new Response(JSON.stringify({ error: 'JSON không hợp lệ' }), { status: 400, headers: JSON_HEADERS });

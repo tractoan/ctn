@@ -11,7 +11,7 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 // (x, y) là điểm chân nhân vật. dir: 1 phải, -1 trái. t: thời gian (ms).
-export function drawAvatar(ctx, x, y, look, { t = 0, moving = false, dir = 1, scale = 1, back = false } = {}) {
+export function drawAvatar(ctx, x, y, look, { t = 0, moving = false, dir = 1, scale = 1, back = false, sit = false } = {}) {
   look = look || {};
   const skin = SKINS[look.skin ?? 1];
   const hairC = HAIR_COLORS[look.hairColor ?? 0];
@@ -26,6 +26,21 @@ export function drawAvatar(ctx, x, y, look, { t = 0, moving = false, dir = 1, sc
   ctx.beginPath(); ctx.ellipse(0, 0, 11, 4, 0, 0, Math.PI * 2); ctx.fill();
 
   ctx.translate(0, -bob);
+  if (sit) {
+    // ngồi: đùi gập ra trước, chân thõng xuống, thân hạ thấp
+    ctx.translate(0, 9);
+    if (!back) {
+      // cẳng chân thõng trước mặt ghế, đầu gối nhô ra
+      ctx.fillStyle = skin; ctx.fillRect(-5.5, -9, 4, 6); ctx.fillRect(1.5, -9, 4, 6);
+      ctx.fillStyle = '#2A2A2A'; rr(ctx, -7, -4, 6, 3, 1.5); ctx.fill(); rr(ctx, 1, -4, 6, 3, 1.5); ctx.fill();
+      ctx.fillStyle = NAVY;
+      if (look.bottom === 'vay') { rr(ctx, -9, -20, 18, 10, 4); ctx.fill(); } else { rr(ctx, -7, -19, 14, 10, 3); ctx.fill(); }
+      ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(-7, -11, 14, 2);
+    } else {
+      ctx.fillStyle = NAVY; rr(ctx, -8, -20, 16, 8, 3); ctx.fill();
+    }
+  }
+  if (!sit) {
   // chân
   ctx.fillStyle = skin;
   const legY = look.bottom === 'vay' ? -11 : -8;
@@ -43,6 +58,7 @@ export function drawAvatar(ctx, x, y, look, { t = 0, moving = false, dir = 1, sc
   } else {
     ctx.fillRect(-6.5 + step * 1.5, -19, 6, 12);
     ctx.fillRect(0.5 - step * 1.5, -19, 6, 12);
+  }
   }
 
   // cặp sách (sau lưng)

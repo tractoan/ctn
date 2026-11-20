@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.0 |
+| Phiên bản | 1.1 – logo trường, lớp học có bàn ghế, ngồi ghế, sổ lưu bút, ảnh kỷ yếu, chọn người ném bóng, thêm hoa |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -92,6 +92,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-NV-03 | Đổi tên và ngoại hình bất cứ lúc nào (nút ảnh đại diện → "Đổi kiểu tóc, đồng phục") | P2 | ✅ |
 | YC-NV-04 | Thẻ tên hai dòng trên đầu: tên và `Khóa · Lớp` (thầy cô: "Thầy cô"; em cấp 2: "Em · THCS"); thẻ của mình nổi bật màu khác | P1 | ✅ |
 | YC-NV-05 | Có hoạt ảnh bước đi, quay trái/phải, quay lưng khi đi lên | P3 | ✅ |
+| YC-NV-06 | **Ngồi**: chạm vào ghế đá (sân trường, vườn) hoặc ghế trong lớp thì nhân vật đi tới và ngồi xuống; đi tiếp thì tự đứng dậy; người khác thấy mình đang ngồi | P2 | ✅ |
 
 ### 4.3 Sơ đồ và di chuyển
 
@@ -110,6 +111,9 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-SD-11 | Trên máy tính: đi bằng phím mũi tên/WASD, cuộn chuột để phóng to/thu nhỏ; có nút +/− | P2 | ✅ |
 | YC-SD-12 | Thanh trên hiện **tên khu vực đang đứng** (Sân trường, Dãy nhà 5 tầng, Cổng trường…) | P2 | ✅ |
 | YC-SD-13 | Toàn bộ sơ đồ nằm trong một file dữ liệu; sửa số liệu ở đó là va chạm, tìm đường, bản đồ tự cập nhật | P1 | ✅ |
+| YC-SD-14 | **Nhiều hoa**: bồn hoa tròn trên sân trường, dải hoa dọc mép sân và trước dãy 5 tầng, bồn hoa trong vườn; cây đang ra hoa (phượng đỏ, bằng lăng tím, hoa sữa) | P2 | ✅ |
+| YC-SD-15 | **Ghế đá** đặt ở sân trường (6 ghế), vườn bên phải (2), vườn bên trái (1), trước cổng (1); mỗi ghế 2 chỗ ngồi | P2 | ✅ |
+| YC-SD-16 | **Logo trường** ở thanh trên, màn chào mừng, biển cổng trường, khung ảnh kỷ yếu, bìa sổ lưu bút, biểu tượng trang | P1 | ✅ |
 
 **Tiêu chí chấp nhận YC-SD-09:** chạy tìm đường từ điểm xuất phát tới toạ độ của từng điểm tương tác; điểm cuối của
 đường đi cách đích < 25 px với cả 29 điểm (đã kiểm bằng script khi đổi sơ đồ).
@@ -124,13 +128,15 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-OL-04 | Người rời trang biến mất khỏi sân sau tối đa 20 giây | P2 | ✅ |
 | YC-OL-05 | **Nói chuyện**: hàng câu nói nhanh ("Xin chào! 👋", "Lâu quá không gặp!"…), biểu cảm 😂 ❤️ 👍, ô chat tự do (≤ 80 ký tự); lời nói hiện thành bong bóng trên đầu ~5 giây cho mọi người cùng thấy | P1 | ✅ |
 | YC-OL-06 | Chạm vào người khác: xem tên, vai, khóa/lớp; nút "Vẫy tay" và "Đi tới" | P2 | ✅ |
-| YC-OL-07 | **Ném bóng nước 🎈**: ném vào người online gần nhất trong tầm (không có ai thì ném ra phía trước); bóng bay vòng cung rồi vỡ; người trúng bị ướt 4 giây và nhận thông báo; mọi người online cùng thấy; mỗi lần ném cách nhau ≥ 1,2 giây | P2 | ✅ |
+| YC-OL-07 | **Ném bóng nước 🎈**: bấm 🎈 mở **danh sách người đang online cùng chỗ** (sắp theo khoảng cách, có ảnh nhân vật) để **chọn người ném vào**; người ở xa hơn ~35 bước bị làm mờ; có nút "Ném ra phía trước"; cũng ném được từ thẻ của người đó; bóng bay vòng cung rồi vỡ; người trúng bị ướt 4 giây và nhận thông báo; mọi người online cùng thấy; mỗi lần ném cách nhau ≥ 1,2 giây | P2 | ✅ |
 
 ### 4.5 Lớp học
 
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
-| YC-LH-01 | Mỗi lớp chuyên có một cửa; vào lớp chọn khóa (mặc định khóa của mình) | P1 | ✅ |
+| YC-LH-01 | Mỗi lớp chuyên có một cửa; chạm cửa là **vào trong lớp**: phòng riêng có bảng đen (ghi thứ, ngày, tên lớp), bục giảng, bàn giáo viên có sổ đầu bài, 12 bàn đôi với 24 chỗ ngồi, tủ sách, cửa sổ, khẩu hiệu "Tiên học lễ – Hậu học văn" | P1 | ✅ |
+| YC-LH-06 | Trong lớp chỉ thấy những người cũng đang ở lớp đó (mọi khóa); **Ra khỏi lớp** thì về đúng trước cửa lớp; mở bản đồ khi đang trong lớp thì tự ra sân trước | P1 | ✅ |
+| YC-LH-07 | Trong lớp: chạm **bảng đen** → đố vui, **bàn giáo viên** → sổ đầu bài, **tủ sách** → lưu bút lớp; các bảng này chọn được khóa (mặc định khóa của mình) | P1 | ✅ |
 | YC-LH-02 | **Lưu bút** theo từng lớp + khóa: đọc 100 lời mới nhất, viết lời mới ≤ 600 ký tự | P1 | ✅ |
 | YC-LH-03 | **Sổ đầu bài**: danh sách những ai đã về lớp (tự ghi danh khi vào đúng lớp + khóa của mình, hoặc khi viết lưu bút) | P2 | ✅ |
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
@@ -149,8 +155,13 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-HD-08 | **Đá cầu** ở sân đá cầu: chạm quả cầu để tâng; lưu kỷ lục cá nhân; bảng xếp hạng 20 người cao nhất | P2 | ✅ |
 | YC-HD-09 | **Trống trường**: hiện giờ và tiết hiện tại; nút "Đánh trống" phát 3 tiếng trống và hiện "Tùng! Tùng! Tùng!" cho mọi người | P3 | 🟡 |
 | YC-HD-10 | **Bác bảo vệ** ở cổng, **cô căng tin** đi lại trước căng tin; bác bảo vệ có câu thoại vui | P3 | ✅ |
+| YC-HD-11 | **Sổ lưu bút** của từng người, dạng quyển sổ: bìa có logo và tên chủ sổ, mỗi trang một lời lưu bút trên giấy kẻ dòng chữ viết tay ("Gửi …", nội dung, chữ ký, ngày), lật trang trước/sau, trang cuối để ký vào sổ (≤ 600 ký tự). Mở sổ của mình từ "Nhân vật của tôi", sổ của bạn từ thẻ của bạn | P1 | ✅ |
+| YC-HD-12 | **Chụp ảnh kỷ yếu** (nút 📸 hoặc điểm "Chụp ảnh kỷ yếu" trước sân khấu): đếm ngược 3–2–1, nhân vật hô "📸 Cười lên nào!" cho mọi người cùng thấy; chụp khung cảnh quanh mình (không có nhãn), ghép vào **khung kỷ yếu** có logo, ngày, khóa/lớp, lời ghi, tên những người trong ảnh | P1 | ✅ |
+| YC-HD-13 | Ảnh kỷ yếu **lưu về máy** (JPEG) hoặc **đăng lên album trường**; mỗi người tối đa 5 ảnh/ngày | P2 | 🟡 |
+| YC-HD-14 | **Album kỷ yếu** (từ phòng truyền thống, nút 📸, "Nhân vật của tôi"): lưới 60 ảnh mới nhất, chạm để xem ảnh lớn, người chụp, người trong ảnh, lưu về máy | P2 | ✅ |
 
 > YC-HD-09: âm thanh tổng hợp bằng Web Audio, chưa nghe thử trên thiết bị thật.
+> YC-HD-13: nút "Lưu ảnh về máy" không hoạt động trong link chạy thử trên Claude (khung nhúng chặn tải file); chạy bình thường khi tự triển khai.
 
 ### 4.7 Thi đua
 
@@ -184,16 +195,16 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 |---|---|---|---|
 | YC-PN-01 | **Điện thoại là chính**: dùng tốt ở màn hình rộng 360–430 px, thao tác bằng chạm; không cuộn ngang; tôn trọng vùng an toàn (tai thỏ, thanh điều hướng) | P1 | ✅ |
 | YC-PN-02 | Chạy trên Chrome/Safari/Edge bản gần đây, cả Android và iOS, không cần cài đặt | P1 | 🟡 |
-| YC-PN-03 | Tải trang nhẹ: không thư viện ngoài, không bước build; tổng mã JavaScript + CSS < 150 KB chưa nén | P2 | ✅ |
+| YC-PN-03 | Tải trang nhẹ: không thư viện ngoài, không bước build; tổng mã JavaScript + CSS < 200 KB chưa nén (hiện ~180 KB) | P2 | ✅ |
 | YC-PN-04 | Vẽ mượt ~60 khung hình/giây trên điện thoại tầm trung | P2 | 🟡 |
 | YC-PN-05 | Vị trí người khác cập nhật mỗi 2,5 giây; độ trễ chấp nhận được ≤ 3 giây | P2 | ✅ |
 | YC-PN-06 | **Chế độ ngoại tuyến**: khi không có máy chủ, trang vẫn chạy đầy đủ chức năng một người, dữ liệu lưu trên trình duyệt, có nhãn cảnh báo | P2 | ✅ |
 | YC-PN-07 | Vận hành trong gói miễn phí Cloudflare Workers + D1 với vài trăm người online cùng lúc | P1 | 🟡 |
 | YC-PN-08 | Toàn bộ giao diện và thông báo lỗi bằng tiếng Việt, dễ hiểu, nói cách khắc phục | P1 | ✅ |
 | YC-PN-09 | **An toàn nội dung**: mọi nội dung người dùng nhập hiển thị dưới dạng văn bản thuần, không chạy được mã | P1 | ✅ |
-| YC-PN-10 | **Kiểm tra dữ liệu vào** ở máy chủ: giới hạn độ dài, danh sách giá trị hợp lệ, định dạng ngày; thân request ≤ 8 KB | P1 | ✅ |
+| YC-PN-10 | **Kiểm tra dữ liệu vào** ở máy chủ: giới hạn độ dài, danh sách giá trị hợp lệ, định dạng ngày; thân request ≤ 8 KB (riêng đăng ảnh ≤ 400 KB, chỉ nhận JPEG) | P1 | ✅ |
 | YC-PN-11 | **Riêng tư**: không thu thập email, số điện thoại; không dùng cookie theo dõi; nhạc YouTube dùng tên miền `youtube-nocookie.com` | P2 | ✅ |
-| YC-PN-12 | **Chống lạm dụng**: giới hạn tần suất gọi API; báo cáo và ẩn lưu bút xấu; chặn người dùng | P1 trước khi công bố rộng | ⬜ |
+| YC-PN-12 | **Chống lạm dụng**: giới hạn tần suất gọi API; báo cáo và ẩn lưu bút, **ảnh album** xấu; chặn người dùng | P1 trước khi công bố rộng | ⬜ |
 | YC-PN-13 | **Khả năng bảo trì**: nghiệp vụ viết một lần, dùng chung cho máy chủ và chế độ ngoại tuyến; có kiểm thử tự động (`npm test`) | P1 | ✅ |
 | YC-PN-14 | **Triển khai**: một lệnh `npm run deploy` sau khi tạo cơ sở dữ liệu | P2 | 🟡 |
 | YC-PN-15 | **Truy cập**: nút có nhãn cho trình đọc màn hình, đóng bảng bằng phím Esc, chữ đủ tương phản | P3 | 🟡 |
@@ -214,11 +225,11 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | Nhóm yêu cầu | Hiện thực chính | Kiểm thử tự động (`tests/logic.test.js`) | Kiểm thử thủ công (Playwright) |
 |---|---|---|---|
 | YC-DT | `logic.js` (`register`, `recover`, `me`), `main.js` (`createFlow`, `recoverFlow`) | "đăng ký, khôi phục…", "thiếu lớp chuyên / khóa sai…", "…chưa đăng nhập 401" | Ghi danh 3 người, khách mở chat bị mời ghi danh |
-| YC-NV | `avatar.js`, `main.js` (`avatarEditor`), `world.js` (`_nameTag`) | – | Ảnh chụp màn hình |
-| YC-SD | `campus.js`, `world.js` (`findPath`, `drawOverview`) | – | Script tìm đường tới 29 điểm; đi tới từng địa điểm qua bản đồ |
-| YC-OL | `logic.js` (`presence`, `online`), `world.js` (`updateOthers`, `throwBalloon`) | "presence trả về người khác…" (gồm cú ném bóng nước) | 2 người thấy nhau, lời nói, ném bóng nước trúng |
-| YC-LH | `logic.js` (`guestbook`, `sign`, `roster`, `attend`, `quiz`), `main.js` (`panels.class`) | "lưu bút, sổ đầu bài, bảng thi đua", "đố vui giới hạn…" | Viết lưu bút lớp Toán K20 |
-| YC-HD | `logic.js` (`checkin`, `menu`, `buy`, `events`, `createEvent`, `joinEvent`, `score`), `games.js` | "đăng ký… điểm danh, mua đồ", "giờ ra chơi giảm 20%", "họp lớp: tạo, đăng ký, huỷ" | Điểm danh, mua đồ, tạo họp lớp, đá cầu |
+| YC-NV | `avatar.js` (tư thế ngồi), `main.js` (`avatarEditor`), `world.js` (`_nameTag`, `sitOn`, `seatAt`) | "presence mang cảnh… và trạng thái ngồi" | Ngồi ghế đá, ngồi ghế trong lớp; người khác thấy "(ngồi)" |
+| YC-SD | `campus.js` (`FLOWERBEDS`, `BENCHES`, `SEATS`), `world.js` (`Grid`, `CAMPUS_SCENE`, `drawOverview`) | – | Script tìm đường tới 30 điểm + 20 chỗ ngồi trên sân, 4 điểm + 24 chỗ ngồi trong lớp |
+| YC-OL | `logic.js` (`presence`, `online`), `world.js` (`updateOthers`, `throwBalloon`), `main.js` (`balloonPicker`) | "presence trả về người khác…" (gồm cú ném bóng nước) | 2 người thấy nhau, lời nói, chọn người trong danh sách rồi ném bóng nước trúng |
+| YC-LH | `classroom.js`, `logic.js` (`guestbook`, `sign`, `roster`, `attend`, `quiz`), `main.js` (`panels.enterClass`, `panels.class`) | "lưu bút, sổ đầu bài, bảng thi đua", "đố vui giới hạn…" | 2 người vào lớp Toán thấy nhau, ngồi, mở đố vui, ra khỏi lớp về đúng cửa |
+| YC-HD | `logic.js` (`checkin`, `menu`, `buy`, `events`, `createEvent`, `joinEvent`, `score`, `albumPost`, `album`, `photo`), `games.js`, `main.js` (`bookSheet`, `panels.photo`, `composeYearbook`, `albumSheet`) | "đăng ký… điểm danh, mua đồ", "giờ ra chơi giảm 20%", "họp lớp: tạo, đăng ký, huỷ", "album kỷ yếu…" | Điểm danh, mua đồ, tạo họp lớp, đá cầu, chụp và đăng ảnh, ký sổ lưu bút |
 | YC-TD | `logic.js` (`khoaBoard`, `leaderboard`, `POINTS`) | "lưu bút, sổ đầu bài, bảng thi đua" | Mở bảng tin |
 | YC-AT | `logic.js` (`SCHEDULE`, `periodOf`), `main.js` (`music`, `beatDrum`) | "giờ ra chơi giảm 20%" (gồm `periodOf`) | Bấm 🎵 phát/dừng/tắt |
 | YC-PN | `ui.js` (`h`), `worker.js`, `api.js` (chế độ ngoại tuyến), `style.css` | "…chức năng lạ trả 404" | Chạy ngoại tuyến bằng `npm run static` |

@@ -1,6 +1,7 @@
 import { api, getToken, setToken, getMode } from './api.js';
 import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock } from './logic.js';
-import { World } from './world.js';
+import { World, CAMPUS_SCENE } from './world.js';
+import { classroomScene } from './classroom.js';
 import { SPAWN, HOTSPOTS, PLACES } from './campus.js';
 import { avatarCanvas, SKINS, HAIR_COLORS, HAIR_NAMES, BAG_COLORS } from './avatar.js';
 import { h, openSheet, closeSheet, toast, money, ago, tabs } from './ui.js';
@@ -91,6 +92,7 @@ function createFlow() {
         avatarCanvas({ gender: 'nam', hair: 0, hairColor: 1, bottom: 'quan', skin: 2, bag: 1 }, 64),
         avatarCanvas({ gender: 'nu', hair: 3, hairColor: 0, bottom: 'vay', skin: 1, bag: 2 }, 64));
       b.replaceChildren(h('div', { class: 'welcome-in' },
+        h('img', { class: 'welcome-logo', src: 'logo.jpg', alt: 'Logo Trường THPT Chuyên Thái Nguyên' }),
         trio,
         h('h1', { class: 'welcome-title' }, 'Chào mừng bạn về Trường THPT Chuyên Thái Nguyên!'),
         h('p', { class: 'lead' }, 'Tạo nhân vật một lần, lần sau vào vẫn là bạn. Bạn là ai?'),
@@ -244,10 +246,11 @@ function enterSchool() {
   app.replaceChildren(
     canvas,
     h('header', { class: 'hud' },
-      h('div', { class: 'brand' }, h('span', { class: 'crest sm' }, 'CTN'), h('div', {}, zoneEl, clockEl)),
+      h('div', { class: 'brand' }, h('img', { class: 'logo', src: 'logo.jpg', alt: 'Logo Trường THPT Chuyên Thái Nguyên' }), h('div', {}, zoneEl, clockEl)),
       right),
     h('div', { class: 'fabs' },
-      h('button', { class: 'fab balloon', 'aria-label': 'Ném bóng nước', title: 'Ném bóng nước vào bạn gần nhất', onclick: () => throwBalloon() }, '🎈'),
+      h('button', { class: 'fab balloon', 'aria-label': 'Chụp ảnh kỷ yếu', title: 'Chụp ảnh kỷ yếu', onclick: () => panels.photo() }, '📸'),
+      h('button', { class: 'fab balloon', 'aria-label': 'Ném bóng nước', title: 'Chọn bạn để ném bóng nước', onclick: () => balloonPicker() }, '🎈'),
       h('button', { class: 'fab', 'aria-label': 'Phóng to', onclick: () => world.zoomBy(1.2) }, '+'),
       h('button', { class: 'fab', 'aria-label': 'Thu nhỏ', onclick: () => world.zoomBy(1 / 1.2) }, '−')),
     h('footer', { class: 'chatbar' },
@@ -266,8 +269,13 @@ function enterSchool() {
   world.onArrive = (hs) => openHotspot(hs);
   world.onTapPlayer = (p) => playerCard(p);
   world.myId = me.id || '';
+  world.onSceneChange = (scene) => {
+    zoneEl.textContent = scene.id === 'campus' ? (ZONES[world.zoneOf(world.me.x, world.me.y)] || 'Sân trường') : scene.name;
+    canvas.setAttribute('aria-label', scene.id === 'campus' ? 'Sơ đồ sân trường' : scene.name);
+  };
   world.onWet = (fromName) => { toast(`💦 ${fromName || 'Ai đó'} vừa ném bóng nước trúng bạn!`); world.say('me', 'Ướt hết rồi! 💦'); };
   world.start();
+  if (new URLSearchParams(location.search).has('debug')) window.ctnWorld = world; // dùng cho kiểm thử tự động
   hud.update();
   updateClock();
   setInterval(updateClock, 15000);
@@ -277,41 +285,46 @@ function enterSchool() {
   sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); };
   let pendingThrow = null;
   let lastThrow = 0;
-  throwBalloon = () => {
+  // Ném bóng nước vào người được chọn (targetId), hoặc ra phía trước nếu không chọn ai
+  throwBalloon = (targetId = null) => {
     const now = performance.now();
-    if (now - lastThrow < 1200) return;
+    if (now - lastThrow < 1200) { toast('Từ từ đã, đang lấy bóng mới…'); return; }
     lastThrow = now;
     const m = world.me;
-    const near = world.nearestOther();
-    const t = near ? { x: Math.round(near.o.x), y: Math.round(near.o.y - 26), target: near.id }
+    const o = targetId ? world.others.get(targetId) : null;
+    const t = o ? { x: Math.round(o.x), y: Math.round(o.y - 26), target: targetId }
       : { x: Math.round(m.x + (m.dir || 1) * 170), y: Math.round(m.y - 6), target: '' };
-    world.throwBalloon({ fx: m.x, fy: m.y, tx: t.x, ty: t.y, target: near ? near.id : null });
-    if (near) toast(`🎈 Ném vào ${near.o.data.name}!`);
+    m.sit = null;
+    if (o) m.dir = o.x >= m.x ? 1 : -1;
+    world.throwBalloon({ fx: m.x, fy: m.y, tx: t.x, ty: t.y, target: o ? targetId : null });
+    if (o) toast(`🎈 Ném vào ${o.data.name}!`);
     if (!me.guest) pendingThrow = t;
   };
   const tick = async () => {
     const pos = { x: Math.round(world.me.x), y: Math.round(world.me.y) };
     const zone = world.zoneOf(pos.x, pos.y);
-    if (zone !== lastZone) { lastZone = zone; zoneEl.textContent = ZONES[zone] || 'Sân trường'; }
+    if (zone !== lastZone) { lastZone = zone; zoneEl.textContent = world.scene.id === 'campus' ? ZONES[zone] || 'Sân trường' : world.scene.name; }
     try {
       let r;
       if (me.guest) r = await api('online');
       else {
-        const body = { ...pos, zone };
+        const sit = world.me.sit;
+        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1 };
         if (pendingSay) { body.say = pendingSay; pendingSay = null; }
         if (pendingThrow) { body.throw = pendingThrow; pendingThrow = null; }
         r = await api('presence', body);
       }
-      world.updateOthers(r.others);
+      // chỉ hiện những người cùng cảnh (cùng sân trường, hoặc cùng trong một lớp)
+      world.updateOthers(r.others.filter((p) => (p.scene || 'campus') === world.scene.id));
       online.lastChild.textContent = String(r.others.length + (me.guest ? 0 : 1));
       if (!tick.done) { tick.done = true; hud.update(); }
     } catch { /* thử lại lượt sau */ }
-    savePos();
+    if (world.scene.id === 'campus') savePos();
   };
   tick();
   setInterval(tick, 2500);
-  setInterval(() => { const z = world.zoneOf(world.me.x, world.me.y); if (z !== lastZone) { lastZone = z; zoneEl.textContent = ZONES[z] || 'Sân trường'; } }, 400);
-  window.addEventListener('beforeunload', savePos);
+  setInterval(() => { if (world.scene.id !== 'campus') return; const z = world.zoneOf(world.me.x, world.me.y); if (z !== lastZone) { lastZone = z; zoneEl.textContent = ZONES[z] || 'Sân trường'; } }, 400);
+  window.addEventListener('beforeunload', () => { if (world.scene.id === 'campus') savePos(); });
 }
 
 function makeNpcs() {
@@ -321,12 +334,19 @@ function makeNpcs() {
   return [guard, cook];
 }
 
+// Đang trong lớp thì ra sân trước, đứng ở cửa lớp
+function backToCampus() {
+  if (world.scene.id === 'campus') return;
+  world.setScene(CAMPUS_SCENE, classReturn || SPAWN);
+}
+let classReturn = null;
+
 function mapSheet() {
   openSheet('Bản đồ trường', (b, { onCleanup }) => {
     const cv = h('canvas', { class: 'overview' });
     b.append(h('p', { class: 'muted' }, 'Chạm vào chỗ muốn tới, nhân vật sẽ tự đi bộ tới.'), cv,
       h('h3', {}, 'Các lớp chuyên'),
-      h('div', { class: 'place-list small' }, ...HOTSPOTS.filter((x) => x.panel === 'class').map((p) => h('button', { class: 'place', onclick: () => { closeSheet(); world.goToHotspot(p); } }, h('span', {}, '🚪'), p.label))));
+      h('div', { class: 'place-list small' }, ...HOTSPOTS.filter((x) => x.panel === 'enterClass').map((p) => h('button', { class: 'place', onclick: () => { closeSheet(); backToCampus(); world.goToHotspot(p); } }, h('span', {}, '🚪'), p.label))));
     let pick = null;
     const draw = () => { pick = world.drawOverview(cv, PLACES); };
     requestAnimationFrame(draw);
@@ -337,6 +357,7 @@ function mapSheet() {
       const r = cv.getBoundingClientRect();
       const res = pick(e.clientX - r.left, e.clientY - r.top);
       closeSheet();
+      backToCampus();
       if (res.hotspot) world.goToHotspot(res.hotspot); else world.walkTo(res.x, res.y);
     });
   }, { wide: true });
@@ -353,8 +374,10 @@ function moreSheet() {
       getMode() === 'offline' ? h('p', { class: 'note' }, 'Đang ở chế độ ngoại tuyến: dữ liệu chỉ lưu trên trình duyệt này, không thấy bạn bè online. Triển khai lên Cloudflare (xem README) để dùng chung.') : null,
       h('div', { class: 'stack' },
         h('button', { class: 'btn primary', onclick: () => panels.mirror() }, '👕 Đổi kiểu tóc, đồng phục'),
+        h('button', { class: 'btn ghost', onclick: () => bookSheet({ id: me.id, name: me.name }) }, '📖 Sổ lưu bút của tôi'),
+        h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Album kỷ yếu'),
         h('a', { class: 'btn ghost', href: 'pages/gioi-thieu.html' }, 'Giới thiệu trang'),
-        h('button', { class: 'btn ghost', onclick: () => { world.teleport(SPAWN.x, SPAWN.y); closeSheet(); } }, 'Về cổng trường'),
+        h('button', { class: 'btn ghost', onclick: () => { backToCampus(); world.teleport(SPAWN.x, SPAWN.y); closeSheet(); } }, 'Về cổng trường'),
         h('button', { class: 'btn danger', onclick: () => { if (confirm('Thoát nhân vật trên máy này? Hãy chắc chắn bạn đã lưu mã khôi phục.')) { setToken(''); location.reload(); } } }, 'Thoát nhân vật'))));
   });
 }
@@ -364,7 +387,10 @@ function playerCard(p) {
     b.append(h('div', { class: 'me-card' }, avatarCanvas(p.look, 72), h('div', {}, h('b', {}, p.name), h('div', { class: 'muted' }, ROLES[p.role] + (describe(p) ? ' · ' + describe(p) : '')))),
       h('div', { class: 'row-btns' },
         h('button', { class: 'btn ghost', onclick: () => { if (!needMe()) return; sayPrompt.send(`👋 Chào ${p.name}!`); closeSheet(); } }, '👋 Vẫy tay'),
-        h('button', { class: 'btn primary', onclick: () => { closeSheet(); world.walkTo(p.x + 30, p.y); } }, 'Đi tới')));
+        h('button', { class: 'btn ghost', onclick: () => { closeSheet(); throwBalloon(p.id); } }, '🎈 Ném bóng nước')),
+      h('div', { class: 'row-btns' },
+        h('button', { class: 'btn ghost', onclick: () => bookSheet({ id: p.id, name: p.name }) }, '✍️ Viết sổ lưu bút'),
+        h('button', { class: 'btn primary', onclick: () => { closeSheet(); const o = world.others.get(p.id); world.walkTo((o ? o.x : p.x) + 30, o ? o.y : p.y); } }, 'Đi tới')));
   });
 }
 
@@ -499,6 +525,7 @@ const panels = {
           h('div', {}, h('b', {}, '1995 – 2019'), h('p', {}, 'Trường học tại cơ sở 234A đường Lương Ngọc Quyến: nhà hiệu bộ 4 tầng sơn xanh trắng, các dãy lớp 3, 4, 5 tầng quây quanh sân trường cao có bậc thang, sân đá cầu, nhà đa năng và căng tin.')),
           h('div', {}, h('b', {}, '2019'), h('p', {}, 'Trường chuyển về cơ sở mới, khang trang hơn với nhà đa năng, bể bơi, sân bóng và ký túc xá.')),
           h('div', {}, h('b', {}, 'Hôm nay'), h('p', {}, 'Sân trường ảo này dựng lại cơ sở cũ để các thế hệ học sinh cùng về thăm.'))),
+        h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Xem album ảnh kỷ yếu'),
         h('h3', {}, 'Góc kỷ niệm'),
       );
       guestbook(b, 'kyniem', { placeholder: 'Kể một kỷ niệm ở trường cũ…' });
@@ -646,8 +673,17 @@ const panels = {
     });
   },
 
+  enterClass(hs) {
+    classReturn = { x: hs.x, y: hs.y };
+    world.setScene(classroomScene(hs.lop), classroomScene(hs.lop).spawn);
+    toast(`Vào lớp chuyên ${hs.lop}. Chạm ghế để ngồi, chạm bảng đen để đố vui.`);
+  },
+
+  exitClass() { backToCampus(); },
+
   class(hs) {
     const lop = hs.lop;
+    const initialTab = hs.tab || 0;
     let khoa = me.lop === lop && me.khoa ? me.khoa : me.khoa || 'K1';
     openSheet('Lớp chuyên ' + lop, (b) => {
       const khoaInp = h('input', { class: 'input sm', value: khoa, maxlength: 4, 'aria-label': 'Khóa' });
@@ -665,7 +701,7 @@ const panels = {
               r.items.length ? h('ol', { class: 'roster' }, ...r.items.map((x) => h('li', {}, x.name, h('span', { class: 'muted' }, ' · ' + ago(x.at))))) : h('p', { class: 'muted' }, 'Chưa có ai điểm danh.'));
           } },
           { label: '❓ Đố vui', render: (c) => quizView(c, lop) },
-        ]));
+        ], initialTab));
       };
       khoaInp.addEventListener('change', render);
       b.append(h('div', { class: 'row-inline' }, h('span', {}, 'Khóa:'), khoaInp, h('button', { class: 'btn ghost sm', onclick: render }, 'Xem')), content);
@@ -673,6 +709,187 @@ const panels = {
     }, { wide: true });
   },
 };
+
+// ======================= Ném bóng nước: chọn người =======================
+function balloonPicker() {
+  const list = [...world.others.entries()]
+    .map(([id, o]) => ({ id, o, d: Math.hypot(o.x - world.me.x, o.y - world.me.y) }))
+    .sort((a, b) => a.d - b.d);
+  openSheet('🎈 Ném bóng nước vào ai?', (b) => {
+    if (!list.length) b.append(h('p', { class: 'muted' }, world.scene.id === 'campus' ? 'Chưa có ai online ở sân trường. Rủ bạn vào chơi nhé!' : 'Trong lớp chưa có ai khác.'));
+    else b.append(h('p', { class: 'muted' }, 'Chọn một bạn đang online. Bạn ở xa quá thì lại gần hơn để ném trúng.'));
+    b.append(h('div', { class: 'pick-list' }, ...list.map(({ id, o, d }) => {
+      const far = d > 700;
+      return h('button', { class: 'pick', disabled: far, onclick: () => { closeSheet(); throwBalloon(id); } },
+        avatarCanvas(o.data.look, 44),
+        h('span', { class: 'pick-info' }, h('b', {}, o.data.name), h('small', {}, [world.subOf(o.data), far ? 'xa quá, lại gần hơn' : `cách ${Math.max(1, Math.round(d / 20))} bước`].filter(Boolean).join(' · '))),
+        h('span', { class: 'pick-go', 'aria-hidden': 'true' }, far ? '🚶' : '🎈'));
+    })),
+    h('button', { class: 'btn ghost', onclick: () => { closeSheet(); throwBalloon(null); } }, 'Ném ra phía trước'));
+  });
+}
+
+// ======================= Ảnh kỷ yếu =======================
+const LOGO = Object.assign(new Image(), { src: 'logo.jpg' });
+
+async function composeYearbook(shot, people, caption) {
+  await LOGO.decode().catch(() => {});
+  const W = 720, H = 660;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const font = (w, size, fam = '"Be Vietnam Pro", system-ui, sans-serif') => `${w} ${size}px ${fam}`;
+  x.fillStyle = '#FFF8EC'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#1B2A4E'; x.fillRect(0, 0, W, 12); x.fillRect(0, H - 12, W, 12); x.fillRect(0, 0, 12, H); x.fillRect(W - 12, 0, 12, H);
+  x.strokeStyle = '#F2B233'; x.lineWidth = 2; x.strokeRect(22, 22, W - 44, H - 44);
+  if (LOGO.naturalWidth) { x.save(); x.beginPath(); x.arc(76, 76, 36, 0, Math.PI * 2); x.clip(); x.drawImage(LOGO, 40, 40, 72, 72); x.restore(); }
+  x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+  x.fillStyle = '#D8343A'; x.font = font(800, 34); x.fillText('KỶ YẾU', 128, 72);
+  x.fillStyle = '#1B2A4E'; x.font = font(700, 16); x.fillText('TRƯỜNG THPT CHUYÊN THÁI NGUYÊN', 128, 98);
+  x.textAlign = 'right'; x.fillStyle = '#5B6577'; x.font = font(600, 13);
+  x.fillText(new Date().toLocaleDateString('vi-VN'), W - 40, 70);
+  x.fillText(me.guest ? '' : [me.khoa, me.lop && 'Chuyên ' + me.lop].filter(Boolean).join(' · '), W - 40, 92);
+  // ảnh
+  x.fillStyle = '#fff'; x.fillRect(34, 124, W - 68, 424);
+  x.drawImage(shot, 44, 134, W - 88, 404);
+  // chú thích + tên
+  x.textAlign = 'center'; x.fillStyle = '#1D2433';
+  x.font = font(400, 24, 'Pangolin, "Be Vietnam Pro", cursive');
+  if (caption) x.fillText(caption.slice(0, 60), W / 2, 588);
+  x.fillStyle = '#5B6577'; x.font = font(600, 13);
+  let names = people.join(', ');
+  while (x.measureText(names).width > W - 90 && names.length > 4) names = names.slice(0, -4) + '…';
+  x.fillText(names, W / 2, caption ? 614 : 596);
+  x.fillStyle = '#9AA0A6'; x.font = font(600, 11);
+  x.fillText('234A Lương Ngọc Quyến · TP Thái Nguyên', W / 2, H - 28);
+  return c;
+}
+
+function jpeg(canvas, maxW, quality, maxLen) {
+  let c = canvas;
+  if (canvas.width > maxW) {
+    c = document.createElement('canvas'); c.width = maxW; c.height = Math.round(canvas.height * maxW / canvas.width);
+    c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+  }
+  let q = quality, url = c.toDataURL('image/jpeg', q);
+  while (url.length > maxLen && q > 0.35) { q -= 0.1; url = c.toDataURL('image/jpeg', q); }
+  return url;
+}
+
+panels.photo = () => {
+  openSheet('📸 Chụp ảnh kỷ yếu', (b, { onCleanup }) => {
+    const stage = h('div', { class: 'shot-stage' }, h('p', { class: 'muted' }, 'Gọi bạn bè đứng gần nhau (trong khoảng 13 bước quanh bạn), tạo dáng rồi bấm Chụp. Ảnh có khung kỷ yếu, lưu về máy hoặc đăng lên album trường.'));
+    const caption = h('input', { class: 'input', maxlength: 60, placeholder: 'Lời ghi trên ảnh (vd: Họp lớp 10 năm 🎉)', 'aria-label': 'Lời ghi trên ảnh' });
+    const actions = h('div', { class: 'stack' });
+    let timer = 0;
+    onCleanup(() => clearInterval(timer));
+    const shoot = () => {
+      let n = 3;
+      const cd = h('div', { class: 'countdown', 'aria-live': 'assertive' }, String(n));
+      stage.replaceChildren(cd);
+      actions.replaceChildren();
+      if (!me.guest) sayPrompt.send('📸 Cười lên nào!'); else world.say('me', '📸 Cười lên nào!');
+      timer = setInterval(async () => {
+        n -= 1;
+        if (n > 0) { cd.textContent = String(n); return; }
+        clearInterval(timer);
+        cd.textContent = '📸';
+        cd.classList.add('flash');
+        const people = world.peopleNear();
+        const framed = await composeYearbook(world.capture(640, 404, 1.6), people, caption.value.trim());
+        const full = jpeg(framed, 720, 0.82, 290000);
+        const img = h('img', { class: 'shot', src: full, alt: 'Ảnh kỷ yếu: ' + people.join(', ') });
+        stage.replaceChildren(img);
+        const post = h('button', { class: 'btn primary', onclick: async () => {
+          if (!needMe()) return;
+          post.disabled = true;
+          try {
+            const r = await call('albumPost', { full, thumb: jpeg(framed, 240, 0.72, 38000), caption: caption.value.trim(), people });
+            setMe(r.user); toast('Đã đăng lên album kỷ yếu!'); post.textContent = '✅ Đã đăng lên album';
+          } catch (e) { toast(e.message, 'bad'); post.disabled = false; }
+        } }, '🖼️ Đăng lên album trường');
+        actions.replaceChildren(
+          h('a', { class: 'btn ghost', href: full, download: `ky-yeu-chuyen-thai-nguyen-${Date.now()}.jpg` }, '⬇️ Lưu ảnh về máy'),
+          post,
+          h('button', { class: 'btn ghost', onclick: shoot }, '🔁 Chụp lại'));
+      }, 1000);
+    };
+    actions.append(h('button', { class: 'btn primary big', onclick: shoot }, '📸 Chụp'), h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Xem album'));
+    b.append(stage, caption, actions);
+  }, { wide: true });
+};
+
+function albumSheet() {
+  openSheet('🖼️ Album kỷ yếu', async (b) => {
+    const grid = h('div', { class: 'album' }, h('p', { class: 'muted' }, 'Đang tải…'));
+    b.append(h('p', { class: 'muted' }, 'Ảnh mọi người chụp ở sân trường ảo. Chạm để xem lớn.'), grid);
+    try {
+      const { items } = await call('album');
+      grid.replaceChildren(...(items.length ? items.map((it) => h('button', { class: 'album-item', onclick: () => photoView(it) },
+        h('img', { src: it.thumb, alt: it.caption || 'Ảnh kỷ yếu', loading: 'lazy' }),
+        h('small', {}, `${it.by}${it.khoa ? ' · ' + it.khoa : ''} · ${ago(it.at)}`))) : [h('p', { class: 'muted' }, 'Chưa có ảnh nào. Ra sân khấu chụp tấm đầu tiên nhé!')]));
+    } catch (e) { grid.replaceChildren(h('p', { class: 'err' }, e.message)); }
+  }, { wide: true });
+}
+
+function photoView(it) {
+  openSheet(it.caption || 'Ảnh kỷ yếu', async (b) => {
+    const img = h('img', { class: 'shot', src: it.thumb, alt: it.caption || 'Ảnh kỷ yếu' });
+    const dl = h('a', { class: 'btn ghost', href: it.thumb, download: `ky-yeu-${it.id}.jpg` }, '⬇️ Lưu ảnh về máy');
+    b.append(img, h('p', { class: 'muted' }, `Chụp bởi ${it.by} · ${new Date(it.at).toLocaleString('vi-VN')}`),
+      it.people?.length ? h('p', {}, 'Trong ảnh: ' + it.people.join(', ')) : null,
+      h('div', { class: 'stack' }, dl, h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '← Về album')));
+    try { const r = await call('photo', { id: it.id }); img.src = r.full; dl.href = r.full; } catch { /* giữ ảnh nhỏ */ }
+  }, { wide: true });
+}
+
+// ======================= Sổ lưu bút (mỗi người một quyển) =======================
+function bookSheet(owner) {
+  const room = 'so:' + owner.id;
+  const mine = owner.id === me.id;
+  openSheet(mine ? '📖 Sổ lưu bút của tôi' : `📖 Sổ lưu bút của ${owner.name}`, async (b) => {
+    let entries = [];
+    let page = 0; // 0 = bìa; 1..n = trang lưu bút; n+1 = trang viết
+    const pageEl = h('div', { class: 'book-page' });
+    const nav = h('div', { class: 'book-nav' });
+    const render = () => {
+      const n = entries.length, last = n + 1;
+      pageEl.className = 'book-page' + (page === 0 ? ' cover' : '');
+      if (page === 0) {
+        pageEl.replaceChildren(
+          h('img', { class: 'book-logo', src: 'logo.jpg', alt: '' }),
+          h('div', { class: 'book-title' }, 'Sổ lưu bút'),
+          h('div', { class: 'book-owner' }, owner.name),
+          h('div', { class: 'book-sub' }, 'Trường THPT Chuyên Thái Nguyên'),
+          h('div', { class: 'book-count' }, n ? `${n} trang lưu bút` : 'Chưa có ai viết'));
+      } else if (page <= n) {
+        const it = entries[page - 1];
+        pageEl.replaceChildren(
+          h('div', { class: 'book-to' }, `Gửi ${owner.name},`),
+          h('p', { class: 'book-body' }, it.body),
+          h('div', { class: 'book-sign' }, `— ${it.name}${describe(it) ? ' (' + describe(it) + ')' : ''}`),
+          h('div', { class: 'book-date' }, new Date(it.at).toLocaleDateString('vi-VN')));
+      } else {
+        const ta = h('textarea', { class: 'book-input', rows: 7, maxlength: 600, placeholder: mine ? 'Viết lời mở đầu cho sổ lưu bút của bạn…' : `Viết gì đó cho ${owner.name}…`, 'aria-label': 'Lời lưu bút' });
+        const err = h('p', { class: 'err' });
+        pageEl.replaceChildren(h('div', { class: 'book-to' }, `Gửi ${owner.name},`), ta, err,
+          h('button', { class: 'btn primary', onclick: async (e) => {
+            if (!needMe()) return;
+            e.target.disabled = true;
+            try { const r = await call('sign', { room, body: ta.value }); setMe(r.user); toast('Đã viết vào sổ lưu bút · +5 điểm'); await load(); page = entries.length; render(); }
+            catch (ex) { err.textContent = ex.message; e.target.disabled = false; }
+          } }, '✍️ Ký vào sổ'));
+      }
+      nav.replaceChildren(
+        h('button', { class: 'icon-btn', 'aria-label': 'Trang trước', disabled: page === 0, onclick: () => { page -= 1; render(); } }, '‹'),
+        h('span', {}, page === 0 ? 'Bìa' : page <= n ? `Trang ${page}/${n}` : 'Trang viết'),
+        h('button', { class: 'icon-btn', 'aria-label': 'Trang sau', disabled: page === last, onclick: () => { page += 1; render(); } }, '›'));
+    };
+    const load = async () => { const r = await call('guestbook', { room }); entries = r.items.slice().reverse(); };
+    b.append(pageEl, nav, h('button', { class: 'btn ghost', onclick: () => { page = entries.length + 1; render(); } }, '✍️ Tới trang viết'));
+    try { await load(); } catch { /* sổ trống */ }
+    render();
+  }, { wide: true });
+}
 
 // Tiếng trống tổng hợp bằng Web Audio (không cần file âm thanh)
 let audioCtx = null;

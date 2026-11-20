@@ -15,7 +15,7 @@ ghé lớp cũ, viết lưu bút, đăng ký họp lớp và thi đua giữa cá
 | **Dãy nhà 5 tầng** (ngay sau cổng) | Lớp chuyên (phải → trái) Tin, Nga, Pháp – cửa ở mặt trong, quay vào sân trường |
 | **Dãy nhà 4 tầng** (chữ L, hàng cau vua) | Lớp chuyên (trái → phải) Toán, Lý, Hóa, Sinh, Văn, Trung |
 | **Dãy nhà 3 tầng** | Lớp chuyên (trái → phải) Anh, Sử, Địa |
-| Trong mỗi lớp | Lưu bút theo từng khóa, sổ đầu bài (ai đã về lớp), đố vui theo môn |
+| Trong mỗi lớp | Vào hẳn trong phòng: bảng đen (đố vui), bàn giáo viên (sổ đầu bài), tủ sách (lưu bút theo khóa), 24 chỗ ngồi; thấy bạn đang ở cùng lớp |
 | Sân trường (cao, có bậc thang) | Sân khấu có cột cờ ở giữa, bảng tin thi đua theo khóa/lớp, ghế đá; trống trường giữa dãy 5 tầng (bấm để đánh trống) |
 | Sân đá cầu | Trò đá cầu có bảng xếp hạng |
 | Nhà đa năng | Gian các CLB |
@@ -31,8 +31,10 @@ giờ Việt Nam và tiết học hiện tại; thanh dưới có câu nói nhan
 Nút 🎵 trên thanh trên phát **bài ca truyền thống** qua trình phát nhúng của YouTube (đổi video ở hằng số `MUSIC`
 trong `public/js/main.js`). Trình phát hiện ở góc dưới bên trái, có nút tắt và link mở trên YouTube.
 
-Nút 🎈 bên phải **ném bóng nước** vào người đang online gần nhất (trong khoảng 360 px); không có ai thì ném ra phía trước.
-Người bị ném trúng ướt sũng vài giây, mọi người đang online đều thấy.
+Nút 🎈 bên phải mở danh sách người đang online để **chọn người ném bóng nước** vào; người bị ném trúng ướt sũng
+vài giây, mọi người cùng thấy. Nút 📸 **chụp ảnh kỷ yếu** có khung logo trường, lưu về máy hoặc đăng album chung.
+Mỗi người có một **sổ lưu bút** dạng quyển sổ để bạn bè ký vào. Chạm vào **ghế đá** (hoặc ghế trong lớp) để ngồi.
+Sân trường có bồn hoa, phượng, bằng lăng, hoa sữa.
 
 Điều khiển: chạm/nhấp vào sân để đi (tự tìm đường quanh các dãy nhà), chạm nhãn để mở,
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
