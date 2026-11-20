@@ -58,18 +58,20 @@ export const EDGES = [
   { x: 658, y: 756, w: 814, h: 8 },
 ];
 
-// Lớp chuyên theo dãy nhà (sắp xếp minh hoạ – đổi tuỳ ý). side: phía cửa quay ra.
+// Lớp chuyên theo dãy nhà (theo trí nhớ của cựu học sinh). side: phía cửa quay ra.
 export const CLASS_DOORS = [
-  // Dãy 5 tầng – cửa quay ra phía cổng
-  ...['Toán', 'Tin', 'Lý', 'Hóa'].map((lop, i) => ({ lop, b: 'D5', x: 700 + i * 250, y: 1010, side: 's' })),
-  // Dãy 4 tầng – cửa quay xuống sân đá cầu
-  { lop: 'Sinh', b: 'D4', x: 128, y: 386, side: 's' },
-  ...['Văn', 'Sử', 'Địa'].map((lop, i) => ({ lop, b: 'D4', x: 300 + i * 110, y: 202, side: 's' })),
-  // Dãy 3 tầng – cửa quay xuống sân trường
+  // Dãy 4 tầng, trái → phải: 2 lớp ở chân chữ L, 4 lớp ở thân dãy
+  { lop: 'Toán', b: 'D4', x: 70, y: 386, side: 's' },
+  { lop: 'Lý', b: 'D4', x: 190, y: 386, side: 's' },
+  ...['Hóa', 'Sinh', 'Văn', 'Trung'].map((lop, i) => ({ lop, b: 'D4', x: 300 + i * 110 + (i === 3 ? 100 : 0), y: 202, side: 's' })),
+  // Dãy 3 tầng, trái → phải
   { lop: 'Anh', b: 'D3', x: 840, y: 202, side: 's' },
-  { lop: 'Nga', b: 'D3', x: 940, y: 202, side: 's' },
-  { lop: 'Pháp', b: 'D3', x: 1400, y: 202, side: 's' },
-  { lop: 'Trung', b: 'D3', x: 1482, y: 262, side: 'w' },
+  { lop: 'Sử', b: 'D3', x: 940, y: 202, side: 's' },
+  { lop: 'Địa', b: 'D3', x: 1400, y: 202, side: 's' },
+  // Dãy 5 tầng, phải → trái; cửa quay ra phía cổng
+  { lop: 'Tin', b: 'D5', x: 1450, y: 1010, side: 's' },
+  { lop: 'Nga', b: 'D5', x: 1200, y: 1010, side: 's' },
+  { lop: 'Pháp', b: 'D5', x: 950, y: 1010, side: 's' },
 ];
 
 // Điểm tương tác: chạm nhãn → nhân vật đi tới (x, y) → mở bảng `panel`. `map`: nhãn ngắn trên bản đồ.

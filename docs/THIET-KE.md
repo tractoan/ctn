@@ -85,8 +85,8 @@ Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối v�
 chính** lên sân trường (sân chỉ lên được bằng hai bậc thang bên trái). Căng tin và chỗ trốn học đi vòng phía
 Đông nhà đa năng.
 
-Phân bổ lớp (minh hoạ, đổi trong `CLASS_DOORS`): **dãy 5 tầng** – Toán, Tin, Lý, Hóa (cửa quay ra cổng);
-**dãy 4 tầng** – Sinh, Văn, Sử, Địa; **dãy 3 tầng** – Anh, Nga, Pháp, Trung.
+Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán, Lý (chân chữ L), Hóa, Sinh,
+Văn, Trung; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp (cửa quay ra cổng).
 
 ## 4. Chức năng
 
@@ -298,7 +298,7 @@ ghi danh, thấy nhau online, lời nói hiện cho người khác, lưu bút l�
 
 | Ưu tiên | Việc | Ghi chú |
 |---|---|---|
-| Cao | Xác nhận lớp chuyên nào học ở dãy nào; thêm cửa phòng thí nghiệm, thư viện | Chỉ sửa `campus.js` |
+| Cao | Thêm cửa phòng thí nghiệm, thư viện, phòng học bộ môn | Chỉ sửa `campus.js` |
 | Cao | Giới hạn tần suất API, nút báo cáo/xoá lưu bút, trang quản trị | Cần trước khi công bố rộng |
 | Trung bình | Thay CLB, câu đố, thực đơn bằng nội dung thật của trường | Hiện là nội dung mẫu |
 | Trung bình | Nhạc nền, ném bóng nước 🎈 như trang mẫu | |

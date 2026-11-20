@@ -12,9 +12,9 @@ ghé lớp cũ, viết lưu bút, đăng ký họp lớp và thi đua giữa cá
 |---|---|
 | Cổng trường (xanh, biển trắng chữ đỏ), bác bảo vệ | Giới thiệu, gửi xe điểm danh mỗi ngày nhận 20k ăn vặt |
 | **Nhà hiệu bộ** (4 tầng, sơn xanh trắng) | Lịch họp lớp (tạo, đăng ký), tri ân thầy cô, phòng giáo viên, phòng truyền thống |
-| **Dãy nhà 5 tầng** (ngay sau cổng) | Lớp chuyên Toán, Tin, Lý, Hóa |
-| **Dãy nhà 4 tầng** (chữ L, hàng cau vua) | Lớp chuyên Sinh, Văn, Sử, Địa |
-| **Dãy nhà 3 tầng** | Lớp chuyên Anh, Nga, Pháp, Trung |
+| **Dãy nhà 5 tầng** (ngay sau cổng) | Lớp chuyên (phải → trái) Tin, Nga, Pháp |
+| **Dãy nhà 4 tầng** (chữ L, hàng cau vua) | Lớp chuyên (trái → phải) Toán, Lý, Hóa, Sinh, Văn, Trung |
+| **Dãy nhà 3 tầng** | Lớp chuyên (trái → phải) Anh, Sử, Địa |
 | Trong mỗi lớp | Lưu bút theo từng khóa, sổ đầu bài (ai đã về lớp), đố vui theo môn |
 | Sân trường (cao, có bậc thang) | Sân khấu chào cờ, bảng tin thi đua theo khóa/lớp, ghế đá |
 | Sân đá cầu | Trò đá cầu có bảng xếp hạng |
@@ -40,8 +40,7 @@ Sơ đồ dựng theo bản vẽ tay của cựu học sinh ([`docs/so-do-goc.jp
 Toàn bộ nằm trong [`public/js/campus.js`](public/js/campus.js): toạ độ, kích thước các dãy nhà
 (`BUILDINGS`), sân trường cao và bậc thang (`YARD`, `STAIRS`, `EDGES`), cửa lớp và lớp chuyên của từng dãy
 (`CLASS_DOORS`), điểm tương tác (`HOTSPOTS`), cây cối. Hướng Bắc ở trên, đường Lương Ngọc Quyến ở dưới.
-Sửa các con số là va chạm, tìm đường, bản đồ toàn cảnh tự cập nhật theo. Việc xếp lớp chuyên vào dãy nào
-là minh hoạ, đổi trong `CLASS_DOORS`.
+Sửa các con số là va chạm, tìm đường, bản đồ toàn cảnh tự cập nhật theo.
 
 ## Cấu trúc
 
