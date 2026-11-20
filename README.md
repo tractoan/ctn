@@ -16,7 +16,7 @@ ghé lớp cũ, viết lưu bút, đăng ký họp lớp và thi đua giữa cá
 | **Dãy nhà 4 tầng** (chữ L, hàng cau vua) | Lớp chuyên (trái → phải) Toán, Lý, Hóa, Sinh, Văn, Trung |
 | **Dãy nhà 3 tầng** | Lớp chuyên (trái → phải) Anh, Sử, Địa |
 | Trong mỗi lớp | Lưu bút theo từng khóa, sổ đầu bài (ai đã về lớp), đố vui theo môn |
-| Sân trường (cao, có bậc thang) | Sân khấu chào cờ, bảng tin thi đua theo khóa/lớp, ghế đá |
+| Sân trường (cao, có bậc thang) | Sân khấu có cột cờ ở giữa, bảng tin thi đua theo khóa/lớp, ghế đá; trống trường giữa dãy 5 tầng (bấm để đánh trống) |
 | Sân đá cầu | Trò đá cầu có bảng xếp hạng |
 | Nhà đa năng | Gian các CLB |
 | Căng tin | Thực đơn có giá, mua và đãi bạn; giờ ra chơi thật (9:25–9:45, 15:55–16:15) giảm 20% |

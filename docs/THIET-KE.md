@@ -85,8 +85,8 @@ Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối v�
 chính** lên sân trường (sân chỉ lên được bằng hai bậc thang bên trái). Căng tin và chỗ trốn học đi vòng phía
 Đông nhà đa năng.
 
-Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), Lý, Hóa, Sinh,
-Văn, Trung; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp, cửa ở **mặt trong**
+Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), rồi Lý, Hóa, Sinh,
+Văn, Trung cách đều nhau, cau vua đứng xen giữa; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp, cửa ở **mặt trong**
 (quay vào sân trường), đi theo hành lang dưới chân tường sân, vào từ lối vào hoặc từ phía nhà đa năng.
 
 ## 4. Chức năng
@@ -97,7 +97,8 @@ Văn, Trung; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 
 | Bác bảo vệ | `guard` | Câu thoại ngẫu nhiên | Không |
 | Gửi xe (trái cổng) | `parking` | Điểm danh mỗi ngày: +20.000đ vào ví, +2 điểm | Có |
 | Bảng tin | `board` | Bảng thi đua theo khóa, theo lớp chuyên, đá cầu | Không |
-| Sân khấu | `stage` | "Hiền tài là nguyên khí của quốc gia", lưu bút chào cờ/văn nghệ | Ghi: có |
+| Sân khấu (cột cờ ở giữa) | `stage` | "Hiền tài là nguyên khí của quốc gia", lưu bút chào cờ/văn nghệ | Ghi: có |
+| Trống trường (giữa dãy 5 tầng, sát sân) | `drum` | Xem giờ/tiết, đánh trống (âm thanh Web Audio) | Không |
 | Sân trường · ghế đá | `garden` | Lưu bút tâm sự | Ghi: có |
 | Nhà hiệu bộ | `office` | Lịch họp lớp (tạo, đăng ký/huỷ), thiệp tri ân thầy cô | Ghi: có |
 | Phòng giáo viên | `teachers` | Lưu bút `gv` | Ghi: có |

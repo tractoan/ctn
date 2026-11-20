@@ -548,6 +548,18 @@ const panels = {
     });
   },
 
+  drum() {
+    openSheet('Trống trường', (b) => {
+      const now = Date.now();
+      b.append(
+        h('p', { class: 'speech' }, `Bây giờ là ${vnClock(now)} · ${periodOf(now).label}. Ba hồi trống là vào học, một hồi là ra chơi – ai đi muộn là nghe thấy từ ngoài cổng.`),
+        h('button', { class: 'btn primary big', onclick: () => {
+          beatDrum();
+          if (!me.guest) sayPrompt.send?.('🥁 Tùng! Tùng! Tùng!'); else world.say('me', '🥁 Tùng! Tùng! Tùng!');
+        } }, '🥁 Đánh trống'));
+    });
+  },
+
   sidegate() {
     openSheet('Cổng phụ', (b) => {
       b.append(h('p', { class: 'speech' }, 'Cổng phụ bên hông dãy 4 tầng – lối tắt quen thuộc mỗi khi đi muộn hay ra quán nước.'));
@@ -606,6 +618,26 @@ const panels = {
     }, { wide: true });
   },
 };
+
+// Tiếng trống tổng hợp bằng Web Audio (không cần file âm thanh)
+let audioCtx = null;
+function beatDrum(times = 3) {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = audioCtx.currentTime + 0.05;
+    for (let i = 0; i < times; i++) {
+      const t = t0 + i * 0.55;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(110, t);
+      osc.frequency.exponentialRampToValueAtTime(45, t + 0.4);
+      gain.gain.setValueAtTime(0.9, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t); osc.stop(t + 0.5);
+    }
+  } catch { /* trình duyệt không hỗ trợ âm thanh */ }
+}
 
 function rankList(rows, empty) {
   if (!rows.length) return h('p', { class: 'muted' }, empty);

@@ -62,8 +62,7 @@ export const EDGES = [
 export const CLASS_DOORS = [
   // Dãy 4 tầng, trái → phải: Toán ở chân chữ L, các lớp còn lại dọc thân dãy (cửa nằm giữa các cây cau)
   { lop: 'Toán', b: 'D4', x: 128, y: 386, side: 's' },
-  ...['Lý', 'Hóa', 'Sinh', 'Văn'].map((lop, i) => ({ lop, b: 'D4', x: 315 + i * 70, y: 202, side: 's' })),
-  { lop: 'Trung', b: 'D4', x: 640, y: 202, side: 's' },
+  ...['Lý', 'Hóa', 'Sinh', 'Văn', 'Trung'].map((lop, i) => ({ lop, b: 'D4', x: 300 + i * 110, y: 202, side: 's' })),
   // Dãy 3 tầng, trái → phải
   { lop: 'Anh', b: 'D3', x: 840, y: 202, side: 's' },
   { lop: 'Sử', b: 'D3', x: 940, y: 202, side: 's' },
@@ -91,6 +90,7 @@ export const HOTSPOTS = [
   { id: 'clubs', x: 1665, y: 792, icon: '🎭', label: 'Nhà đa năng · CLB', map: 'Đa năng', panel: 'clubs' },
   { id: 'canteen', x: 1884, y: 718, icon: '🍜', label: 'Căng tin', panel: 'canteen' },
   { id: 'tronhoc', x: 1805, y: 150, icon: '⚽', label: 'Chỗ trốn học đá bóng', map: 'Trốn học', panel: 'tronhoc' },
+  { id: 'drum', x: 1087, y: 790, icon: '🥁', label: 'Trống trường', map: 'Trống', panel: 'drum' },
   { id: 'wish', x: 1400, y: 1150, icon: '🌠', label: 'Tường "Ước mơ vào Chuyên"', map: 'Ước mơ', panel: 'wish' },
   ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'class', lop: d.lop, small: true })),
 ];
@@ -98,8 +98,9 @@ export const HOTSPOTS = [
 // Cây cối (gốc cây là vật cản nhỏ). kind: palm (cau vua), bonsai (chậu cảnh), tree (bàng, xà cừ)
 const trees = [];
 // Hàng cau vua trước dãy 4 tầng và dọc mép trái sân trường
-for (let x = 280; x <= 560; x += 70) trees.push({ x, y: 222, kind: 'palm' });
-for (const y of [250, 330, 560, 700]) trees.push({ x: 675, y, kind: 'palm' });
+// cau vua đứng xen giữa các cửa lớp
+for (const x of [355, 465, 575]) trees.push({ x, y: 222, kind: 'palm' });
+for (const y of [260, 340, 560, 700]) trees.push({ x: 675, y, kind: 'palm' });
 // Cau vua phía phải sân trường
 for (const y of [240, 360, 480, 620]) trees.push({ x: 1440, y, kind: 'palm' });
 // Hàng chậu cảnh dưới sân
@@ -115,7 +116,10 @@ export const TREES = trees;
 export const LAMPS = [{ x: 960, y: 470 }, { x: 1180, y: 470 }];
 export const BENCHES = [{ x: 860, y: 600 }, { x: 1230, y: 600 }, { x: 900, y: 360 }, { x: 1380, y: 380 }];
 
-export const FLAG = { x: 1372, y: 300 };
+// Cột cờ ở giữa sân khấu
+export const FLAG = { x: 1151, y: 250 };
+// Trống trường: giữa dãy 5 tầng, phía sát sân trường
+export const DRUM = { x: 1087, y: 806 };
 export const BOARD = { x: 603, y: 395, w: 40, h: 133 };
 export const STAGE = { x: 987, y: 195, w: 328, h: 72, label: 'HIỀN TÀI LÀ NGUYÊN KHÍ CỦA QUỐC GIA' };
 
@@ -125,7 +129,6 @@ export const PLACES = HOTSPOTS.filter((h) => !h.small);
 export function solids() {
   const s = [...BUILDINGS.map(({ x, y, w, h }) => ({ x, y, w, h })), ...WALLS, ...EDGES];
   for (const t of TREES) s.push({ x: t.x - 6, y: t.y - 4, w: 12, h: 8 });
-  s.push({ x: FLAG.x - 14, y: FLAG.y - 14, w: 28, h: 28 });
   s.push({ x: BOARD.x, y: BOARD.y, w: BOARD.w, h: BOARD.h });
   s.push({ x: STAGE.x, y: STAGE.y, w: STAGE.w, h: STAGE.h - 20 });
   return s;

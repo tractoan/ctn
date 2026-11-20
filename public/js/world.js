@@ -1,5 +1,5 @@
 // Sân trường: vẽ bản đồ, camera, tìm đường (A* trên lưới), nhân vật mình + người khác.
-import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, LAMPS, STAIRS, YARD, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
+import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
 import { drawAvatar } from './avatar.js';
 
 const CELL = 20;
@@ -273,6 +273,21 @@ function drawFlag(ctx, time) {
   ctx.fill();
 }
 
+function drawDrum(ctx) {
+  const { x, y } = DRUM;
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(x + 4, y + 2, 30, 7, 0, 0, Math.PI * 2); ctx.fill();
+  // giá gỗ
+  ctx.fillStyle = '#6B3E22';
+  ctx.fillRect(x - 26, y - 34, 5, 36); ctx.fillRect(x + 21, y - 34, 5, 36); ctx.fillRect(x - 28, y - 36, 56, 5);
+  // tang trống
+  ctx.fillStyle = '#B23A2A'; rr(ctx, x - 20, y - 46, 40, 34, 10); ctx.fill();
+  ctx.fillStyle = '#8E2B1F'; ctx.fillRect(x - 20, y - 31, 40, 3);
+  ctx.fillStyle = '#E8D3A6'; ctx.beginPath(); ctx.ellipse(x - 20, y - 29, 5, 16, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#F2B233'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x - 20, y - 29, 5, 16, 0, 0, Math.PI * 2); ctx.stroke();
+  // dùi trống
+  ctx.strokeStyle = '#8A5A35'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - 34, y - 14); ctx.lineTo(x - 22, y - 30); ctx.stroke();
+}
+
 function drawBoard(ctx) {
   const b = BOARD;
   ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(b.x + 6, b.y + 6, b.w, b.h);
@@ -288,9 +303,6 @@ function drawStage(ctx) {
   // phông sân khấu: nền đỏ, sao vàng, băng chữ
   ctx.fillStyle = '#1F5E3B'; ctx.fillRect(s.x + 20, s.y - 70, s.w - 40, 70);
   ctx.fillStyle = '#C62828'; ctx.fillRect(s.x + s.w / 2 - 50, s.y - 70, 100, 70);
-  ctx.fillStyle = '#FFDE00'; ctx.beginPath();
-  for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 4 * Math.PI / 5; ctx[i ? 'lineTo' : 'moveTo'](s.x + s.w / 2 + Math.cos(a) * 16, s.y - 32 + Math.sin(a) * 16); }
-  ctx.fill();
   ctx.fillStyle = '#C62828'; ctx.fillRect(s.x + 10, s.y - 86, s.w - 20, 18);
   label(ctx, s.label, s.x + s.w / 2, s.y - 77, { size: 9, color: '#FFE08A', weight: 800 });
   // bục sân khấu
@@ -525,7 +537,8 @@ export class World {
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
-    items.push({ y: FLAG.y, draw: () => drawFlag(ctx, now) });
+    items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
+    items.push({ y: DRUM.y, draw: () => drawDrum(ctx) });
     items.push({ y: BOARD.y + BOARD.h, draw: () => drawBoard(ctx) });
     items.push({ y: STAGE.y + STAGE.h, draw: () => drawStage(ctx) });
     for (const l of LAMPS) items.push({ y: l.y, draw: () => drawLamp(ctx, l) });
@@ -610,7 +623,8 @@ export class World {
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
-    items.push({ y: FLAG.y, draw: () => drawFlag(ctx, now) });
+    items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
+    items.push({ y: DRUM.y, draw: () => drawDrum(ctx) });
     items.push({ y: BOARD.y + BOARD.h, draw: () => drawBoard(ctx) });
     items.push({ y: STAGE.y + STAGE.h, draw: () => drawStage(ctx) });
     items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
