@@ -19,9 +19,15 @@ ghé lớp cũ, viết lưu bút, đăng ký họp lớp và thi đua giữa cá
 | **Nhà D** | Lớp chuyên Anh, Nga, Pháp, Trung |
 | Trong mỗi lớp | Lưu bút theo từng khóa, sổ đầu bài (ai đã về lớp), đố vui theo môn |
 | Nhà đa năng | Gian các CLB |
-| Căng tin | Thực đơn có giá, mua và đãi bạn; giờ ra chơi thật (9:15–9:35) giảm 20% |
+| Căng tin | Thực đơn có giá, mua và đãi bạn; giờ ra chơi thật (9:25–9:45, 15:55–16:15) giảm 20% |
 | Sân bóng | Trò đá cầu có bảng xếp hạng |
 | Ký túc xá, vườn trường, tường "Ước mơ vào Chuyên" | Góc lưu bút kỷ niệm |
+
+Giao diện theo kiểu trang mẫu [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/):
+vào là thấy ngay sân trường với tư cách khách; muốn viết lưu bút, điểm danh, mua đồ, trò chuyện tự do thì bấm
+**Ghi danh** (cựu học sinh, học sinh, thầy cô, bạn trường khác, em cấp 2). Thanh trên hiện nơi đang đứng,
+giờ Việt Nam và tiết học hiện tại; thanh dưới có câu nói nhanh, biểu cảm, ô chat và nút 🗺️ mở bản đồ toàn trường
+(chạm vào đâu trên bản đồ thì nhân vật tự đi tới đó).
 
 Điều khiển: chạm/nhấp vào sân để đi (tự tìm đường quanh các dãy nhà), chạm nhãn để mở,
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.

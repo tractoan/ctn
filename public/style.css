@@ -158,7 +158,7 @@ details summary { cursor: pointer; color: var(--muted); font-weight: 600; paddin
 .timeline { display: grid; gap: 10px; border-left: 3px solid var(--red); padding-left: 14px; }
 .timeline p { margin: 2px 0 0; font-size: 14px; }
 
-#toast { position: fixed; left: 50%; bottom: calc(92px + var(--sab)); transform: translate(-50%, 20px); background: var(--navy); color: #fff; padding: 10px 16px; border-radius: 14px; font-size: 14px; font-weight: 600; opacity: 0; transition: .2s; z-index: 80; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
+#toast { position: fixed; left: 50%; bottom: calc(130px + var(--sab)); transform: translate(-50%, 20px); background: var(--navy); color: #fff; padding: 10px 16px; border-radius: 14px; font-size: 14px; font-weight: 600; opacity: 0; transition: .2s; z-index: 80; max-width: calc(100% - 32px); text-align: center; pointer-events: none; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.bad { background: var(--red); }
 
@@ -168,3 +168,40 @@ body.page { overflow: auto; background: var(--bg); }
 .page-nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; padding: 8px 0 16px; }
 .page-wrap h1 { color: var(--navy); line-height: 1.25; }
 .page-wrap h2 { color: var(--navy); margin-top: 28px; }
+
+/* ---------- Bố cục giống trang mẫu: thanh trên, thanh chat dưới ---------- */
+.hud { background: var(--navy); padding: calc(8px + var(--sat)) 12px 8px; }
+.brand > div { min-width: 0; }
+.brand b { font-size: 16px; }
+.brand small { font-size: 12px; opacity: .85; }
+.brand .clock { font-weight: 800; font-size: 14px; opacity: 1; }
+.hud-right { align-items: center; flex-wrap: nowrap; }
+.online-pill { display: inline-flex; align-items: center; gap: 5px; background: #E7F5EC; color: var(--ok); font-weight: 800; font-size: 13px; padding: 5px 10px; border-radius: 999px; }
+.online-pill i { width: 8px; height: 8px; border-radius: 50%; background: #2ECC71; box-shadow: 0 0 0 3px #2ECC7133; }
+.hud-btn { border: 0; background: #fff; color: var(--navy); font-weight: 800; border-radius: 999px; padding: 8px 14px; font-size: 14px; }
+.hud-avatar { border: 2px solid #fff; background: linear-gradient(#E6F0FA, #F7F3EA); border-radius: 50%; width: 38px; height: 38px; padding: 0; overflow: hidden; display: grid; place-items: center; }
+.fabs { position: absolute; right: 12px; bottom: calc(118px + var(--sab)); display: grid; gap: 8px; }
+.fab { width: 44px; height: 44px; border-radius: 50%; border: 0; background: #fff; color: var(--navy); font-size: 22px; font-weight: 700; box-shadow: 0 3px 12px rgba(0,0,0,.2); }
+.chatbar { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; padding: 8px 0 calc(8px + var(--sab)); box-shadow: 0 -4px 18px rgba(0,0,0,.12); }
+.quick-row { display: flex; gap: 6px; overflow-x: auto; padding: 0 12px 8px; scrollbar-width: none; }
+.quick-row::-webkit-scrollbar { display: none; }
+.quick-row .pill { flex: none; border: 1.5px solid var(--line); box-shadow: none; background: #fff; }
+.quick-row .pill.emoji { padding: 6px 9px; font-size: 16px; }
+.chat-row { display: flex; gap: 8px; align-items: center; padding: 0 12px; }
+.map-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; background: #EEF1F6; font-size: 22px; }
+.chat-input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 15px; color: var(--ink); padding: 10px 4px; }
+.chat-input:focus { outline: none; }
+.chat-send { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--red); color: #fff; font-size: 16px; }
+.overview { width: 100%; display: block; border-radius: 16px; cursor: pointer; margin-top: 8px; }
+.welcome-in { text-align: left; }
+.trio { display: flex; justify-content: center; gap: 10px; }
+.welcome-title { font-size: 24px; line-height: 1.25; color: var(--navy); margin: 6px 0 8px; }
+.role-list { display: grid; gap: 8px; }
+.role { display: flex; align-items: center; gap: 14px; border: 1.5px solid var(--line); background: #fff; border-radius: 16px; padding: 12px 14px; text-align: left; color: var(--ink); }
+.role:active, .role:hover { border-color: var(--red); }
+.role-ico { font-size: 28px; width: 36px; text-align: center; }
+.role b { display: block; font-size: 16px; }
+.role small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.btn.link { background: transparent; color: var(--navy); text-decoration: underline; padding: 8px; margin-top: 4px; }
+.btn.link.muted { color: var(--muted); font-weight: 600; }
+@media (max-width: 420px) { .brand small { display: block; } .hud-btn { padding: 7px 11px; font-size: 13px; } .chip { padding: 4px 8px; } }

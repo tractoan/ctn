@@ -239,14 +239,32 @@ function drawStage(ctx) {
   label(ctx, s.label, s.x + s.w / 2, s.y + s.h / 2 - 4, { size: 11, color: '#fff', weight: 800 });
 }
 
-function drawGate(ctx) {
-  const g = GATE;
-  for (const px of [g.x - 18, g.x + g.w]) { ctx.fillStyle = '#B5452F'; ctx.fillRect(px, g.y - 46, 18, 58); ctx.fillStyle = '#F6E7C8'; ctx.fillRect(px + 3, g.y - 40, 12, 46); }
-  ctx.fillStyle = '#1B2A4E'; rr(ctx, g.x - 20, g.y - 74, g.w + 40, 30, 6); ctx.fill();
-  label(ctx, g.sign, g.x + g.w / 2, g.y - 59, { size: 10, color: '#F2B233', weight: 800 });
-  // cánh cổng mở
-  ctx.strokeStyle = '#6B7280'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(g.x, g.y + 6); ctx.lineTo(g.x + 14, g.y - 30); ctx.moveTo(g.x + g.w, g.y + 6); ctx.lineTo(g.x + g.w - 14, g.y - 30); ctx.stroke();
+function drawGate(ctx, time) {
+  const g = GATE, top = g.y - 120;
+  // trụ cổng
+  for (const px of [g.x - 34, g.x + g.w + 6]) {
+    ctx.fillStyle = '#C9CCD3'; ctx.fillRect(px, top + 30, 28, 102);
+    ctx.fillStyle = '#E4E6EA'; ctx.fillRect(px + 4, top + 34, 20, 94);
+  }
+  // cờ trang trí
+  const colors = ['#D8343A', '#F2B233', '#2E8B57', '#7E57C2', '#2F6FB5'];
+  for (let i = 0; i < 9; i++) {
+    const fx = g.x - 40 + i * ((g.w + 80) / 8), wave = Math.sin(time / 400 + i) * 2;
+    ctx.fillStyle = '#9AA0A6'; ctx.fillRect(fx - 1, top - 34, 2, 30);
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.beginPath(); ctx.moveTo(fx + 1, top - 34); ctx.lineTo(fx + 12, top - 28 + wave); ctx.lineTo(fx + 1, top - 20); ctx.fill();
+  }
+  // băng rôn đỏ
+  ctx.fillStyle = '#D8343A'; rr(ctx, g.x - 60, top - 6, g.w + 120, 16, 3); ctx.fill();
+  label(ctx, 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ HỌC SINH VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 2, { size: 7.5, color: '#FFE08A', weight: 800 });
+  // biển trường
+  ctx.fillStyle = '#E4E6EA'; rr(ctx, g.x - 70, top + 12, g.w + 140, 42, 4); ctx.fill();
+  ctx.fillStyle = '#1E4FA3'; rr(ctx, g.x - 64, top + 16, g.w + 128, 34, 3); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(g.x - 61, top + 19, g.w + 122, 28);
+  label(ctx, 'SỞ GIÁO DỤC VÀ ĐÀO TẠO THÁI NGUYÊN', g.x + g.w / 2, top + 25, { size: 6, color: '#fff', weight: 600 });
+  label(ctx, g.sign, g.x + g.w / 2, top + 38, { size: 11.5, color: '#fff', weight: 800 });
+  // barie
+  ctx.fillStyle = '#F2B233'; ctx.fillRect(g.x + 4, g.y - 14, 10, 18); ctx.fillRect(g.x + g.w - 14, g.y - 14, 10, 18);
 }
 
 export class World {
@@ -278,7 +296,7 @@ export class World {
     const r = this.canvas.getBoundingClientRect();
     this.vw = r.width; this.vh = r.height; this.dpr = dpr;
     this.canvas.width = Math.round(r.width * dpr); this.canvas.height = Math.round(r.height * dpr);
-    this.baseZoom = r.width < 640 ? 0.72 : 1;
+    this.baseZoom = r.width < 640 ? 0.95 : 1.2;
   }
 
   // Vẽ sẵn lớp nền tĩnh (mặt đất) vào canvas ngoài màn hình
@@ -453,10 +471,10 @@ export class World {
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
     items.push({ y: FLAG.y, draw: () => drawFlag(ctx, now) });
     items.push({ y: BOARD.y, draw: () => drawBoard(ctx) });
-    items.push({ y: GATE.y + 10, draw: () => drawGate(ctx) });
-    for (const n of this.npcs) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir }); this._nameTag(ctx, n.x, n.y, n.name, '#2E8B57'); } });
-    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: o.dir, back: o.back }); this._nameTag(ctx, o.x, o.y, o.data.name + (o.data.khoa ? ` · ${o.data.lop || ''} ${o.data.khoa}` : ''), '#2F6FB5', o.data); this._bubble(ctx, id, o.x, o.y, now); } });
-    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.back }); this._nameTag(ctx, m.x, m.y, m.name, '#D8343A'); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
+    items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
+    for (const n of this.npcs) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir }); if (n.tag !== false) this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57'); } });
+    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: o.dir, back: o.back }); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._bubble(ctx, id, o.x, o.y, now); } });
+    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.back }); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
 
@@ -471,11 +489,12 @@ export class World {
     this.labelRects = [];
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     for (const h of HOTSPOTS) {
-      const sx = (h.x - this.cam.x) * z, sy = (h.y - this.cam.y) * z - (h.small ? 18 : 34) * z;
+      const near = this.me && Math.hypot(this.me.x - h.x, this.me.y - h.y) < 60;
+      // khi nhân vật đứng tại điểm, đẩy nhãn xuống dưới chân để không che người
+      const sx = (h.x - this.cam.x) * z, sy = (h.y - this.cam.y) * z + (near ? 24 : h.small ? -18 : -34) * z;
       if (sx < -100 || sy < -40 || sx > this.vw + 100 || sy > this.vh + 40) continue;
       const txt = `${h.icon} ${h.label}`;
       const size = h.small ? 11 : 12;
-      const near = this.me && Math.hypot(this.me.x - h.x, this.me.y - h.y) < 90;
       const w = label(ctx, txt, sx, sy, { size, color: h.small ? '#1B2A4E' : '#fff', bg: h.small ? 'rgba(255,255,255,.92)' : near ? '#D8343A' : 'rgba(27,42,78,.88)', weight: 700, pad: 6 });
       this.labelRects.push({ x: sx - w / 2, y: sy - size / 2 - 8, w, h: size + 16, h_: 0, h });
     }
@@ -486,8 +505,26 @@ export class World {
     }
   }
 
-  _nameTag(ctx, x, y, name, color) {
-    label(ctx, name, x, y + 12, { size: 9, color: '#fff', bg: color, weight: 700, pad: 3 });
+  subOf(p) {
+    if (p.role === 'gv') return 'Thầy cô';
+    if (p.role === 'em') return 'Em · THCS';
+    if (p.role === 'khach') return p.school ? 'Bạn · ' + p.school : 'Bạn trường khác';
+    return [p.khoa, p.lop].filter(Boolean).join(' · ');
+  }
+
+  _nameTag(ctx, x, y, name, sub, color, mine = false) {
+    ctx.font = '700 10px "Be Vietnam Pro", system-ui, sans-serif';
+    const w1 = ctx.measureText(name).width;
+    ctx.font = '600 8px "Be Vietnam Pro", system-ui, sans-serif';
+    const w2 = sub ? ctx.measureText(sub).width : 0;
+    const w = Math.max(w1, w2) + 12, hgt = sub ? 25 : 15, top = y - 58 - hgt;
+    ctx.fillStyle = mine ? '#D8343A' : 'rgba(255,255,255,.94)';
+    rr(ctx, x - w / 2, top, w, hgt, 6); ctx.fill();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = mine ? '#fff' : color;
+    ctx.font = '700 10px "Be Vietnam Pro", system-ui, sans-serif';
+    ctx.fillText(name, x, top + 8);
+    if (sub) { ctx.fillStyle = mine ? 'rgba(255,255,255,.85)' : '#5B6577'; ctx.font = '600 8px "Be Vietnam Pro", system-ui, sans-serif'; ctx.fillText(sub, x, top + 19); }
   }
 
   _bubble(ctx, id, x, y, now) {
@@ -497,11 +534,41 @@ export class World {
     ctx.font = '600 11px "Be Vietnam Pro", system-ui, sans-serif';
     const w = Math.min(180, ctx.measureText(b.text).width + 16);
     ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.15)';
-    rr(ctx, x - w / 2, y - 82, w, 24, 10); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x - 5, y - 58); ctx.lineTo(x + 5, y - 58); ctx.lineTo(x, y - 52); ctx.fill();
+    rr(ctx, x - w / 2, y - 118, w, 24, 10); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 5, y - 94); ctx.lineTo(x + 5, y - 94); ctx.lineTo(x, y - 88); ctx.fill();
     ctx.fillStyle = '#1D2433'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     let t = b.text; while (ctx.measureText(t).width > w - 14 && t.length > 1) t = t.slice(0, -2) + '…';
-    ctx.fillText(t, x, y - 70);
+    ctx.fillText(t, x, y - 106);
+  }
+
+  // Bản đồ toàn cảnh (trong bảng "Bản đồ trường"); trả về hàm đổi toạ độ màn hình → thế giới
+  drawOverview(canvas, places, now = performance.now()) {
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = canvas.clientWidth, s = cw / WORLD.w, ch = WORLD.h * s;
+    canvas.width = cw * dpr; canvas.height = ch * dpr; canvas.style.height = ch + 'px';
+    ctx.setTransform(dpr * s, 0, 0, dpr * s, 0, 0);
+    if (this.bg) ctx.drawImage(this.bg, 0, 0);
+    const items = [];
+    for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
+    for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
+    items.push({ y: FLAG.y, draw: () => drawFlag(ctx, now) });
+    items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
+    items.sort((a, b) => a.y - b.y).forEach((it) => it.draw());
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#F26A21';
+    for (const o of this.others.values()) { ctx.beginPath(); ctx.arc(o.x * s, o.y * s, 3.5, 0, Math.PI * 2); ctx.fill(); }
+    const rects = [];
+    for (const p of places) {
+      const fs = cw < 500 ? 9 : 11;
+      const w = label(ctx, p.map || p.label, p.x * s, p.y * s - 8, { size: fs, color: '#fff', bg: 'rgba(27,42,78,.88)', pad: 4 });
+      rects.push({ x: p.x * s - w / 2, y: p.y * s - 20, w, h: 24, p });
+    }
+    if (this.me) { ctx.fillStyle = '#D8343A'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.me.x * s, this.me.y * s, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+    return (sx, sy) => {
+      for (const r of rects) if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) return { hotspot: r.p };
+      return { x: sx / s, y: sy / s };
+    };
   }
 
   // Bản đồ thu nhỏ

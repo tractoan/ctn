@@ -7,8 +7,18 @@ export const ROLES = {
   cuuhs: 'Cựu học sinh',
   hs: 'Học sinh',
   gv: 'Thầy cô',
-  khach: 'Khách / bạn trường khác',
+  khach: 'Bạn trường khác',
+  em: 'Em cấp 2',
 };
+
+// Thời khoá biểu (giờ Việt Nam, phút tính từ 0:00): [bắt đầu, kết thúc, nhãn]
+export const SCHEDULE = [
+  [7 * 60, 7 * 60 + 45, 'Tiết 1 sáng'], [7 * 60 + 50, 8 * 60 + 35, 'Tiết 2 sáng'], [8 * 60 + 40, 9 * 60 + 25, 'Tiết 3 sáng'],
+  [9 * 60 + 25, 9 * 60 + 45, 'Ra chơi', true], [9 * 60 + 45, 10 * 60 + 30, 'Tiết 4 sáng'], [10 * 60 + 35, 11 * 60 + 20, 'Tiết 5 sáng'],
+  [13 * 60 + 30, 14 * 60 + 15, 'Tiết 1 chiều'], [14 * 60 + 20, 15 * 60 + 5, 'Tiết 2 chiều'], [15 * 60 + 10, 15 * 60 + 55, 'Tiết 3 chiều'],
+  [15 * 60 + 55, 16 * 60 + 15, 'Ra chơi', true], [16 * 60 + 15, 17 * 60, 'Tiết 4 chiều'], [17 * 60 + 5, 17 * 60 + 50, 'Tiết 5 chiều'],
+];
+export const BREAK_TEXT = '9:25–9:45 và 15:55–16:15';
 
 export const MENU = [
   { id: 'banhmi', name: 'Bánh mì pate', price: 15000, emoji: '🥖' },
@@ -64,7 +74,16 @@ function recoveryCode() {
 // Ngày/giờ theo múi giờ Việt Nam (UTC+7)
 function vnDate(now) { return new Date(now + 7 * 3600e3).toISOString().slice(0, 10); }
 function vnMinutes(now) { const d = new Date(now + 7 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); }
-export function isBreakTime(now) { const m = vnMinutes(now); return m >= 9 * 60 + 15 && m < 9 * 60 + 35; }
+export function periodOf(now) {
+  const m = vnMinutes(now);
+  for (const [a, b, label, brk] of SCHEDULE) if (m >= a && m < b) return { label, isBreak: !!brk };
+  if (m < 7 * 60) return { label: m < 5 * 60 ? 'Đêm khuya' : 'Sắp vào học', isBreak: false };
+  if (m < 13 * 60 + 30) return { label: 'Nghỉ trưa', isBreak: false };
+  if (m < 22 * 60) return { label: 'Tan học', isBreak: false };
+  return { label: 'Đêm khuya', isBreak: false };
+}
+export function vnClock(now) { const m = vnMinutes(now); return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+export function isBreakTime(now) { return periodOf(now).isBreak; }
 
 function sanitizeLook(l) {
   l = l && typeof l === 'object' ? l : {};
@@ -79,7 +98,7 @@ function sanitizeLook(l) {
 }
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, look: u.look, points: u.points || 0 };
+  return { id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', look: u.look, points: u.points || 0 };
 }
 function privateUser(u) {
   return { ...publicUser(u), wallet: u.wallet, lastCheckin: u.lastCheckin || null, code: u.code, quizToday: u.quizCount || 0 };
@@ -98,8 +117,9 @@ async function addPoints(ctx, u, kind, mult = 1) {
   await ctx.store.put('user', u.id, u);
 }
 
+const NO_CLASS = ['gv', 'khach', 'em'];
 function normKhoa(v, role) {
-  if (role === 'gv' || role === 'khach') return '';
+  if (NO_CLASS.includes(role)) return '';
   const s = str(String(v ?? ''), 12).toUpperCase().replace(/^K?/, 'K');
   if (!/^K\d{1,2}$/.test(s)) throw new ApiError(400, 'Khóa dạng K1, K2… K40');
   return s;
@@ -112,9 +132,9 @@ const handlers = {
     const role = ROLES[b.role] ? b.role : 'cuuhs';
     const name = str(b.name, 40, true, 'tên');
     const khoa = normKhoa(b.khoa, role);
-    const lop = role === 'gv' || role === 'khach' ? '' : LOPS.includes(b.lop) ? b.lop : '';
+    const lop = NO_CLASS.includes(role) ? '' : LOPS.includes(b.lop) ? b.lop : '';
     if ((role === 'cuuhs' || role === 'hs') && !lop) throw new ApiError(400, 'Chọn lớp chuyên');
-    const school = role === 'khach' ? str(b.school, 60) : '';
+    const school = role === 'khach' || role === 'em' ? str(b.school, 60) : '';
     const id = randId(10);
     const token = randId(24);
     const code = recoveryCode();
@@ -150,7 +170,7 @@ const handlers = {
   async presence(ctx, b) {
     const u = await auth(ctx);
     const p = {
-      id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, look: u.look,
+      id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', look: u.look,
       x: num(b.x, 0, 4000), y: num(b.y, 0, 4000), zone: str(b.zone, 40), at: ctx.now,
     };
     const old = await ctx.store.get('presence', u.id);
@@ -164,6 +184,12 @@ const handlers = {
       if (v.id !== u.id) others.push(v);
     }
     return { others, now: ctx.now };
+  },
+
+  // Khách chưa ghi danh: chỉ xem ai đang online, không hiện mình
+  async online(ctx) {
+    const all = await ctx.store.list('presence', '', 500);
+    return { others: all.map((r) => r.v).filter((v) => ctx.now - v.at <= PRESENCE_TTL), now: ctx.now };
   },
 
   async guestbook(ctx, b) {

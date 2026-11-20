@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handle, isBreakTime } from '../public/js/logic.js';
+import { handle, isBreakTime, periodOf } from '../public/js/logic.js';
 
 function memStore() {
   const m = new Map();
@@ -48,8 +48,10 @@ test('đăng ký, khôi phục, điểm danh, mua đồ', async () => {
 });
 
 test('giờ ra chơi giảm 20%', () => {
-  assert.equal(isBreakTime(Date.UTC(2026, 0, 5, 2, 20)), true); // 9:20 VN
-  assert.equal(isBreakTime(Date.UTC(2026, 0, 5, 2, 40)), false);
+  assert.equal(isBreakTime(Date.UTC(2026, 0, 5, 2, 30)), true); // 9:30 VN
+  assert.equal(isBreakTime(Date.UTC(2026, 0, 5, 9, 0)), true); // 16:00 VN
+  assert.equal(isBreakTime(Date.UTC(2026, 0, 5, 2, 50)), false);
+  assert.equal(periodOf(Date.UTC(2026, 0, 5, 7, 3)).label, 'Tiết 1 chiều'); // 14:03 VN
 });
 
 test('thiếu lớp chuyên / khóa sai bị từ chối', async () => {
@@ -57,6 +59,9 @@ test('thiếu lớp chuyên / khóa sai bị từ chối', async () => {
   assert.equal((await call(s, 'register', { name: 'A', role: 'hs', khoa: 'K30' })).status, 400);
   assert.equal((await call(s, 'register', { name: 'A', role: 'hs', khoa: 'abc', lop: 'Tin' })).status, 400);
   assert.equal((await call(s, 'register', { name: 'Cô Lan', role: 'gv' })).status, 200);
+  const em = await call(s, 'register', { name: 'Bé Na', role: 'em', school: 'THCS Nha Trang' });
+  assert.equal(em.status, 200);
+  assert.equal(em.body.user.lop, '');
 });
 
 test('lưu bút, sổ đầu bài, bảng thi đua', async () => {
@@ -88,6 +93,7 @@ test('presence trả về người khác, bỏ người đã rời đi', async (
   assert.equal(r.others.length, 1);
   assert.equal(r.others[0].name, 'An');
   assert.equal(r.others[0].say, 'Chào');
+  assert.equal((await call(s, 'online', {}, '', 2500)).body.others.length, 2);
   const later = (await call(s, 'presence', { x: 50, y: 60 }, b.token, 60000)).body;
   assert.equal(later.others.length, 0);
 });

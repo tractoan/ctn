@@ -7,7 +7,7 @@
 
 export const WORLD = { w: 2000, h: 1720 };
 
-export const SPAWN = { x: 1000, y: 1390 };
+export const SPAWN = { x: 1000, y: 1325 };
 
 // Mặt đất: vẽ theo thứ tự (sau đè trước)
 export const GROUNDS = [
@@ -35,8 +35,8 @@ export const BUILDINGS = [
   { id: 'CT', name: 'Căng tin', short: 'CĂNG TIN', x: 80, y: 560, w: 250, h: 200, floors: 1, wall: '#FFF1D6', roof: '#E08A1E' },
   { id: 'KTX', name: 'Ký túc xá', short: 'KÝ TÚC XÁ', x: 1700, y: 880, w: 220, h: 400, floors: 4, wall: '#EDE6F7', roof: '#6E56A8', vertical: true },
   { id: 'XE1', name: 'Nhà xe học sinh', short: 'NHÀ XE HS', x: 560, y: 1360, w: 300, h: 110, floors: 0, wall: '#E7EBF0', roof: '#7C8A9A', shed: true },
-  { id: 'XE2', name: 'Nhà xe giáo viên', short: 'NHÀ XE GV', x: 1180, y: 1360, w: 260, h: 110, floors: 0, wall: '#E7EBF0', roof: '#7C8A9A', shed: true },
-  { id: 'BV', name: 'Phòng bảo vệ', short: 'BẢO VỆ', x: 1122, y: 1430, w: 60, h: 50, floors: 1, wall: '#FFF', roof: '#1B2A4E' },
+  { id: 'XE2', name: 'Nhà xe giáo viên', short: 'NHÀ XE GV', x: 1240, y: 1360, w: 200, h: 110, floors: 0, wall: '#E7EBF0', roof: '#7C8A9A', shed: true },
+  { id: 'BV', name: 'Phòng bảo vệ', short: 'BẢO VỆ', x: 1180, y: 1430, w: 60, h: 50, floors: 1, wall: '#FFF', roof: '#1B2A4E' },
 ];
 
 // Tường rào (vật cản mỏng). Chừa khoảng trống cổng chính x 900–1100.
@@ -62,20 +62,20 @@ export const CLASS_DOORS = [
 
 // Điểm tương tác: chạm nhãn → nhân vật đi tới (x, y) → mở bảng `panel`.
 export const HOTSPOTS = [
-  { id: 'gate', x: 1000, y: 1535, icon: '🚪', label: 'Cổng trường', panel: 'gate' },
-  { id: 'parking', x: 710, y: 1335, icon: '🛵', label: 'Gửi xe · điểm danh', panel: 'parking' },
-  { id: 'guard', x: 1060, y: 1395, icon: '👮', label: 'Bác bảo vệ', panel: 'guard' },
-  { id: 'flag', x: 1000, y: 880, icon: '🇻🇳', label: 'Cột cờ · Bảng thi đua', panel: 'board' },
-  { id: 'office', x: 1000, y: 645, icon: '🏛️', label: 'Nhà A · Hiệu bộ', panel: 'office' },
-  { id: 'teachers', x: 790, y: 645, icon: '👩‍🏫', label: 'Phòng giáo viên', panel: 'teachers' },
-  { id: 'history', x: 1210, y: 645, icon: '📸', label: 'Phòng truyền thống', panel: 'history' },
-  { id: 'clubs', x: 205, y: 505, icon: '🎭', label: 'Nhà đa năng · CLB', panel: 'clubs' },
+  { id: 'gate', x: 1000, y: 1535, icon: '🚪', label: 'Cổng trường', map: 'Cổng', panel: 'gate' },
+  { id: 'parking', x: 710, y: 1335, icon: '🛵', label: 'Gửi xe · điểm danh', map: 'Gửi xe', panel: 'parking' },
+  { id: 'guard', x: 1110, y: 1345, icon: '👮', label: 'Bác bảo vệ', map: 'Bảo vệ', panel: 'guard' },
+  { id: 'flag', x: 1000, y: 880, icon: '🇻🇳', label: 'Cột cờ · Bảng thi đua', map: 'Cột cờ', panel: 'board' },
+  { id: 'office', x: 1000, y: 645, icon: '🏛️', label: 'Nhà A · Hiệu bộ', map: 'Hiệu bộ', panel: 'office' },
+  { id: 'teachers', x: 790, y: 645, icon: '👩‍🏫', label: 'Phòng giáo viên', map: 'P. giáo viên', panel: 'teachers' },
+  { id: 'history', x: 1210, y: 645, icon: '📸', label: 'Phòng truyền thống', map: 'Truyền thống', panel: 'history' },
+  { id: 'clubs', x: 205, y: 505, icon: '🎭', label: 'Nhà đa năng · CLB', map: 'Đa năng', panel: 'clubs' },
   { id: 'canteen', x: 205, y: 785, icon: '🍜', label: 'Căng tin', panel: 'canteen' },
-  { id: 'football', x: 1650, y: 480, icon: '⚽', label: 'Sân bóng · Đá cầu', panel: 'football' },
-  { id: 'dorm', x: 1650, y: 1080, icon: '🛏️', label: 'Ký túc xá', panel: 'dorm' },
-  { id: 'wc', x: 450, y: 1325, icon: '🪞', label: 'WC · Gương', panel: 'mirror' },
-  { id: 'wish', x: 300, y: 1470, icon: '🌠', label: 'Tường "Ước mơ vào Chuyên"', panel: 'wish' },
-  { id: 'garden', x: 200, y: 1050, icon: '🌳', label: 'Vườn trường', panel: 'garden' },
+  { id: 'football', x: 1650, y: 480, icon: '⚽', label: 'Sân bóng · Đá cầu', map: 'Sân bóng', panel: 'football' },
+  { id: 'dorm', x: 1650, y: 1080, icon: '🛏️', label: 'Ký túc xá', map: 'KTX', panel: 'dorm' },
+  { id: 'wc', x: 450, y: 1325, icon: '🪞', label: 'WC · Gương', map: 'WC', panel: 'mirror' },
+  { id: 'wish', x: 300, y: 1470, icon: '🌠', label: 'Tường "Ước mơ vào Chuyên"', map: 'Ước mơ', panel: 'wish' },
+  { id: 'garden', x: 200, y: 1050, icon: '🌳', label: 'Vườn trường', map: 'Vườn', panel: 'garden' },
   ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'class', lop: d.lop, small: true })),
 ];
 
