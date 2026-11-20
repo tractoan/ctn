@@ -53,7 +53,7 @@ dãy 4 tầng. Mỗi pixel của bản vẽ gốc = **1,6 px thế giới**. Th�
 ```
 ┌──────────────────────────────┬──────────────────────────────────┬──────────┐
 │ DÃY NHÀ 4 TẦNG (chữ L)       │ DÃY NHÀ 3 TẦNG    [sân khấu]     │ CHỖ TRỐN │
-│ ┌────┐ (hàng cau vua)        │                          ┌───────┤ HỌC ĐÁ   │
+│ ┌────┐ (hàng cây phượng)     │                          ┌───────┤ HỌC ĐÁ   │
 │ │    │  ┌──────────┐ ║┌──────┴───────────────────┐      │       │ BÓNG     │
 │ └────┘  │ SÂN ĐÁ   │ ║│                          │      └───────┘          │
 │CỔNG PHỤ │   CẦU    │ ▤│       SÂN TRƯỜNG         │ ┌──────────┐ ┌──┐      │
@@ -78,14 +78,14 @@ dãy 4 tầng. Mỗi pixel của bản vẽ gốc = **1,6 px thế giới**. Th�
 | `WALLS`, `GATE`, `SIDE_GATE` | Tường rào thấp màu kem, cổng chính (x 693–1130), cổng phụ bên trái |
 | `CLASS_DOORS` | Cửa lớp: lớp chuyên nào ở dãy nào, vị trí đứng trước cửa |
 | `HOTSPOTS` | Điểm tương tác: toạ độ, biểu tượng, nhãn, nhãn ngắn trên bản đồ (`map`), bảng cần mở (`panel`) |
-| `TREES` (`palm`, `bonsai`, `tree` + `bloom`: `phuong`/`banglang`/`hoasua`), `LAMPS`, `FLAG`, `BOARD`, `STAGE`, `DRUM` | Trang trí; gốc cây, bảng tin, bục sân khấu là vật cản |
+| `TREES` (`tree` + `bloom`: `phuong`/`banglang`/`hoasua`, `planter`: bồn gốc cây; `bonsai`: bụi hoa; `palm` vẫn vẽ được), `LAMPS`, `FLAG`, `BOARD`, `STAGE`, `DRUM` | Trang trí; gốc cây, bảng tin, bục sân khấu là vật cản |
 
 Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối vào** giữa nhà hiệu bộ và dãy 5 tầng → **bậc thang
 chính** lên sân trường (sân chỉ lên được bằng hai bậc thang bên trái). Căng tin và chỗ trốn học đi vòng phía
 Đông nhà đa năng.
 
 Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), rồi Lý, Hóa, Sinh,
-Văn, Trung cách đều nhau, cau vua đứng xen giữa; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp, cửa ở **mặt trong**
+Văn, Trung cách đều nhau, cây phượng – bằng lăng có bồn đứng xen giữa; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp, cửa ở **mặt trong**
 (quay vào sân trường), đi theo hành lang dưới chân tường sân, vào từ lối vào hoặc từ phía nhà đa năng.
 
 ### 3.1 Cảnh và lớp học

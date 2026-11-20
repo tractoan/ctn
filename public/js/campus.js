@@ -105,18 +105,19 @@ export const HOTSPOTS = [
   ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'enterClass', lop: d.lop, small: true })),
 ];
 
-// Cây cối (gốc cây là vật cản nhỏ). kind: palm (cau vua), bonsai (chậu cảnh), tree (bàng, xà cừ)
+// Cây cối (gốc cây là vật cản nhỏ). kind: tree (cây tán tròn), bonsai (bụi hoa), palm (cau vua – còn hỗ trợ vẽ)
+// bloom: cây đang ra hoa – phượng đỏ, bằng lăng tím, hoa sữa trắng; planter: có bồn quanh gốc (trên nền gạch)
 const trees = [];
-// Hàng cau vua trước dãy 4 tầng và dọc mép trái sân trường
-// cau vua đứng xen giữa các cửa lớp
-for (const x of [355, 465, 575]) trees.push({ x, y: 222, kind: 'palm' });
-for (const y of [260, 340, 560, 700]) trees.push({ x: 675, y, kind: 'palm' });
-// Cau vua phía phải sân trường
-for (const y of [240, 360, 480, 620]) trees.push({ x: 1440, y, kind: 'palm' });
+const yardTree = (x, y, bloom) => trees.push({ x, y, kind: 'tree', bloom, planter: true });
+// Hàng cây trước dãy 4 tầng, đứng xen giữa các cửa lớp
+for (const [x, bloom] of [[355, 'phuong'], [465, 'banglang'], [575, 'phuong']]) yardTree(x, 222, bloom);
+// Hàng cây dọc mép trái sân trường
+for (const [y, bloom] of [[260, 'phuong'], [340], [560, 'banglang'], [700, 'phuong']]) yardTree(675, y, bloom);
+// Hàng cây phía phải sân trường
+for (const [y, bloom] of [[240, 'phuong'], [360, 'hoasua'], [480, 'banglang'], [620, 'phuong']]) yardTree(1440, y, bloom);
 // Hàng chậu cảnh dưới sân
 for (let x = 760; x <= 1380; x += 90) trees.push({ x, y: 715, kind: 'bonsai' });
 // Cây to quanh cổng, góc vườn
-// bloom: cây đang ra hoa – phượng đỏ, bằng lăng tím, hoa sữa trắng
 for (const [x, y, bloom] of [[60, 1070, 'phuong'], [170, 1120], [280, 1060, 'banglang'], [1660, 860, 'phuong'], [1780, 940], [1900, 880, 'banglang'], [1700, 1080, 'hoasua'], [1880, 1110, 'phuong'], [1600, 1150, 'phuong']]) trees.push({ x, y, kind: 'tree', bloom, planter: x < 1610 && y > 1000 && x > 1500 });
 // Cây có bồn dọc lối vào (trên nền gạch)
 trees.push({ x: 505, y: 690, kind: 'tree', bloom: 'phuong', planter: true }, { x: 505, y: 930, kind: 'tree', bloom: 'banglang', planter: true });
