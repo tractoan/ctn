@@ -38,7 +38,7 @@ Người bị ném trúng ướt sũng vài giây, mọi người đang online �
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
 Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.
 
-Tài liệu thiết kế chi tiết: [`docs/THIET-KE.md`](docs/THIET-KE.md).
+Tài liệu: [yêu cầu](docs/YEU-CAU.md) (cần làm gì, tiêu chí chấp nhận, trạng thái) · [thiết kế](docs/THIET-KE.md) (làm như thế nào).
 
 ## Sửa sơ đồ cho đúng thực tế
 

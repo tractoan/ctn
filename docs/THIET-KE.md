@@ -2,33 +2,29 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.1 – sơ đồ theo bản vẽ của cựu học sinh |
+| Phiên bản | 1.2 – sơ đồ theo bản vẽ của cựu học sinh, nhạc nền, trống trường, ném bóng nước |
+| Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
 | Nền tảng | Trình duyệt (điện thoại là chính) · Cloudflare Workers + D1 |
 
 ---
 
-## 1. Mục tiêu
+## 1. Mục tiêu và phạm vi
 
 Một **sân trường ảo** dựng lại cơ sở cũ của THPT Chuyên Thái Nguyên tại **234A đường Lương Ngọc Quyến,
-phường Quang Trung, TP Thái Nguyên** (trường học tại đây giai đoạn 1995–2019). Người dùng tạo nhân vật
-mặc đồng phục, đi dạo trong trường, gặp người khác đang online, ghé lớp cũ viết lưu bút, hẹn họp lớp và
-thi đua giữa các khóa.
+TP Thái Nguyên** (1995–2019). Mục tiêu, phạm vi, người dùng và toàn bộ yêu cầu xem [tài liệu yêu cầu](YEU-CAU.md).
+Tài liệu này mô tả **cách hiện thực**.
 
-**Mục tiêu chính**
+**Nguyên tắc thiết kế**
 
-1. Vào chơi trong vòng 1 phút, không mật khẩu, chạy tốt trên điện thoại.
-2. Gợi nhớ không gian trường cũ: cổng xanh, nhà hiệu bộ, dãy 3–4–5 tầng, sân trường cao có bậc thang, sân đá cầu, nhà đa năng, căng tin.
-3. Kết nối các thế hệ: lưu bút theo lớp và khóa, lịch họp lớp, bảng thi đua.
-4. Chi phí vận hành gần bằng 0 (gói miễn phí của Cloudflare).
-
-**Ngoài phạm vi (phiên bản này)**
-
-- Tài khoản có mật khẩu, đăng nhập mạng xã hội.
-- Chat riêng tư, tin nhắn 1–1, gửi ảnh.
-- Trang quản trị, kiểm duyệt nội dung.
-- Ứng dụng cài đặt (APK/iOS).
+| # | Nguyên tắc | Lý do |
+|---|---|---|
+| NT-1 | Không bước build, không thư viện ngoài: HTML + ES modules + Canvas 2D | Nhẹ, ai cũng sửa được, triển khai là chép file (YC-PN-03) |
+| NT-2 | Nghiệp vụ viết **một lần** trong `logic.js`, chạy cả trên Worker lẫn trình duyệt | Chế độ ngoại tuyến và kiểm thử miễn phí (YC-PN-06, YC-PN-13) |
+| NT-3 | Sơ đồ là **dữ liệu** (`campus.js`), không lẫn vào mã vẽ | Sửa sơ đồ theo trí nhớ cựu học sinh mà không đụng logic (YC-SD-13) |
+| NT-4 | Đồng bộ bằng hỏi định kỳ (polling) thay vì WebSocket | Chạy được trên gói miễn phí, đơn giản (YC-PN-07) |
+| NT-5 | Nội dung người dùng chỉ gắn bằng `textContent` | Chống chèn mã (YC-PN-09) |
 
 ## 2. Người dùng
 
@@ -99,6 +95,8 @@ Văn, Trung cách đều nhau, cau vua đứng xen giữa; **dãy 3 tầng** tr�
 | Bảng tin | `board` | Bảng thi đua theo khóa, theo lớp chuyên, đá cầu | Không |
 | Sân khấu (cột cờ ở giữa) | `stage` | "Hiền tài là nguyên khí của quốc gia", lưu bút chào cờ/văn nghệ | Ghi: có |
 | Trống trường (giữa dãy 5 tầng, sát sân) | `drum` | Xem giờ/tiết, đánh trống (âm thanh Web Audio) | Không |
+| Nút 🎈 (mọi nơi) | – | Ném bóng nước vào người gần nhất | Thấy được bởi người khác: có |
+| Nút 🎵 (thanh trên) | – | Bài ca truyền thống qua YouTube nhúng | Không |
 | Sân trường · ghế đá | `garden` | Lưu bút tâm sự | Ghi: có |
 | Nhà hiệu bộ | `office` | Lịch họp lớp (tạo, đăng ký/huỷ), thiệp tri ân thầy cô | Ghi: có |
 | Phòng giáo viên | `teachers` | Lưu bút `gv` | Ghi: có |
@@ -125,13 +123,14 @@ ra chơi 15:55–16:15. Dùng cho đồng hồ trên thanh trên và giảm giá
 
 ```
 ┌──────────────────────────────────────┐
-│ [CTN] Sân trường        ●3  💰 20k 🙂 │  ← nơi đang đứng · giờ · tiết; online; ví / Ghi danh
+│ [CTN] Sân trường    ●3 🎵 💰20k 🙂    │  ← khu vực · giờ · tiết; online; nhạc; ví / Ghi danh
 │       14:07 · Tiết 1 chiều            │
 ├──────────────────────────────────────┤
 │                                      │
 │        canvas sân trường             │  ← chạm để đi, chạm nhãn để mở
-│                                  (+) │
-│                                  (−) │
+│ ┌─────────┐                     (🎈) │  ← ném bóng nước
+│ │▶ nhạc   │                      (+) │
+│ └─────────┘                      (−) │  ← trình phát nhạc nhỏ (khi bật 🎵)
 ├──────────────────────────────────────┤
 │ [Xin chào!👋] [Lâu quá không gặp!] … │  ← câu nói nhanh + 😂 ❤️ 👍 (cuộn ngang)
 │ (🗺️)  Nhắn gì đó…                (➤) │  ← bản đồ toàn trường, ô chat
@@ -157,7 +156,31 @@ Vẽ bằng canvas (`avatar.js`): áo sơ mi trắng có phù hiệu, quần âu
 Tuỳ chọn: dáng (nam/nữ), đồng phục, 6 kiểu tóc, 5 màu tóc, 5 màu da, 4 màu cặp. Có hoạt ảnh bước đi,
 quay trái/phải, quay lưng khi đi lên. Thẻ tên hai dòng: tên + `K20 · Toán` (thẻ của mình màu đỏ).
 
-### 5.4 Phong cách
+### 5.4 Âm thanh và hiệu ứng
+
+| Thành phần | Thiết kế | Yêu cầu |
+|---|---|---|
+| Nhạc nền 🎵 | `music` trong `main.js`: lần bấm đầu tạo `<iframe>` YouTube (`youtube-nocookie.com/embed/<id>?enablejsapi=1&autoplay=1&loop=1`) trong hộp nổi góc dưới trái; các lần sau gửi lệnh `playVideo`/`pauseVideo` qua `postMessage`; ✕ gỡ iframe. Đổi bài ở hằng số `MUSIC` | YC-AT-02, YC-AT-03 |
+| Trống trường 🥁 | `beatDrum()`: 3 nhịp, mỗi nhịp một `OscillatorNode` sóng sine trượt 110 → 45 Hz trong 0,4 s, âm lượng tắt dần theo hàm mũ. `AudioContext` chỉ tạo khi người dùng bấm | YC-HD-09 |
+| Bóng nước 🎈 | `World.throwBalloon`: quỹ đạo nội suy tuyến tính + cung `sin(πk)`, thời gian bay `450 + khoảng cách × 1,3` ms, bám theo vị trí hiện tại của mục tiêu; khi chạm: vòng nước + 10 giọt bắn trong 0,7 s; đặt `wet[id]` 4 s → `_wetFx` vẽ giọt nước rơi quanh người | YC-OL-07 |
+| Bong bóng lời nói | `World.say(id, text)`: hiện 5 s trên đầu, cắt bớt chữ quá dài | YC-OL-05 |
+
+Đồng bộ cú ném: người ném đặt `pendingThrow = {x, y, target}` và gửi kèm lượt `presence` kế tiếp. Máy chủ lưu
+`throw` (kèm `at`) trong bản ghi presence 6 giây. Máy khác thấy `throw.at` mới thì diễn lại cú ném từ vị trí người
+ném tới mục tiêu; nếu `target` là id của mình thì hiện thông báo "… vừa ném bóng nước trúng bạn!". Lần đầu thấy một
+người, cú ném cũ hơn 4 giây bị bỏ qua để không diễn lại chuyện đã qua.
+
+```
+Người ném (A)            Máy chủ (presence)              Người bị ném (B)
+   │ bấm 🎈                    │                               │
+   │ diễn hoạt ảnh ngay        │                               │
+   │── presence {throw} ──────►│ lưu throw.at (giữ 6 s)        │
+   │                           │◄────────── presence ──────────│ (≤ 2,5 s sau)
+   │                           │── others[A].throw ───────────►│ throw.at mới → diễn lại,
+   │                           │                               │ target = B → ướt + thông báo
+```
+
+### 5.5 Phong cách
 
 | Token | Giá trị | Dùng cho |
 |---|---|---|
@@ -196,8 +219,8 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 
 | File | Trách nhiệm |
 |---|---|
-| `main.js` | Khởi động, ghi danh, thanh trên/dưới, vòng đồng bộ, toàn bộ bảng chức năng |
-| `world.js` | Lưới va chạm 20 px, tìm đường A* 8 hướng + làm mượt, camera, vẽ theo thứ tự y, nhãn, bong bóng lời nói, bản đồ toàn cảnh |
+| `main.js` | Khởi động, ghi danh, thanh trên/dưới, vòng đồng bộ, toàn bộ bảng chức năng, nhạc nền, tiếng trống, nút ném bóng nước |
+| `world.js` | Lưới va chạm 20 px, tìm đường A* 8 hướng + làm mượt, camera, vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, bản đồ toàn cảnh |
 | `campus.js` | Dữ liệu sơ đồ (mục 3) |
 | `avatar.js` | Vẽ nhân vật, ảnh đại diện nhỏ |
 | `games.js` | Đá cầu (canvas, trọng lực), câu hỏi đố vui theo môn |
@@ -231,7 +254,7 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `user` | id | `{id, token, code, name, role, khoa, lop, school, look, wallet, points, lastCheckin, quizDay, quizCount, createdAt}` |
 | `tok` | token | id người dùng |
 | `code` | mã khôi phục `CTN-XXXX-XXXX` | id người dùng |
-| `presence` | id | `{id, name, role, khoa, lop, school, look, x, y, zone, say, sayAt, at}` |
+| `presence` | id | `{id, name, role, khoa, lop, school, look, x, y, zone, say, sayAt, throw: {x, y, target, at}, at}` |
 | `gb` | `phòng\|thời gian-id` | `{id, room, uid, name, role, khoa, lop, body, at}` |
 | `roster` | `phòng\|uid` | `{id, name, khoa, at}` – sổ đầu bài |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
@@ -286,24 +309,28 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 
 | Lệnh | Việc |
 |---|---|
-| `npm test` | 7 bài kiểm thử nghiệp vụ (`node --test`) |
+| `npm test` | 7 nhóm kiểm thử nghiệp vụ (`node --test`), gồm presence + ném bóng nước, thời khoá biểu |
 | `npm run db:init` + `npm run dev` | Worker + D1 cục bộ, `http://localhost:8787` |
 | `npx wrangler dev --ip 0.0.0.0` | Cho điện thoại cùng Wi-Fi truy cập |
 | `npm run static` | Chỉ giao diện, chế độ ngoại tuyến, `http://localhost:8080` |
 | `npx wrangler d1 create ctn` → `npm run db:init:remote` → `npm run deploy` | Đưa lên Cloudflare |
 
-Kiểm thử thủ công đã chạy bằng Playwright: hai người chơi (điện thoại + máy tính) và một khách cùng lúc;
-ghi danh, thấy nhau online, lời nói hiện cho người khác, lưu bút lớp, điểm danh, mua đồ, tạo họp lớp,
-đá cầu, bảng thi đua, bản đồ toàn cảnh; không có lỗi JavaScript.
+Kiểm thử thủ công đã chạy bằng Playwright (Chromium giả lập iPhone 13 và máy tính): hai người chơi và một
+khách cùng lúc; ghi danh, thấy nhau online, lời nói và cú ném bóng nước hiện cho người khác, lưu bút lớp,
+điểm danh, mua đồ, tạo họp lớp, đá cầu, bảng thi đua, đi tới từng địa điểm qua bản đồ toàn cảnh, nút nhạc;
+không có lỗi JavaScript. Khi đổi sơ đồ, chạy script tìm đường từ cổng tới cả 29 điểm tương tác (YC-SD-09).
+Bảng truy vết yêu cầu → mã → kiểm thử: [YEU-CAU.md mục 7](YEU-CAU.md#7-truy-vết-yêu-cầu--mã-nguồn--kiểm-thử).
+
+**Chưa kiểm thử:** thiết bị Android/iOS thật, tiếng nhạc YouTube và tiếng trống thật, triển khai thật lên Cloudflare.
 
 ## 11. Hướng phát triển
 
 | Ưu tiên | Việc | Ghi chú |
 |---|---|---|
 | Cao | Thêm cửa phòng thí nghiệm, thư viện, phòng học bộ môn | Chỉ sửa `campus.js` |
-| Cao | Giới hạn tần suất API, nút báo cáo/xoá lưu bút, trang quản trị | Cần trước khi công bố rộng |
+| Cao | Giới hạn tần suất API, nút báo cáo/xoá lưu bút, trang quản trị (YC-PN-12) | Cần trước khi công bố rộng |
+| Cao | Thay `confirm()` của nút "Thoát nhân vật" bằng bước xác nhận trong trang (YC-DT-07) | `confirm()` bị chặn trong khung nhúng |
 | Trung bình | Thay CLB, câu đố, thực đơn bằng nội dung thật của trường | Hiện là nội dung mẫu |
-| Trung bình | Album ảnh, giấy chứng nhận kỷ niệm | Nhạc nền 🎵 và ném bóng nước 🎈 đã có |
 | Trung bình | Album ảnh kỷ yếu, giấy chứng nhận kỷ niệm | Cần R2 để lưu ảnh |
 | Thấp | Durable Objects + WebSocket cho chuyển động thời gian thực | Khi > vài trăm người online |
 | Thấp | Đóng gói APK bằng Capacitor / TWA | |

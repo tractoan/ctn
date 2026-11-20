@@ -1,0 +1,248 @@
+# Tài liệu yêu cầu – Trường THPT Chuyên Thái Nguyên · Họp lớp online
+
+| | |
+|---|---|
+| Phiên bản | 1.0 |
+| Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
+| Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
+| Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
+
+Tài liệu này mô tả **cần làm gì**: mục tiêu, người dùng, yêu cầu chức năng, yêu cầu phi chức năng và tiêu chí
+chấp nhận. **Làm như thế nào** nằm trong [tài liệu thiết kế](THIET-KE.md).
+
+Mỗi yêu cầu có mã (`YC-…`), mức ưu tiên và trạng thái:
+
+| Ưu tiên | Nghĩa | | Trạng thái | Nghĩa |
+|---|---|---|---|---|
+| **P1** | Bắt buộc, thiếu thì sản phẩm không dùng được | | ✅ | Đã làm và đã kiểm thử |
+| **P2** | Nên có, tạo nên trải nghiệm | | 🟡 | Đã làm một phần / chưa kiểm thử đủ |
+| **P3** | Có thì tốt | | ⬜ | Chưa làm |
+
+---
+
+## 1. Bối cảnh và mục tiêu
+
+Trường THPT Chuyên Thái Nguyên học tại cơ sở **234A đường Lương Ngọc Quyến, TP Thái Nguyên** từ năm 1995 đến 2019,
+sau đó chuyển về cơ sở mới. Nhiều thế hệ học sinh muốn có một nơi để "về lại trường cũ", gặp bạn, viết lưu bút,
+hẹn họp lớp. Sản phẩm là một **sân trường ảo trên trình duyệt**, lấy cảm hứng từ trang họp lớp online của THPT
+Chuyên Hạ Long.
+
+| Mã | Mục tiêu | Đo bằng |
+|---|---|---|
+| MT-1 | Vào chơi nhanh, không rào cản | Từ lúc mở trang tới lúc đi lại trong sân ≤ 1 phút; không mật khẩu |
+| MT-2 | Gợi nhớ đúng không gian trường cũ | Sơ đồ khớp bản vẽ của cựu học sinh (`docs/so-do-goc.jpg`) |
+| MT-3 | Kết nối các thế hệ | Lưu bút theo lớp và khóa, lịch họp lớp, thi đua giữa các khóa |
+| MT-4 | Chi phí vận hành gần bằng 0 | Chạy trong gói miễn phí của Cloudflare với vài trăm người dùng |
+
+**Ngoài phạm vi phiên bản này:** tài khoản có mật khẩu hoặc đăng nhập mạng xã hội; tin nhắn riêng 1–1; gửi ảnh;
+trang quản trị và kiểm duyệt; ứng dụng cài đặt (APK/iOS); website chính thức của nhà trường.
+
+## 2. Các bên liên quan và người dùng
+
+| Vai | Mô tả | Cần gì |
+|---|---|---|
+| Cựu học sinh | Đã ra trường, nhóm người dùng chính | Tìm bạn cùng lớp/khóa, viết lưu bút, hẹn họp lớp |
+| Học sinh đang học | Đang học tại trường | Giao lưu, thi đua cho khóa mình |
+| Thầy cô | Đang hoặc đã công tác tại trường | Nhắn gửi học trò, nhận lời tri ân |
+| Bạn trường khác | Học sinh THPT khác | Tham quan, giao lưu |
+| Em cấp 2 | Học sinh THCS | Tham quan, viết "Ước mơ vào Chuyên" |
+| Khách chưa ghi danh | Mới mở trang | Xem trước khi quyết định tạo nhân vật |
+| Người vận hành | Cựu học sinh dựng và duy trì trang | Triển khai dễ, chi phí thấp, sửa sơ đồ dễ |
+
+Lớp chuyên: Toán, Tin, Lý, Hóa, Sinh, Văn, Sử, Địa, Anh, Nga, Pháp, Trung. Khóa ghi dạng `K1` … `K99`.
+
+## 3. Ca sử dụng chính
+
+| Mã | Ca sử dụng | Tác nhân | Luồng chính |
+|---|---|---|---|
+| CSD-1 | Vào xem trường | Khách | Mở trang → chọn "Vào xem với tư cách khách" → đi dạo, mở bản đồ, đọc lưu bút |
+| CSD-2 | Tạo nhân vật | Mọi vai | Chọn vai → nhập tên (khóa, lớp) → chọn đồng phục → lưu mã khôi phục → vào sân |
+| CSD-3 | Dùng lại nhân vật trên máy khác | Người đã ghi danh | "Tôi đã có nhân vật" → nhập mã `CTN-XXXX-XXXX` |
+| CSD-4 | Về lớp cũ | Cựu học sinh | Mở bản đồ → chọn lớp → nhân vật tự đi tới cửa → đọc/viết lưu bút khóa mình, xem sổ đầu bài |
+| CSD-5 | Hẹn họp lớp | Cựu học sinh | Vào nhà hiệu bộ → tạo buổi họp lớp → bạn bè đăng ký tham gia |
+| CSD-6 | Gặp bạn đang online | Người đã ghi danh | Thấy nhân vật khác → chạm để xem → vẫy tay / nói / ném bóng nước |
+| CSD-7 | Thi đua cho khóa | Mọi người đã ghi danh | Điểm danh, viết lưu bút, đố vui, đá cầu → điểm cộng cho khóa và lớp |
+
+## 4. Yêu cầu chức năng
+
+### 4.1 Danh tính và ghi danh
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-DT-01 | Người mới mở trang thấy ngay sân trường và bảng chào mừng; có thể vào xem với tư cách khách mà không cần ghi danh | P1 | ✅ |
+| YC-DT-02 | Ghi danh không cần mật khẩu hay email: chọn 1 trong 5 vai, nhập tên (≤ 40 ký tự); cựu học sinh/học sinh phải nhập khóa và lớp chuyên; bạn trường khác/em cấp 2 nhập trường (không bắt buộc, ≤ 60 ký tự) | P1 | ✅ |
+| YC-DT-03 | Khóa nhập "20" hoặc "k20" đều được chuẩn hoá thành `K20`; khóa sai định dạng bị từ chối với thông báo rõ | P1 | ✅ |
+| YC-DT-04 | Sau khi ghi danh, hiển thị **mã khôi phục** dạng `CTN-XXXX-XXXX` kèm nút sao chép; nhập mã này trên máy khác sẽ lấy lại đúng nhân vật (không phân biệt hoa thường) | P1 | ✅ |
+| YC-DT-05 | Nhân vật được nhớ trên trình duyệt; mở lại trang là vào thẳng, không phải ghi danh lại | P1 | ✅ |
+| YC-DT-06 | Khách bấm vào chức năng cần ghi danh (viết, mua, điểm danh, chat tự do…) thì được mời ghi danh, không báo lỗi khó hiểu | P1 | ✅ |
+| YC-DT-07 | Người dùng có thể "Thoát nhân vật" trên máy, có xác nhận trước | P3 | 🟡 |
+
+**Tiêu chí chấp nhận YC-DT-04:** đăng ký trên trình duyệt A, lấy mã; mở trình duyệt B, nhập mã bằng chữ thường →
+vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
+
+> YC-DT-07: hộp xác nhận dùng `confirm()` của trình duyệt; trên link chạy thử trong Claude hộp này không hiện nên
+> nút không có tác dụng. Cần thay bằng bước xác nhận trong trang.
+
+### 4.2 Nhân vật
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-NV-01 | Nhân vật mặc đồng phục: áo sơ mi trắng có phù hiệu, quần âu hoặc chân váy xanh than | P1 | ✅ |
+| YC-NV-02 | Tuỳ chọn: dáng nam/nữ, 6 kiểu tóc, 5 màu tóc, 5 màu da, 4 màu cặp; có xem trước khi chọn | P2 | ✅ |
+| YC-NV-03 | Đổi tên và ngoại hình bất cứ lúc nào (nút ảnh đại diện → "Đổi kiểu tóc, đồng phục") | P2 | ✅ |
+| YC-NV-04 | Thẻ tên hai dòng trên đầu: tên và `Khóa · Lớp` (thầy cô: "Thầy cô"; em cấp 2: "Em · THCS"); thẻ của mình nổi bật màu khác | P1 | ✅ |
+| YC-NV-05 | Có hoạt ảnh bước đi, quay trái/phải, quay lưng khi đi lên | P3 | ✅ |
+
+### 4.3 Sơ đồ và di chuyển
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-SD-01 | Sơ đồ dựng theo bản vẽ của cựu học sinh: dãy nhà 4 tầng (chữ L), dãy 3 tầng, dãy 5 tầng, nhà hiệu bộ, sân trường cao có bậc thang, sân đá cầu, nhà đa năng, căng tin (sau nhà đa năng), chỗ trốn học đá bóng, cổng phụ, cổng chính ra đường Lương Ngọc Quyến | P1 | ✅ |
+| YC-SD-02 | Sân trường chỉ lên/xuống được qua **bậc thang chính** và **bậc thang xuống sân đá cầu** ở cạnh trái | P2 | ✅ |
+| YC-SD-03 | Cổng chính giống ảnh thật: trụ xanh nhạt, biển trắng chữ đỏ "SỞ GIÁO DỤC & ĐÀO TẠO TỈNH THÁI NGUYÊN – TRƯỜNG THPT CHUYÊN THÁI NGUYÊN", băng rôn xanh | P2 | ✅ |
+| YC-SD-04 | Vị trí lớp chuyên: **dãy 4 tầng** trái → phải Toán, Lý, Hóa, Sinh, Văn, Trung (Lý sát Hóa, các lớp giãn đều); **dãy 3 tầng** trái → phải Anh, Sử, Địa; **dãy 5 tầng** phải → trái Tin, Nga, Pháp, cửa ở mặt trong quay vào sân trường | P1 | ✅ |
+| YC-SD-05 | Sân khấu có phông "Hiền tài là nguyên khí của quốc gia", **cột cờ ở giữa sân khấu** | P2 | ✅ |
+| YC-SD-06 | **Trống trường** ở giữa dãy 5 tầng, phía sát sân trường | P2 | ✅ |
+| YC-SD-07 | Chạm/nhấp vào sân thì nhân vật tự tìm đường đi tới, không xuyên qua nhà, tường, cây, bậc chắn | P1 | ✅ |
+| YC-SD-08 | Chạm vào nhãn địa điểm thì nhân vật đi tới đó và tự mở chức năng khi tới nơi | P1 | ✅ |
+| YC-SD-09 | Từ cổng trường đi tới được **mọi** địa điểm và cửa lớp | P1 | ✅ |
+| YC-SD-10 | Nút 🗺️ mở **bản đồ toàn trường**; chạm vào chỗ nào trên bản đồ thì nhân vật đi tới đó; có danh sách các lớp chuyên | P1 | ✅ |
+| YC-SD-11 | Trên máy tính: đi bằng phím mũi tên/WASD, cuộn chuột để phóng to/thu nhỏ; có nút +/− | P2 | ✅ |
+| YC-SD-12 | Thanh trên hiện **tên khu vực đang đứng** (Sân trường, Dãy nhà 5 tầng, Cổng trường…) | P2 | ✅ |
+| YC-SD-13 | Toàn bộ sơ đồ nằm trong một file dữ liệu; sửa số liệu ở đó là va chạm, tìm đường, bản đồ tự cập nhật | P1 | ✅ |
+
+**Tiêu chí chấp nhận YC-SD-09:** chạy tìm đường từ điểm xuất phát tới toạ độ của từng điểm tương tác; điểm cuối của
+đường đi cách đích < 25 px với cả 29 điểm (đã kiểm bằng script khi đổi sơ đồ).
+
+### 4.4 Gặp gỡ trực tuyến
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-OL-01 | Người đã ghi danh thấy nhân vật của người khác đang online, di chuyển mượt | P1 | ✅ |
+| YC-OL-02 | Hiện số người đang online trên thanh trên | P2 | ✅ |
+| YC-OL-03 | Khách chưa ghi danh thấy người khác nhưng người khác không thấy khách | P2 | ✅ |
+| YC-OL-04 | Người rời trang biến mất khỏi sân sau tối đa 20 giây | P2 | ✅ |
+| YC-OL-05 | **Nói chuyện**: hàng câu nói nhanh ("Xin chào! 👋", "Lâu quá không gặp!"…), biểu cảm 😂 ❤️ 👍, ô chat tự do (≤ 80 ký tự); lời nói hiện thành bong bóng trên đầu ~5 giây cho mọi người cùng thấy | P1 | ✅ |
+| YC-OL-06 | Chạm vào người khác: xem tên, vai, khóa/lớp; nút "Vẫy tay" và "Đi tới" | P2 | ✅ |
+| YC-OL-07 | **Ném bóng nước 🎈**: ném vào người online gần nhất trong tầm (không có ai thì ném ra phía trước); bóng bay vòng cung rồi vỡ; người trúng bị ướt 4 giây và nhận thông báo; mọi người online cùng thấy; mỗi lần ném cách nhau ≥ 1,2 giây | P2 | ✅ |
+
+### 4.5 Lớp học
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-LH-01 | Mỗi lớp chuyên có một cửa; vào lớp chọn khóa (mặc định khóa của mình) | P1 | ✅ |
+| YC-LH-02 | **Lưu bút** theo từng lớp + khóa: đọc 100 lời mới nhất, viết lời mới ≤ 600 ký tự | P1 | ✅ |
+| YC-LH-03 | **Sổ đầu bài**: danh sách những ai đã về lớp (tự ghi danh khi vào đúng lớp + khóa của mình, hoặc khi viết lưu bút) | P2 | ✅ |
+| YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
+
+### 4.6 Hoạt động trong trường
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-HD-01 | **Điểm danh** khi gửi xe: mỗi ngày (theo giờ Việt Nam) một lần, +20.000đ vào ví, +2 điểm | P2 | ✅ |
+| YC-HD-02 | **Căng tin**: thực đơn có giá, mua hoặc "đãi" một bạn; không đủ tiền thì báo và gợi ý điểm danh; danh sách 20 lượt mua gần nhất | P2 | ✅ |
+| YC-HD-03 | Căng tin **giảm 20%** đúng giờ ra chơi thật (9:25–9:45 và 15:55–16:15, giờ Việt Nam) | P3 | ✅ |
+| YC-HD-04 | **Lịch họp lớp** ở nhà hiệu bộ: tạo buổi (tên, ngày, giờ, địa điểm, ghi chú), đăng ký/huỷ tham gia, xem danh sách người tham gia; tách buổi sắp tới và đã diễn ra | P1 | ✅ |
+| YC-HD-05 | **Tri ân thầy cô**, **phòng giáo viên**, **phòng truyền thống**: các góc lưu bút riêng | P2 | ✅ |
+| YC-HD-06 | **Nhà đa năng**: gian từng CLB, mỗi gian một lưu bút | P3 | ✅ |
+| YC-HD-07 | **Sân khấu**, **ghế đá sân trường**, **chỗ trốn học đá bóng**, **cổng phụ**, **tường "Ước mơ vào Chuyên"**: các góc lưu bút theo chủ đề | P3 | ✅ |
+| YC-HD-08 | **Đá cầu** ở sân đá cầu: chạm quả cầu để tâng; lưu kỷ lục cá nhân; bảng xếp hạng 20 người cao nhất | P2 | ✅ |
+| YC-HD-09 | **Trống trường**: hiện giờ và tiết hiện tại; nút "Đánh trống" phát 3 tiếng trống và hiện "Tùng! Tùng! Tùng!" cho mọi người | P3 | 🟡 |
+| YC-HD-10 | **Bác bảo vệ** ở cổng, **cô căng tin** đi lại trước căng tin; bác bảo vệ có câu thoại vui | P3 | ✅ |
+
+> YC-HD-09: âm thanh tổng hợp bằng Web Audio, chưa nghe thử trên thiết bị thật.
+
+### 4.7 Thi đua
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-TD-01 | Điểm thi đua: điểm danh +2, lưu bút +5, tạo họp lớp +3, đăng ký họp lớp +3, đố vui +1/câu (≤ 10/ngày), đá cầu ≥ 5 quả +1 | P2 | ✅ |
+| YC-TD-02 | **Bảng tin** ở mép sân trường hiển thị xếp hạng theo khóa (tổng điểm, số người), theo lớp chuyên, và đá cầu | P2 | ✅ |
+
+### 4.8 Âm thanh và không khí
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-AT-01 | Thanh trên hiện **đồng hồ giờ Việt Nam** và **tiết học hiện tại** (Tiết 1 sáng … Tiết 5 chiều, Ra chơi, Nghỉ trưa, Tan học) | P2 | ✅ |
+| YC-AT-02 | Nút **🎵** phát **bài ca truyền thống** (video YouTube `N7Rl5xQd538`, không bản quyền) bằng trình phát nhúng: phát / tạm dừng / tắt; có link mở trên YouTube; không tải file về máy chủ | P2 | 🟡 |
+| YC-AT-03 | Không tự phát âm thanh khi người dùng chưa bấm | P1 | ✅ |
+
+> YC-AT-02: các nút đã kiểm thử; chưa nghe được nhạc thật vì môi trường kiểm thử không truy cập YouTube.
+> Trên link chạy thử trong Claude, YouTube bị chặn nhúng nên chỉ dùng được link "Mở trên YouTube".
+
+### 4.9 Thông tin
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-TT-01 | Trang **Giới thiệu** (`/pages/gioi-thieu.html`): ai vào được, có gì trong trường, cách dùng | P2 | ✅ |
+| YC-TT-02 | Ghi rõ đây là trang cộng đồng, **không phải website chính thức** của nhà trường, có link tới website chính thức | P1 | ✅ |
+| YC-TT-03 | Nhắc người dùng không đăng số điện thoại, địa chỉ nhà | P2 | ✅ |
+
+## 5. Yêu cầu phi chức năng
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-PN-01 | **Điện thoại là chính**: dùng tốt ở màn hình rộng 360–430 px, thao tác bằng chạm; không cuộn ngang; tôn trọng vùng an toàn (tai thỏ, thanh điều hướng) | P1 | ✅ |
+| YC-PN-02 | Chạy trên Chrome/Safari/Edge bản gần đây, cả Android và iOS, không cần cài đặt | P1 | 🟡 |
+| YC-PN-03 | Tải trang nhẹ: không thư viện ngoài, không bước build; tổng mã JavaScript + CSS < 150 KB chưa nén | P2 | ✅ |
+| YC-PN-04 | Vẽ mượt ~60 khung hình/giây trên điện thoại tầm trung | P2 | 🟡 |
+| YC-PN-05 | Vị trí người khác cập nhật mỗi 2,5 giây; độ trễ chấp nhận được ≤ 3 giây | P2 | ✅ |
+| YC-PN-06 | **Chế độ ngoại tuyến**: khi không có máy chủ, trang vẫn chạy đầy đủ chức năng một người, dữ liệu lưu trên trình duyệt, có nhãn cảnh báo | P2 | ✅ |
+| YC-PN-07 | Vận hành trong gói miễn phí Cloudflare Workers + D1 với vài trăm người online cùng lúc | P1 | 🟡 |
+| YC-PN-08 | Toàn bộ giao diện và thông báo lỗi bằng tiếng Việt, dễ hiểu, nói cách khắc phục | P1 | ✅ |
+| YC-PN-09 | **An toàn nội dung**: mọi nội dung người dùng nhập hiển thị dưới dạng văn bản thuần, không chạy được mã | P1 | ✅ |
+| YC-PN-10 | **Kiểm tra dữ liệu vào** ở máy chủ: giới hạn độ dài, danh sách giá trị hợp lệ, định dạng ngày; thân request ≤ 8 KB | P1 | ✅ |
+| YC-PN-11 | **Riêng tư**: không thu thập email, số điện thoại; không dùng cookie theo dõi; nhạc YouTube dùng tên miền `youtube-nocookie.com` | P2 | ✅ |
+| YC-PN-12 | **Chống lạm dụng**: giới hạn tần suất gọi API; báo cáo và ẩn lưu bút xấu; chặn người dùng | P1 trước khi công bố rộng | ⬜ |
+| YC-PN-13 | **Khả năng bảo trì**: nghiệp vụ viết một lần, dùng chung cho máy chủ và chế độ ngoại tuyến; có kiểm thử tự động (`npm test`) | P1 | ✅ |
+| YC-PN-14 | **Triển khai**: một lệnh `npm run deploy` sau khi tạo cơ sở dữ liệu | P2 | 🟡 |
+| YC-PN-15 | **Truy cập**: nút có nhãn cho trình đọc màn hình, đóng bảng bằng phím Esc, chữ đủ tương phản | P3 | 🟡 |
+
+> YC-PN-02, 04: mới kiểm thử trên Chromium giả lập iPhone 13 và máy tính, chưa thử trên máy Android/iOS thật.
+> YC-PN-07, 14: chưa triển khai thật lên Cloudflare; mới chạy bằng `wrangler dev` cục bộ.
+
+## 6. Ràng buộc và giả định
+
+- Sơ đồ và vị trí lớp dựa trên trí nhớ của cựu học sinh (bản vẽ tay + mô tả), không phải bản vẽ kỹ thuật.
+- Tên, logo, ảnh chính thức của nhà trường chỉ dùng ở mức chữ trên biển cổng; không dùng ảnh có bản quyền.
+- Bài ca truyền thống: người đặt hàng xác nhận không bản quyền; vẫn phát qua YouTube nhúng thay vì sao chép file.
+- Danh sách CLB, câu đố, thực đơn căng tin hiện là **nội dung mẫu**, cần thay bằng nội dung thật.
+- Không có quản trị viên; nội dung người dùng tự chịu trách nhiệm cho tới khi có YC-PN-12.
+
+## 7. Truy vết yêu cầu → mã nguồn → kiểm thử
+
+| Nhóm yêu cầu | Hiện thực chính | Kiểm thử tự động (`tests/logic.test.js`) | Kiểm thử thủ công (Playwright) |
+|---|---|---|---|
+| YC-DT | `logic.js` (`register`, `recover`, `me`), `main.js` (`createFlow`, `recoverFlow`) | "đăng ký, khôi phục…", "thiếu lớp chuyên / khóa sai…", "…chưa đăng nhập 401" | Ghi danh 3 người, khách mở chat bị mời ghi danh |
+| YC-NV | `avatar.js`, `main.js` (`avatarEditor`), `world.js` (`_nameTag`) | – | Ảnh chụp màn hình |
+| YC-SD | `campus.js`, `world.js` (`findPath`, `drawOverview`) | – | Script tìm đường tới 29 điểm; đi tới từng địa điểm qua bản đồ |
+| YC-OL | `logic.js` (`presence`, `online`), `world.js` (`updateOthers`, `throwBalloon`) | "presence trả về người khác…" (gồm cú ném bóng nước) | 2 người thấy nhau, lời nói, ném bóng nước trúng |
+| YC-LH | `logic.js` (`guestbook`, `sign`, `roster`, `attend`, `quiz`), `main.js` (`panels.class`) | "lưu bút, sổ đầu bài, bảng thi đua", "đố vui giới hạn…" | Viết lưu bút lớp Toán K20 |
+| YC-HD | `logic.js` (`checkin`, `menu`, `buy`, `events`, `createEvent`, `joinEvent`, `score`), `games.js` | "đăng ký… điểm danh, mua đồ", "giờ ra chơi giảm 20%", "họp lớp: tạo, đăng ký, huỷ" | Điểm danh, mua đồ, tạo họp lớp, đá cầu |
+| YC-TD | `logic.js` (`khoaBoard`, `leaderboard`, `POINTS`) | "lưu bút, sổ đầu bài, bảng thi đua" | Mở bảng tin |
+| YC-AT | `logic.js` (`SCHEDULE`, `periodOf`), `main.js` (`music`, `beatDrum`) | "giờ ra chơi giảm 20%" (gồm `periodOf`) | Bấm 🎵 phát/dừng/tắt |
+| YC-PN | `ui.js` (`h`), `worker.js`, `api.js` (chế độ ngoại tuyến), `style.css` | "…chức năng lạ trả 404" | Chạy ngoại tuyến bằng `npm run static` |
+
+## 8. Vấn đề mở
+
+| # | Câu hỏi | Ảnh hưởng |
+|---|---|---|
+| 1 | Phòng thí nghiệm, thư viện, phòng học bộ môn nằm ở đâu? | Thêm cửa phòng vào sơ đồ |
+| 2 | Danh sách CLB thật của trường, thực đơn căng tin ngày xưa? | Thay nội dung mẫu |
+| 3 | Ai là người kiểm duyệt nội dung khi công bố rộng? | Quyết định thiết kế YC-PN-12 |
+| 4 | Có muốn tên miền riêng thay cho `*.workers.dev`? | Cấu hình triển khai |
+
+## 9. Thuật ngữ
+
+| Thuật ngữ | Nghĩa |
+|---|---|
+| Ghi danh | Tạo nhân vật (đăng ký) |
+| Mã khôi phục | Mã `CTN-XXXX-XXXX` dùng để lấy lại nhân vật trên máy khác |
+| Khách | Người mở trang nhưng chưa ghi danh |
+| Điểm tương tác | Nhãn trên sân; chạm vào thì nhân vật đi tới và mở chức năng |
+| Chế độ ngoại tuyến | Chạy không cần máy chủ, dữ liệu chỉ trên trình duyệt |
+| Presence | Bản tin vị trí + lời nói + cú ném gửi lên máy chủ mỗi 2,5 giây |
+
+---
+
+*Trang cộng đồng do cựu học sinh xây dựng, không phải website chính thức của nhà trường.*
