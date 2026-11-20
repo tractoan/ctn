@@ -230,17 +230,25 @@ export function periodOf(now) {
 export function vnClock(now) { const m = vnMinutes(now); return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
 export function isBreakTime(now) { return periodOf(now).isBreak; }
 
+// Ngoại hình phiên bản 2: 13 kiểu tóc, 8 màu tóc; bản cũ (9 kiểu, 5 màu) được đổi sang kiểu gần nhất
+const OLD_HAIR = [0, 0, 3, 4, 9, 12, 2, 5, 1];
+const OLD_HAIR_COLOR = [0, 1, 1, 6, 2];
+export const OUTFIT_IDS = ['somi', 'somitrang', 'somixanh', 'somivang', 'khoac', 'aolop', 'vest', 'phong', 'khanquang',
+  'aodai', 'aodaitim', 'aodaihong', 'aodaixanh', 'aodaido', 'teew', 'teeb'];
 function sanitizeLook(l) {
   l = l && typeof l === 'object' ? l : {};
+  const old = l.v !== 2;
+  const hair = num(l.hair, 0, old ? 8 : 12, 0) | 0;
+  const hairColor = num(l.hairColor, 0, old ? 4 : 7, 0) | 0;
   return {
+    v: 2,
     gender: l.gender === 'nu' ? 'nu' : 'nam',
     skin: num(l.skin, 0, 4, 1) | 0,
-    hair: num(l.hair, 0, 8, 0) | 0,
-    hairColor: num(l.hairColor, 0, 4, 0) | 0,
+    hair: old ? OLD_HAIR[hair] : hair,
+    hairColor: old ? OLD_HAIR_COLOR[hairColor] : hairColor,
     bottom: l.bottom === 'vay' ? 'vay' : 'quan',
-    bag: num(l.bag, 0, 3, 0) | 0,
-    outfit: ['somi', 'aodai', 'khoac', 'aolop', 'vest', 'phong'].includes(l.outfit) ? l.outfit : 'somi',
-    color: num(l.color, 0, 4, 0) | 0,
+    outfit: OUTFIT_IDS.includes(l.outfit) ? l.outfit : 'somi',
+    color: num(l.color, 0, 5, 0) | 0,
     scarf: !!l.scarf,
   };
 }
@@ -307,7 +315,8 @@ const handlers = {
     const khoa = normKhoa(b.khoa, role);
     const lop = NO_CLASS.includes(role) ? '' : LOPS.includes(b.lop) ? b.lop : '';
     if ((role === 'cuuhs' || role === 'hs') && !lop) throw new ApiError(400, 'Chọn lớp chuyên');
-    const school = role === 'khach' || role === 'em' ? str(b.school, 60) : '';
+    // khách, em cấp 2: tên trường; thầy cô: danh xưng + bộ môn (vd "Cô · Toán")
+    const school = role === 'khach' || role === 'em' || role === 'gv' ? str(b.school, 60) : '';
     const id = randId(10);
     const token = randId(24);
     const code = recoveryCode();

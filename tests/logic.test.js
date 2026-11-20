@@ -305,3 +305,17 @@ test('sổ đầu bài: có mặt, ghi chú, nộp sổ, kiểm tra vở, điể
   assert.equal(next.punished, true);
   assert.equal(next.user.wallet, 0);
 });
+
+test('ngoại hình phiên bản 2: đổi kiểu cũ, giữ kiểu mới, thầy cô có danh xưng', async () => {
+  const s = memStore();
+  // nhân vật cũ: kiểu tóc 3 (tóc dài), màu tóc 3 → tóc dài (4), balayage (6)
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán', look: { gender: 'nu', hair: 3, hairColor: 3, outfit: 'aodai' } })).body;
+  assert.deepEqual([a.user.look.v, a.user.look.hair, a.user.look.hairColor, a.user.look.outfit], [2, 4, 6, 'aodai']);
+  // kiểu mới giữ nguyên, trang phục lạ về sơ mi
+  const r = (await call(s, 'look', { look: { v: 2, gender: 'nam', hair: 11, hairColor: 7, outfit: 'teeb', color: 5 } }, a.token)).body;
+  assert.deepEqual([r.user.look.hair, r.user.look.hairColor, r.user.look.outfit, r.user.look.color], [11, 7, 'teeb', 5]);
+  const r2 = (await call(s, 'look', { look: { v: 2, hair: 99, outfit: 'ao-la' } }, a.token)).body;
+  assert.deepEqual([r2.user.look.hair, r2.user.look.outfit], [12, 'somi']);
+  const gv = (await call(s, 'register', { name: 'Hà', role: 'gv', school: 'Cô · Toán' })).body;
+  assert.equal(gv.user.school, 'Cô · Toán');
+});

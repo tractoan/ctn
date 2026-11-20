@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.6 – phòng học kiểu trang mẫu (hành lang, nội quy, 5 điều Bác Hồ dạy, 36 chỗ), sổ đầu bài theo ngày, chạm thẳng vào cửa/bảng; sửa lỗi chạm nhãn |
+| Phiên bản | 1.7 – tạo nhân vật và chọn ngoại hình giống trang mẫu: nhân vật chibi, 13 kiểu tóc, 8 màu tóc, trang phục theo vai |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -213,17 +213,46 @@ hoặc phím Esc.
 
 ```
 Mở trang ──► Sân trường (khách) + bảng "Chào mừng"
-               ├─ Chọn vai ─► Tên / khóa / lớp ─► Mặc đồng phục ─► Lưu mã khôi phục ─► Vào sân
+               ├─ Chọn vai ─► Thông tin ─► Chọn ngoại hình ─► Tên hiển thị ─► Lưu mã khôi phục ─► Vào sân
                ├─ "Tôi đã có nhân vật" ─► nhập CTN-XXXX-XXXX ─► Vào sân
                └─ "Vào xem với tư cách khách" ─► Vào sân (chỉ xem)
 Khách bấm chức năng cần ghi danh / ô chat ─► mở lại bảng "Chào mừng"
 ```
 
+| Bước | Nội dung |
+|---|---|
+| Bạn là ai? | Logo, 3 nhân vật mẫu, "Chào mừng bạn về Trường THPT Chuyên Thái Nguyên!", 5 vai (biểu tượng + mô tả), "Tôi đã có nhân vật", "Vào xem với tư cách khách" |
+| Thông tin | Cựu học sinh / học sinh: **Khóa của bạn** (ô chọn K40 → K1) + **Lớp chuyên** (12 nút); thầy cô: **Danh xưng** Thầy/Cô (đặt sẵn giới tính) + **Bộ môn hoặc phòng ban**; bạn trường khác / em cấp 2: **Tên trường**. Thiếu khóa/lớp thì báo "Bạn chọn khóa nhé" / "Bạn chọn lớp nhé" |
+| Chọn ngoại hình | Bộ chọn ở 5.3 |
+| Tên hiển thị | Nhân vật xem trước, dòng tóm tắt (`K20 · Hóa`, `Thầy · Vật lý`, tên trường), ô tên (≥ 2 ký tự mới bấm được "Vào sân trường") |
+| Lưu mã khôi phục | Mã, nút sao chép, cảnh báo không gửi mã cho người khác, "Tôi đã lưu, vào sân trường" |
+
+Thầy cô: danh xưng và bộ môn lưu vào trường `school` (vd `Cô · Toán`) và hiện ở dòng thứ hai của thẻ tên.
+
 ### 5.3 Nhân vật
 
-Vẽ bằng canvas (`avatar.js`): áo sơ mi trắng có phù hiệu, quần âu hoặc chân váy xanh than, cặp sách.
-Tuỳ chọn: dáng (nam/nữ), đồng phục, 6 kiểu tóc, 5 màu tóc, 5 màu da, 4 màu cặp. Có hoạt ảnh bước đi,
-quay trái/phải, quay lưng khi đi lên. Thẻ tên hai dòng: tên + `K20 · Toán` (thẻ của mình màu đỏ).
+Vẽ bằng canvas (`avatar.js`) kiểu **chibi**: đầu to (≈ 45 % chiều cao), mắt tròn có ánh sáng, má hồng, miệng cười,
+nữ có mi mắt; tay tròn; áo có viền. Hoạt ảnh thở nhẹ khi đứng, bước chân/vung tay khi đi, quay trái/phải, quay lưng
+khi đi lên, ngồi (nhìn thẳng hoặc quay lưng). Thẻ tên hai dòng: tên + `K20 · Toán` (thẻ của mình màu đỏ).
+
+**Bộ chọn ngoại hình** (`avatarEditor(look, role)` trong `main.js`, dùng khi tạo nhân vật và khi soi gương đổi kiểu):
+khung xem trước có hoạt ảnh (`avatarStage`) + nút **🎲 Ngẫu nhiên** (`randomLook`, giữ trang phục đang chọn),
+rồi lần lượt: **Giới tính** (👦 Nam / 👧 Nữ) · **Màu da** (5 ô màu) · **Kiểu tóc** · **Màu tóc** (8 ô màu) ·
+**Kiểu dáng** Quần/Váy (chỉ nữ) · **Trang phục** (theo vai) · **Màu áo lớp** (khi chọn áo lớp). Nút đang chọn tô xanh.
+
+| Thuộc tính | Giá trị |
+|---|---|
+| Kiểu tóc (13) | Ngắn, Rẽ ngôi, Tóc bob, Đuôi ngựa, Tóc dài, Búi cao, Rẽ ngôi 3/7, Đan Trường, Mullet, Undercut, Short quiff, Layer, Hai bím. Đổi sang nam thì các kiểu chỉ dành cho nữ (bob, đuôi ngựa, tóc dài, búi cao, layer, hai bím) về "Ngắn" |
+| Màu tóc (8) | Đen, Nâu, Xám, Bạc, Đỏ, Tím, Balayage (chuyển màu nâu đậm → vàng), Cam |
+| Màu da (5) | `#FBDDC2` `#F1C39B` `#D9A066` `#B97C4E` `#8E5C3A` |
+| Trang phục – cựu HS, HS | Sơ mi cà vạt · Áo khoác trường · Áo lớp (6 màu) · Áo dài kỷ yếu (nữ) / Vest kỷ yếu (nam) · Áo "Tôi yêu CTN" trắng/đen |
+| Trang phục – thầy cô | Sơ mi trắng/xanh/vàng · nữ: Áo dài tím/hồng/xanh/đỏ, nam: Vest · Áo "Tôi yêu CTN" |
+| Trang phục – bạn trường khác | Sơ mi trắng · Áo khoác · Áo phông · Áo dài trắng (nữ) / Vest (nam) · Áo "Tôi yêu CTN" |
+| Trang phục – em cấp 2 | Khăn quàng đỏ · Áo "Tôi yêu CTN" |
+
+Ngoại hình lưu dạng `{v: 2, gender, skin, hair, hairColor, bottom, outfit, color, scarf}`. Nhân vật tạo trước bản 1.7
+(9 kiểu tóc, 5 màu tóc, có cặp sách) được đổi sang kiểu gần nhất ở cả máy chủ (`sanitizeLook`) lẫn trình duyệt
+(`normLook`), nên người chơi cũ vẫn thấy nhân vật của mình gần như cũ.
 
 ### 5.4 Âm thanh và hiệu ứng
 

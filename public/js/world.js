@@ -923,7 +923,7 @@ export class World {
   }
 
   subOf(p) {
-    if (p.role === 'gv') return 'Thầy cô';
+    if (p.role === 'gv') return p.school || 'Thầy cô';
     if (p.role === 'em') return 'Em · THCS';
     if (p.role === 'khach') return p.school ? 'Bạn · ' + p.school : 'Bạn trường khác';
     return [p.khoa, p.lop].filter(Boolean).join(' · ');

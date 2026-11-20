@@ -435,3 +435,23 @@ body.page { overflow: auto; background: var(--bg); }
 .writeups p { margin: 6px 0 0; }
 .logbook textarea.input { margin-top: 4px; }
 .logbook select.input.sm { width: auto; max-width: 70%; font-weight: 700; }
+
+/* ---------- Tạo nhân vật / chọn ngoại hình (giống trang mẫu) ---------- */
+.ob-step { display: grid; gap: 0; }
+.ob-lbl { display: block; font-size: 14px; font-weight: 700; color: var(--ink); margin: 16px 0 8px; }
+.ob-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ob-chip { border: 1.5px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; min-height: 38px; }
+.ob-chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.ob-sw { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--line); padding: 0; }
+.ob-sw.on { box-shadow: 0 0 0 3px var(--blue); }
+.ob-btns { display: grid; gap: 4px; margin-top: 18px; }
+.ob-btns .btn { margin-top: 0; }
+.btn.big { padding: 15px 16px; font-size: 16px; border-radius: 16px; }
+.btn.primary:disabled { background: #EBA9AC; cursor: default; }
+.ob-btns .btn.link { text-decoration: none; }
+.ob-center { display: grid; place-items: center; text-align: center; }
+.ob-step .warn-box { margin: 12px 0 0; }
+.look-stage { display: flex; align-items: center; justify-content: space-around; gap: 12px; background: #fff; border: 1.5px solid var(--line); border-radius: 20px; padding: 8px 12px; }
+.look-stage canvas { flex: none; }
+.look-stage .dice { width: auto; margin: 0; padding: 10px 16px; border-radius: 14px; }
+.look { padding-bottom: 4px; }

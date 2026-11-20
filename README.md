@@ -45,7 +45,7 @@ khăn quàng đỏ.
 
 Điều khiển: chạm/nhấp vào sân để đi (tự tìm đường quanh các dãy nhà), chạm nhãn để mở,
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
-Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.
+Tạo nhân vật 4 bước như trang mẫu (vai → thông tin → chọn ngoại hình → tên). Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.
 
 Tài liệu: [yêu cầu](docs/YEU-CAU.md) (cần làm gì, tiêu chí chấp nhận, trạng thái) · [thiết kế](docs/THIET-KE.md) (làm như thế nào).
 
@@ -64,7 +64,7 @@ public/            giao diện tĩnh (không cần build)
   index.html, style.css, pages/gioi-thieu.html
   js/campus.js     dữ liệu sơ đồ trường
   js/world.js      vẽ canvas 2D, camera, tìm đường A*, người chơi khác
-  js/avatar.js     vẽ nhân vật đồng phục
+  js/avatar.js     vẽ nhân vật chibi (13 kiểu tóc, 8 màu tóc, trang phục theo vai)
   js/main.js       luồng tạo nhân vật và các bảng chức năng
   js/games.js      đá cầu, câu hỏi đố vui
   js/logic.js      nghiệp vụ dùng chung cho server và chế độ ngoại tuyến

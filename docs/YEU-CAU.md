@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.3 – phòng học kiểu trang mẫu, sổ đầu bài theo ngày, chạm thẳng vào cửa lớp/bảng/áp phích |
+| Phiên bản | 1.4 – tạo nhân vật và chọn ngoại hình giống trang mẫu |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -70,7 +70,7 @@ Lớp chuyên: Toán, Tin, Lý, Hóa, Sinh, Văn, Sử, Địa, Anh, Nga, Pháp,
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
 | YC-DT-01 | Người mới mở trang thấy ngay sân trường và bảng chào mừng; có thể vào xem với tư cách khách mà không cần ghi danh | P1 | ✅ |
-| YC-DT-02 | Ghi danh không cần mật khẩu hay email: chọn 1 trong 5 vai, nhập tên (≤ 40 ký tự); cựu học sinh/học sinh phải nhập khóa và lớp chuyên; bạn trường khác/em cấp 2 nhập trường (không bắt buộc, ≤ 60 ký tự) | P1 | ✅ |
+| YC-DT-02 | Ghi danh không cần mật khẩu hay email, 4 bước như trang mẫu: chọn 1 trong 5 vai → thông tin (cựu học sinh/học sinh **chọn khóa** trong danh sách và **chọn lớp chuyên** bằng nút; thầy cô chọn **Thầy/Cô** và nhập bộ môn; bạn trường khác/em cấp 2 nhập trường, không bắt buộc, ≤ 60 ký tự) → chọn ngoại hình → tên hiển thị (2–40 ký tự, có xem trước nhân vật và dòng tóm tắt) | P1 | ✅ |
 | YC-DT-03 | Khóa nhập "20" hoặc "k20" đều được chuẩn hoá thành `K20`; khóa sai định dạng bị từ chối với thông báo rõ | P1 | ✅ |
 | YC-DT-04 | Sau khi ghi danh, hiển thị **mã khôi phục** dạng `CTN-XXXX-XXXX` kèm nút sao chép; nhập mã này trên máy khác sẽ lấy lại đúng nhân vật (không phân biệt hoa thường) | P1 | ✅ |
 | YC-DT-05 | Nhân vật được nhớ trên trình duyệt; mở lại trang là vào thẳng, không phải ghi danh lại | P1 | ✅ |
@@ -87,8 +87,10 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
-| YC-NV-01 | Nhân vật mặc đồng phục: áo sơ mi trắng có phù hiệu, quần âu hoặc chân váy xanh than | P1 | ✅ |
-| YC-NV-02 | Tuỳ chọn: dáng nam/nữ, 6 kiểu tóc, 5 màu tóc, 5 màu da, 4 màu cặp; có xem trước khi chọn | P2 | ✅ |
+| YC-NV-01 | Nhân vật kiểu chibi đầu to giống trang mẫu; mặc định đồng phục sơ mi trắng cà vạt, quần âu hoặc chân váy xanh than | P1 | ✅ |
+| YC-NV-02 | Bộ chọn ngoại hình giống trang mẫu: khung xem trước có hoạt ảnh + nút 🎲 Ngẫu nhiên; Giới tính, Màu da (5), **Kiểu tóc (13)**: Ngắn, Rẽ ngôi, Tóc bob, Đuôi ngựa, Tóc dài, Búi cao, Rẽ ngôi 3/7, Đan Trường, Mullet, Undercut, Short quiff, Layer, Hai bím; **Màu tóc (8)** gồm Balayage; Kiểu dáng Quần/Váy (nữ); **Trang phục theo vai**; màu áo lớp | P1 | ✅ |
+| YC-NV-07 | Nhân vật tạo trước bản 1.4 tự đổi sang kiểu tóc/màu tóc gần nhất, không mất nhân vật | P1 | ✅ |
+| YC-NV-08 | Thầy cô hiện danh xưng và bộ môn dưới tên (vd "Thầy · Vật lý") | P3 | ✅ |
 | YC-NV-03 | Đổi tên và ngoại hình bất cứ lúc nào (nút ảnh đại diện → "Đổi kiểu tóc, đồng phục") | P2 | ✅ |
 | YC-NV-04 | Thẻ tên hai dòng trên đầu: tên và `Khóa · Lớp` (thầy cô: "Thầy cô"; em cấp 2: "Em · THCS"); thẻ của mình nổi bật màu khác | P1 | ✅ |
 | YC-NV-05 | Có hoạt ảnh bước đi, quay trái/phải, quay lưng khi đi lên | P3 | ✅ |
@@ -217,7 +219,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-TT2-16 | **Ai đang online**: bấm số người trên thanh trên để xem danh sách theo khu, chạm để đi tới | P2 | ✅ |
 | YC-TT2-17 | **Âm thanh**: bảng chỉnh âm lượng nhạc nền và hiệu ứng (lưu trên máy); hiệu ứng tổng hợp: chuông, trống, tiền, bóng nước, tim… | P2 | 🟡 |
 | YC-TT2-18 | **Ngày / đêm** theo giờ Việt Nam: chạng vạng 17:30–19:00, đêm tới 5:00; ban đêm sân tối lại, đèn sân toả sáng, cửa sổ các dãy nhà sáng đèn (trong lớp học vẫn sáng) | P3 | ✅ |
-| YC-TT2-19 | **Trang phục**: sơ mi trắng, áo dài trắng, áo khoác trường, áo lớp (5 màu), vest kỷ yếu, áo phông; khăn quàng đỏ; 9 kiểu tóc | P2 | ✅ |
+| YC-TT2-19 | **Trang phục**: sơ mi cà vạt, sơ mi trắng/xanh/vàng, áo khoác trường, áo lớp (6 màu), áo dài trắng/tím/hồng/xanh/đỏ, vest, áo phông, khăn quàng đỏ, áo "Tôi yêu CTN" trắng/đen – danh sách tuỳ vai (xem YC-NV-02) | P2 | ✅ |
 | YC-TT2-20 | **Phòng chức năng**: phòng thí nghiệm, phòng máy, thư viện (góc giới thiệu sách hay); **Sổ lưu bút của trường** đặt trên giá ở sân | P2 | ✅ |
 
 > YC-TT2-08: chưa kiểm thử vào đúng sáng thứ Hai trên trình duyệt (kiểm thử tự động đã giả lập giờ thứ Hai cho máy chủ).

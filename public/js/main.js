@@ -3,7 +3,7 @@ import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LIN
 import { World, CAMPUS_SCENE } from './world.js';
 import { classroomScene } from './classroom.js';
 import { SPAWN, HOTSPOTS, PLACES } from './campus.js';
-import { avatarCanvas, SKINS, HAIR_COLORS, HAIR_NAMES, BAG_COLORS, OUTFITS, SHIRT_COLORS } from './avatar.js';
+import { avatarCanvas, avatarStage, normLook, randomLook, outfitsFor, SKINS, HAIR_COLORS, HAIR_COLOR_NAMES, HAIR_SWATCH, HAIR_NAMES, GIRL_HAIR, outfitLabel, SHIRT_COLORS } from './avatar.js';
 import { MINIGAMES, oldLesson } from './minigames.js';
 import { drawDiploma, drawThanksCard, shareCanvas, DIPLOMA_QUOTES } from './cards.js';
 import { sfx, settings as soundSettings, saveSettings } from './sound.js';
@@ -13,7 +13,7 @@ import { startDaCau, QUIZ } from './games.js';
 
 const app = document.getElementById('app');
 // Khách chưa ghi danh vẫn dạo được sân trường, chỉ không viết/mua/điểm danh được.
-const GUEST = { guest: true, id: '', name: 'Khách', role: 'khach', khoa: '', lop: '', school: '', wallet: 0, points: 0, code: '', look: { gender: 'nam', skin: 1, hair: 0, hairColor: 0, bottom: 'quan', bag: 3 } };
+const GUEST = { guest: true, id: '', name: 'Khách', role: 'khach', khoa: '', lop: '', school: '', wallet: 0, points: 0, code: '', look: { v: 2, gender: 'nam', skin: 1, hair: 10, hairColor: 0, bottom: 'quan', outfit: 'phong' } };
 let me = GUEST;
 let world = null;
 
@@ -35,7 +35,7 @@ function sessionGet(k) { try { return sessionStorage.getItem(k); } catch { retur
 function sessionSet(k, v) { try { sessionStorage.setItem(k, v); } catch { /* */ } }
 
 function describe(u) {
-  if (u.role === 'gv') return 'Thầy cô';
+  if (u.role === 'gv') return u.school || 'Thầy cô';
   if (u.role === 'em') return 'Em cấp 2';
   if (u.role === 'khach') return u.school || 'Bạn trường khác';
   return `${u.lop || ''} ${u.khoa || ''}`.trim();
@@ -86,99 +86,148 @@ function setMe(u) {
   hud.update();
 }
 
+// Tạo nhân vật 4 bước như trang mẫu: bạn là ai → thông tin → chọn ngoại hình → tên hiển thị → lưu mã khôi phục
 function createFlow() {
-  const draft = { role: 'cuuhs', name: '', khoa: '', lop: 'Toán', school: '', look: { gender: 'nam', skin: 1, hair: 0, hairColor: 0, bottom: 'quan', bag: 0 } };
+  const draft = { role: 'cuuhs', name: '', khoa: '', lop: '', school: '', title: 'Cô', dept: '', look: randomLook('cuuhs') };
+  const btns = (onNext, onBack, nextText = 'Tiếp tục') => h('div', { class: 'ob-btns' },
+    h('button', { class: 'btn primary big', onclick: onNext }, nextText),
+    onBack ? h('button', { class: 'btn link muted', onclick: onBack }, 'Quay lại') : null);
+  const chips = (items, isOn, pick, label) => h('div', { class: 'ob-chips', role: 'group', 'aria-label': label },
+    ...items.map(([val, text]) => h('button', { class: 'ob-chip' + (isOn(val) ? ' on' : ''), onclick: (e) => {
+      pick(val); e.currentTarget.parentNode.querySelectorAll('.ob-chip').forEach((x) => x.classList.remove('on')); e.currentTarget.classList.add('on');
+    } }, text)));
+  const summary = () => draft.role === 'cuuhs' || draft.role === 'hs' ? `${draft.khoa} · ${draft.lop}`
+    : draft.role === 'gv' ? gvLabel() : draft.school || ROLES[draft.role];
+  const gvLabel = () => [draft.title, draft.dept.trim()].filter(Boolean).join(' · ');
   openSheet('', (b, { setTitle }) => {
-    const step1 = () => {
+    const stepRole = () => {
       setTitle('');
-      const trio = h('div', { class: 'trio' },
-        avatarCanvas({ gender: 'nu', hair: 2, hairColor: 0, bottom: 'vay', skin: 0, bag: 0 }, 64),
-        avatarCanvas({ gender: 'nam', hair: 0, hairColor: 1, bottom: 'quan', skin: 2, bag: 1 }, 64),
-        avatarCanvas({ gender: 'nu', hair: 3, hairColor: 0, bottom: 'vay', skin: 1, bag: 2 }, 64));
+      const hero = h('div', { class: 'trio' },
+        avatarCanvas({ v: 2, gender: 'nu', hair: 4, hairColor: 0, bottom: 'vay', skin: 0, outfit: 'aodai' }, 64),
+        avatarCanvas({ v: 2, gender: 'nam', hair: 6, hairColor: 0, bottom: 'quan', skin: 1, outfit: 'khoac' }, 64),
+        avatarCanvas({ v: 2, gender: 'nu', hair: 3, hairColor: 1, bottom: 'vay', skin: 0, outfit: 'somi' }, 64));
       b.replaceChildren(h('div', { class: 'welcome-in' },
         h('img', { class: 'welcome-logo', src: 'logo.jpg', alt: 'Logo Trường THPT Chuyên Thái Nguyên' }),
-        trio,
+        hero,
         h('h1', { class: 'welcome-title' }, 'Chào mừng bạn về Trường THPT Chuyên Thái Nguyên!'),
         h('p', { class: 'lead' }, 'Tạo nhân vật một lần, lần sau vào vẫn là bạn. Bạn là ai?'),
         h('div', { class: 'role-list' },
-          ...Object.entries(ROLES).map(([k, v]) => h('button', { class: 'role', onclick: () => { draft.role = k; step2(); } },
-            h('span', { class: 'role-ico' }, ROLE_INFO[k].icon), h('span', {}, h('b', {}, v), h('small', {}, ROLE_INFO[k].sub))))),
+          ...Object.entries(ROLES).map(([k, v]) => h('button', { class: 'role', onclick: () => {
+            draft.role = k;
+            if (k === 'gv') { draft.look.gender = draft.title === 'Thầy' ? 'nam' : 'nu'; }
+            draft.look.outfit = outfitsFor(k, draft.look)[0];
+            stepInfo();
+          } }, h('span', { class: 'role-ico' }, ROLE_INFO[k].icon), h('span', {}, h('b', {}, v), h('small', {}, ROLE_INFO[k].sub))))),
         h('button', { class: 'btn link', onclick: () => recoverFlow() }, 'Tôi đã có nhân vật'),
         h('button', { class: 'btn link muted', onclick: () => { sessionSet('ctn.skipWelcome', '1'); closeSheet(); toast('Chạm vào sân để đi bộ. Bấm 🗺️ để xem bản đồ trường.'); } }, 'Vào xem với tư cách khách')));
     };
-    const step2 = () => {
-      setTitle(ROLES[draft.role]);
-      const err = h('p', { class: 'err' });
-      const name = h('input', { class: 'input', placeholder: 'Tên hiển thị (vd: Minh Anh)', maxlength: 40, value: draft.name, 'aria-label': 'Tên' });
-      const needClass = draft.role === 'cuuhs' || draft.role === 'hs';
-      const khoa = h('input', { class: 'input', placeholder: 'Khóa (vd: K20)', maxlength: 4, value: draft.khoa, 'aria-label': 'Khóa' });
-      const lop = h('select', { class: 'input', 'aria-label': 'Lớp chuyên' }, ...LOPS.map((l) => h('option', { value: l, selected: draft.lop === l }, 'Chuyên ' + l)));
-      const school = h('input', { class: 'input', placeholder: draft.role === 'em' ? 'Trường THCS của em (không bắt buộc)' : 'Trường của bạn (không bắt buộc)', maxlength: 60, value: draft.school, 'aria-label': 'Trường' });
-      b.replaceChildren(h('div', {},
-        h('label', { class: 'lbl' }, 'Tên'), name,
-        needClass ? h('div', { class: 'row2' }, h('div', {}, h('label', { class: 'lbl' }, 'Khóa'), khoa), h('div', {}, h('label', { class: 'lbl' }, 'Lớp'), lop)) : null,
-        draft.role === 'khach' || draft.role === 'em' ? h('div', {}, h('label', { class: 'lbl' }, 'Trường'), school) : null,
-        err,
-        h('div', { class: 'row-btns' },
-          h('button', { class: 'btn ghost', onclick: step1 }, '← Quay lại'),
-          h('button', { class: 'btn primary', onclick: () => {
-            draft.name = name.value.trim(); draft.khoa = khoa.value.trim(); draft.lop = lop.value; draft.school = school.value;
-            if (!draft.name) { err.textContent = 'Nhập tên của bạn'; return; }
-            if (needClass && !/^k?\d{1,2}$/i.test(draft.khoa)) { err.textContent = 'Khóa dạng K1, K2… (số khóa của bạn)'; return; }
-            step3();
-          } }, 'Tiếp →'))));
+
+    const stepInfo = () => {
+      setTitle(`${ROLE_INFO[draft.role].icon} ${ROLES[draft.role]}`);
+      const err = h('p', { class: 'err', role: 'alert' });
+      const parts = [];
+      if (draft.role === 'cuuhs' || draft.role === 'hs') {
+        const sel = h('select', { class: 'input', id: 'ob-khoa', 'aria-label': 'Khóa', onchange: (e) => { draft.khoa = e.target.value; } },
+          h('option', { value: '' }, '— Chọn khóa —'),
+          ...Array.from({ length: 40 }, (_, i) => 40 - i).map((n) => h('option', { value: 'K' + n, selected: draft.khoa === 'K' + n }, `Khóa ${n} (K${n})`)));
+        parts.push(h('label', { class: 'ob-lbl', for: 'ob-khoa' }, 'Khóa của bạn'), sel,
+          h('label', { class: 'ob-lbl' }, 'Lớp chuyên'), chips(LOPS.map((l) => [l, l]), (v) => draft.lop === v, (v) => { draft.lop = v; }, 'Lớp chuyên'));
+      } else if (draft.role === 'gv') {
+        const dept = h('input', { class: 'input', id: 'ob-dept', maxlength: 30, value: draft.dept, placeholder: 'Ví dụ: Toán, Ngữ văn, Văn phòng', oninput: (e) => { draft.dept = e.target.value; } });
+        parts.push(h('label', { class: 'ob-lbl' }, 'Danh xưng'), chips([['Thầy', '👨‍🏫 Thầy'], ['Cô', '👩‍🏫 Cô']], (v) => draft.title === v, (v) => {
+          draft.title = v; draft.look.gender = v === 'Thầy' ? 'nam' : 'nu';
+          if (draft.look.gender === 'nam') { draft.look.bottom = 'quan'; if (GIRL_HAIR.includes(draft.look.hair)) draft.look.hair = 0; }
+          draft.look.outfit = outfitsFor('gv', draft.look)[0];
+        }, 'Danh xưng'),
+        h('label', { class: 'ob-lbl', for: 'ob-dept' }, 'Bộ môn hoặc phòng ban'), dept);
+      } else {
+        const em = draft.role === 'em';
+        const sch = h('input', { class: 'input', id: 'ob-school', maxlength: 60, value: draft.school, 'aria-label': 'Trường',
+          placeholder: em ? 'Ví dụ: THCS Nha Trang' : 'Ví dụ: THPT Gang Thép', oninput: (e) => { draft.school = e.target.value; } });
+        parts.push(h('label', { class: 'ob-lbl', for: 'ob-school' }, em ? 'Tên trường của em' : 'Tên trường của bạn'), sch);
+      }
+      b.replaceChildren(h('div', { class: 'ob-step' }, ...parts, err, btns(() => {
+        const needClass = draft.role === 'cuuhs' || draft.role === 'hs';
+        if (needClass && !draft.khoa) { err.textContent = 'Bạn chọn khóa nhé'; return; }
+        if (needClass && !draft.lop) { err.textContent = 'Bạn chọn lớp nhé'; return; }
+        stepLook();
+      }, stepRole)));
+    };
+
+    const stepLook = () => {
+      setTitle('Chọn ngoại hình');
+      b.replaceChildren(h('div', { class: 'ob-step' }, avatarEditor(draft.look, draft.role), btns(stepName, stepInfo)));
+    };
+
+    const stepName = () => {
+      setTitle('Tên hiển thị');
+      const err = h('p', { class: 'err', role: 'alert' });
+      const go = h('button', { class: 'btn primary big', disabled: draft.name.trim().length < 2, onclick: async () => {
+        go.disabled = true; go.textContent = 'Đang lưu…';
+        const school = draft.role === 'gv' ? gvLabel() : draft.school.trim();
+        try { const r = await api('register', { ...draft, name: draft.name.trim(), school }); setToken(r.token); setMe(r.user); stepCode(); }
+        catch (ex) { err.textContent = ex.message; go.disabled = false; go.textContent = 'Vào sân trường'; }
+      } }, 'Vào sân trường');
+      const name = h('input', { class: 'input', id: 'ob-name', maxlength: 40, value: draft.name, placeholder: 'Ví dụ: Minh Anh', autocomplete: 'nickname', 'aria-label': 'Tên',
+        oninput: (e) => { draft.name = e.target.value; go.disabled = draft.name.trim().length < 2; },
+        onkeydown: (e) => { if (e.key === 'Enter' && !go.disabled) go.click(); } });
+      b.replaceChildren(h('div', { class: 'ob-step' },
+        h('div', { class: 'ob-center' }, avatarCanvas(draft.look, 110)),
+        h('p', { class: 'ob-center muted' }, summary()),
+        h('label', { class: 'ob-lbl', for: 'ob-name' }, 'Mọi người sẽ thấy tên này trên đầu nhân vật'), name, err,
+        h('div', { class: 'ob-btns' }, go, h('button', { class: 'btn link muted', onclick: stepLook }, 'Quay lại'))));
       setTimeout(() => name.focus(), 50);
     };
-    const step3 = () => {
-      setTitle('Mặc đồng phục');
-      const err = h('p', { class: 'err' });
-      b.replaceChildren(avatarEditor(draft.look), err,
-        h('div', { class: 'row-btns' },
-          h('button', { class: 'btn ghost', onclick: step2 }, '← Quay lại'),
-          h('button', { class: 'btn primary', onclick: async (e) => {
-            e.target.disabled = true;
-            try { const r = await api('register', draft); setToken(r.token); setMe(r.user); step4(); }
-            catch (ex) { err.textContent = ex.message; e.target.disabled = false; }
-          } }, 'Vào trường!')));
-    };
-    const step4 = () => {
+
+    const stepCode = () => {
       setTitle('Lưu mã khôi phục');
-      b.replaceChildren(
-        h('p', {}, 'Đây là mã để lần sau (kể cả khi đổi máy) bạn vẫn là nhân vật này. Hãy chụp màn hình hoặc sao chép lại:'),
-        h('div', { class: 'code-box' }, me.code),
-        h('div', { class: 'row-btns' },
-          h('button', { class: 'btn ghost', onclick: () => { navigator.clipboard?.writeText(me.code).then(() => toast('Đã sao chép mã')); } }, 'Sao chép'),
-          h('button', { class: 'btn primary', onclick: () => { closeSheet(); toast(`Chào ${me.name}! Chạm vào sân để đi, chạm nhãn để vào lớp, căng tin…`); } }, 'Đã lưu, vào sân trường')));
+      const copy = h('button', { class: 'btn ghost', onclick: () => { navigator.clipboard?.writeText(me.code).then(() => { copy.textContent = 'Đã sao chép ✓'; }); } }, 'Sao chép mã');
+      b.replaceChildren(h('div', { class: 'ob-step' },
+        h('p', {}, 'Nhân vật của bạn đã được lưu. Khi ', h('b', {}, 'đổi máy'), ' hoặc ', h('b', {}, 'xóa dữ liệu trình duyệt'), ', bạn nhập mã này để lấy lại đúng nhân vật.'),
+        h('div', { class: 'code-box' }, me.code), copy,
+        h('p', { class: 'warn-box' }, 'Không gửi mã này cho người khác: ai có mã sẽ vào được nhân vật của bạn.'),
+        h('button', { class: 'btn primary big', onclick: () => { closeSheet(); toast(`Chào ${me.name}! Chạm vào sân để đi, chạm nhãn hoặc cửa lớp để vào lớp, căng tin…`); } }, 'Tôi đã lưu, vào sân trường')));
     };
-    step1();
+    stepRole();
   });
 }
 
-function avatarEditor(look, onChange = () => {}) {
-  const preview = h('div', { class: 'avatar-preview' });
-  const redraw = () => { preview.replaceChildren(avatarCanvas(look, 120)); onChange(look); };
-  const row = (title, opts, key) => h('div', { class: 'opt-row' },
-    h('span', { class: 'lbl' }, title),
-    h('div', { class: 'opts' }, ...opts.map(([val, content, isColor]) => {
-      const btn = h('button', { class: 'opt' + (look[key] === val ? ' on' : ''), 'aria-label': title + ' ' + (isColor ? val : content), style: isColor ? { background: content } : null, onclick: () => {
-        look[key] = val; btn.parentNode.querySelectorAll('.opt').forEach((x) => x.classList.remove('on')); btn.classList.add('on'); redraw();
-      } }, isColor ? '' : content);
-      return btn;
-    })));
-  const el = h('div', { class: 'editor' }, preview,
-    h('div', { class: 'opt-list' },
-      row('Dáng', [['nam', 'Nam'], ['nu', 'Nữ']], 'gender'),
-      row('Trang phục', OUTFITS, 'outfit'),
-      row('Màu áo lớp', SHIRT_COLORS.map((c, i) => [i, c, true]), 'color'),
-      row('Quần / váy', [['quan', 'Quần âu'], ['vay', 'Chân váy']], 'bottom'),
-      row('Khăn quàng đỏ', [[false, 'Không'], [true, 'Có']], 'scarf'),
-      row('Kiểu tóc', HAIR_NAMES.map((n, i) => [i, n]), 'hair'),
-      row('Màu tóc', HAIR_COLORS.map((c, i) => [i, c, true]), 'hairColor'),
-      row('Màu da', SKINS.map((c, i) => [i, c, true]), 'skin'),
-      row('Cặp sách', BAG_COLORS.map((c, i) => [i, c, true]), 'bag'),
-    ));
-  redraw();
-  return el;
+// Bộ chọn ngoại hình (giống trang mẫu): xem trước động + Ngẫu nhiên, giới tính, màu da, kiểu tóc, màu tóc,
+// kiểu dáng (nữ), trang phục theo vai, màu áo lớp. Sửa trực tiếp object `look`.
+function avatarEditor(look, role = me.role, onChange = () => {}) {
+  Object.assign(look, normLook(look));
+  delete look.bag;
+  if (!outfitsFor(role, look).includes(look.outfit)) look.outfit = outfitsFor(role, look)[0];
+  const stage = avatarStage({ ...look }, 150);
+  const root = h('div', { class: 'look' });
+  const changed = () => { stage.set({ ...look }); onChange(look); render(); };
+  const chips = (label, items, cur, pick) => [h('div', { class: 'ob-lbl' }, label), h('div', { class: 'ob-chips', role: 'group', 'aria-label': label },
+    ...items.map(([val, text]) => h('button', { class: 'ob-chip' + (cur === val ? ' on' : ''), 'aria-pressed': String(cur === val), onclick: () => { pick(val); changed(); } }, text)))];
+  const swatches = (label, items, cur, pick, names) => [h('div', { class: 'ob-lbl' }, label), h('div', { class: 'ob-chips', role: 'group', 'aria-label': label },
+    ...items.map((bg, i) => h('button', { class: 'ob-sw' + (cur === i ? ' on' : ''), style: { background: bg }, 'aria-pressed': String(cur === i),
+      'aria-label': `${label} ${names ? names[i] : i + 1}`, title: names ? names[i] : '', onclick: () => { pick(i); changed(); } })))];
+  const render = () => {
+    const outfits = outfitsFor(role, look);
+    root.replaceChildren(
+      h('div', { class: 'look-stage' }, stage.el, h('button', { class: 'btn ghost dice', onclick: () => {
+        const keep = look.outfit; Object.assign(look, randomLook(role, look.gender)); if (outfitsFor(role, look).includes(keep)) look.outfit = keep; changed();
+      } }, '🎲 Ngẫu nhiên')),
+      ...chips('Giới tính', [['nam', '👦 Nam'], ['nu', '👧 Nữ']], look.gender, (g) => {
+        const i = outfitsFor(role, look).indexOf(look.outfit);
+        look.gender = g;
+        if (g === 'nam') { look.bottom = 'quan'; if (GIRL_HAIR.includes(look.hair)) look.hair = 0; }
+        const list = outfitsFor(role, look); look.outfit = list[i] || list[0];
+      }),
+      ...swatches('Màu da', SKINS, look.skin, (i) => { look.skin = i; }),
+      ...chips('Kiểu tóc', HAIR_NAMES.map((n, i) => [i, n]), look.hair, (i) => { look.hair = i; }),
+      ...swatches('Màu tóc', HAIR_COLORS.map((_, i) => HAIR_SWATCH(i)), look.hairColor, (i) => { look.hairColor = i; }, HAIR_COLOR_NAMES),
+      ...(look.gender === 'nu' ? chips('Kiểu dáng', [['quan', 'Quần'], ['vay', 'Váy']], look.bottom, (v) => { look.bottom = v; }) : []),
+      ...chips('Trang phục', outfits.map((o) => [o, outfitLabel(role, o)]), look.outfit, (o) => { look.outfit = o; }),
+      ...(look.outfit === 'aolop' ? swatches('Màu áo lớp', SHIRT_COLORS, look.color ?? 0, (i) => { look.color = i; }) : []),
+    );
+  };
+  render();
+  return root;
 }
 
 // ======================= Nhạc nền: bài ca truyền thống =======================
@@ -783,7 +832,7 @@ const panels = {
     openSheet('Soi gương · Đổi kiểu', (b) => {
       const look = { ...me.look };
       const name = h('input', { class: 'input', value: me.name, maxlength: 40, 'aria-label': 'Tên' });
-      b.append(h('label', { class: 'lbl' }, 'Tên hiển thị'), name, avatarEditor(look),
+      b.append(h('label', { class: 'lbl' }, 'Tên hiển thị'), name, avatarEditor(look, me.role),
         h('button', { class: 'btn primary', onclick: async () => {
           try { const r = await call('look', { look, name: name.value }); setMe(r.user); closeSheet(); toast('Đã đổi kiểu!'); }
           catch (e) { toast(e.message, 'bad'); }
