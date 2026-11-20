@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.5 – vẽ lại cảnh vật theo phong cách trang mẫu (gạch sân, cỏ, cây tán tròn, hoa 5 cánh, mái nhà, màu trời theo giờ) |
+| Phiên bản | 1.6 – phòng học kiểu trang mẫu (hành lang, nội quy, 5 điều Bác Hồ dạy, 36 chỗ), sổ đầu bài theo ngày, chạm thẳng vào cửa/bảng; sửa lỗi chạm nhãn |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -93,9 +93,9 @@ Văn, Trung cách đều nhau, cây phượng – bằng lăng có bồn đứng
 `World` luôn hiển thị **một cảnh**. Cảnh là object:
 
 ```js
-{ id, name, w, h, bgColor, fit?,          // fit: thu nhỏ cho vừa chiều ngang màn hình
+{ id, name, w, h, bgColor, fit?, fitMin?, // fit: thu nhỏ cho vừa chiều ngang (không nhỏ hơn fitMin)
   solids: [{x,y,w,h}],                    // vật cản → lưới va chạm 20 px riêng của cảnh (class Grid, có cache)
-  hotspots: [...], seats: [{x,y,dir,back}],
+  hotspots: [...], seats: [{x,y,dir,back}], // hotspot: {id,x,y,icon,label,panel,small?,rect?,nolabel?}
   spawn: {x,y},
   drawBg(ctx),                            // nền tĩnh, vẽ một lần vào canvas ngoài màn hình
   statics(ctx, now) → [{ y, draw() }] }   // vật thể sắp theo y cùng nhân vật
@@ -104,10 +104,37 @@ Văn, Trung cách đều nhau, cây phượng – bằng lăng có bồn đứng
 | Cảnh | Nguồn | Ghi chú |
 |---|---|---|
 | `campus` | `CAMPUS_SCENE` trong `world.js`, dữ liệu `campus.js` | 2000 × 1400, 30 điểm tương tác, 20 chỗ ngồi ghế đá |
-| `lop:<Lớp>` | `classroomScene(lop)` trong `classroom.js` | 960 × 740: bảng đen (thứ/ngày/tên lớp), bục giảng, bàn giáo viên, 4 × 3 bàn đôi, 24 chỗ ngồi (ngồi quay lưng về phía người xem, hướng lên bảng), tủ sách, cửa sổ; `fit: true` |
+| `lop:<Lớp>` | `classroomScene(lop)` trong `classroom.js` | 640 × 980 (dọc, hợp điện thoại): tường đầu lớp có **Nội quy lớp học**, **bảng lớp** (thứ/ngày, tên lớp), **5 điều Bác Hồ dạy**, khẩu hiệu, đồng hồ; bục giảng + bàn giáo viên (sổ đầu bài); 6 × 3 bàn, **36 chỗ ngồi** (quay lưng, hướng lên bảng); hành lang bên trái có lan can, chậu hoa, **ban công**, cửa sau; cửa sổ hai bên; cửa **ra sân** ở góc phải đầu lớp; giá sách **lưu bút lớp** ở cuối lớp; `fit: true, fitMin: 0.6` |
 
-Vào lớp: chạm cửa lớp (`panel: 'enterClass'`) → `world.setScene(classroomScene(lop), spawn)`, nhớ vị trí cửa trong
-`classReturn`. Ra lớp (`exitClass`, mở bản đồ, "Về cổng trường") → `setScene(CAMPUS_SCENE, classReturn)`.
+Vào lớp: chạm nhãn "🚪 Lớp …" **hoặc chạm thẳng vào cánh cửa / biển tên lớp trên mặt tiền** (hotspot có `rect`,
+vùng chạm theo toạ độ thế giới) → nhân vật đi tới cửa → `panel: 'enterClass'` → `world.setScene(classroomScene(lop), spawn)`,
+nhớ vị trí cửa trong `classReturn`. Cửa mặt nam vẽ trong `statics` (sau toà nhà) gồm khung trắng, cánh gỗ và biển
+tên lớp màu xanh; cửa mặt trong dãy 5 tầng có biển tên trên lối đi.
+
+Trong lớp: bảng, hai tờ áp phích không có nhãn (`nolabel`) vì đã có chữ – chạm thẳng vào đồ vật (`rect`). Camera của
+cảnh `fit` không lộ khoảng tối ngoài phòng và tính phần bị thanh trên/thanh chat che (`world.insets`, đo từ DOM khi
+đổi kích thước) để thấy trọn tường đầu và cuối lớp.
+
+| Điểm trong lớp | Mở |
+|---|---|
+| 🖍️ Bảng lớp | Menu: ✍️ Lưu bút lớp · 📒 Sổ đầu bài · ❓ Đố vui · 🙋 Kiểm tra bài cũ · 📓 Kiểm tra vở ghi · 📤 Nộp sổ đầu bài |
+| 📋 Nội quy, ⭐ 5 điều Bác Hồ dạy | Danh sách đánh số (`CLASS_RULES`, `BAC_HO` trong `logic.js`) |
+| 📒 Bàn giáo viên | Sổ đầu bài |
+| ✍️ Giá sách cuối lớp | Lưu bút lớp theo khóa, danh sách cả lớp theo khóa, đố vui |
+| 🌤️ Ban công | Thông báo + nhân vật nói một câu |
+| 🚪 Ra sân | Về sân, đứng trước cửa lớp |
+| Cô chủ nhiệm (NPC) | Đi lại trước bảng; chạm → kiểm tra bài cũ |
+
+**Sổ đầu bài** (theo lớp chuyên, theo ngày đổi lúc 5 giờ sáng):
+- *Có mặt*: ngồi vào ghế trong lớp mình (thầy cô, khách: lớp bất kỳ) → `act classSit` ghi tên + giờ vào sổ.
+- *Ghi chú buổi học*: học sinh lớp đó / thầy cô viết ≤ 200 ký tự, mỗi người một ghi chú mỗi ngày.
+- *Kiểm tra vở ghi*: có ghi chú hôm nay → cô khen, +5 điểm (mỗi ngày một lần); chưa có → nhắc đi ghi bài.
+- *Nộp sổ*: người đầu tiên trong ngày +10 điểm; người sau thấy ai đã nộp, lúc mấy giờ.
+- *Điểm miệng*: kết quả "Kiểm tra bài cũ" ghi vào sổ (`score` với `game: 'baicu', lop`).
+- *Ghi tên vi phạm*: ném bóng nước trúng người trong lớp **giữa giờ học** (tiết 1–10 theo `periodOf`) → tự động
+  ghi tên; thầy cô ghi tên học sinh có mặt kèm lý do. Bị ghi tên thì lần điểm danh ngày hôm sau **không được tiền
+  ăn vặt** (`checkin` trả `punished: true`).
+- Xem lại các ngày trước bằng ô chọn ngày (30 ngày gần nhất có ghi chép). Ra lớp (`exitClass`, mở bản đồ, "Về cổng trường") → `setScene(CAMPUS_SCENE, classReturn)`.
 `setScene` dựng lại nền, lưới va chạm, xoá người khác và hiệu ứng, đặt lại mức phóng to, gọi `onSceneChange`.
 Vị trí chỉ được lưu vào `localStorage` khi đang ở sân trường.
 
@@ -371,7 +398,7 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 | `cards.js` | Giấy chứng nhận, thiệp tri ân dạng ảnh, chia sẻ/tải về |
 | `npcs.js` | Nhân vật phụ sân trường và cô chủ nhiệm từng lớp |
 | `sound.js` | Hiệu ứng âm thanh Web Audio, cài đặt âm lượng |
-| `classroom.js` | Cảnh lớp học: bố cục, vật cản, chỗ ngồi, điểm tương tác, vẽ bàn ghế/bảng đen |
+| `classroom.js` | Cảnh lớp học (640 × 980): bố cục, vật cản, 36 chỗ ngồi, điểm tương tác, vẽ bảng lớp, áp phích, bàn ghế, hành lang |
 | `world.js` | `Grid` (lưới va chạm 20 px, A* 8 hướng + làm mượt) theo từng cảnh, `CAMPUS_SCENE`, camera (căn giữa cảnh nhỏ), vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, ngồi ghế, chụp ảnh (`capture`), bản đồ toàn cảnh |
 | `campus.js` | Dữ liệu sơ đồ (mục 3) |
 | `avatar.js` | Vẽ nhân vật (đứng, đi, quay lưng, ngồi), ảnh đại diện nhỏ |
@@ -414,7 +441,9 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `photo` | `thời gian-id` | `{id, uid, by, khoa, lop, caption, people[], thumb, at}` – ảnh nhỏ cho album |
 | `photofull` | id | `{id, full}` – ảnh lớn, chỉ tải khi xem |
 | `gb` | `phòng\|thời gian-id` | `{id, room, uid, name, role, khoa, lop, body, at}` |
-| `roster` | `phòng\|uid` | `{id, name, khoa, at}` – sổ đầu bài |
+| `roster` | `phòng\|uid` | `{id, name, khoa, at}` – danh sách cả lớp theo khóa |
+| `clog` | `lớp\|ngày\|loại\|id` | Sổ đầu bài: `p` có mặt `{name, label, at}`, `n` ghi chú `{name, text, at}`, `o` điểm miệng `{name, label, grade, at}`, `s` nộp sổ (id `0`) `{name, at}`, `w` vi phạm `{uid, name, label, reason, by, at}` |
+| `clogday` | `lớp\|ngày` | `{day}` – các ngày có ghi chép, để chọn ngày xem lại |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
 | `score` | `trò chơi\|uid` | `{id, name, khoa, lop, score, at}` |
 | `buy` | `thời gian-id` | `{id, uid, name, item, emoji, price, forName, at}` |
@@ -439,7 +468,9 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `sign` | ✔ | `room, body` (≤ 600 ký tự) | `{item, user}` |
 | `roster` | – | `room` | `{items[]}` |
 | `attend` | ✔ | `room` (`lop:*`) | `{ok}` |
-| `checkin` | ✔ | `transport` (xedap/xemay/oto/bus/dibo) | `{already, gained, bonus, streak, transport, user}` |
+| `checkin` | ✔ | `transport` (xedap/xemay/oto/bus/dibo) | `{already, gained, punished, bonus, streak, transport, user}` |
+| `classlog` | – (có token thì đánh dấu dòng của mình) | `lop, day?` | `{lop, day, today, days[], present[], notes[], orals[], submit, writeups[], canWrite, isTeacher}` |
+| `classlogAct` | ✔ | `lop, kind` (note/submit/notebook/writeup), `text?`, `target?`, `reason?` | note → `{ok, user}`; submit → `{fresh, by?, at?, user}`; notebook → `{today, fresh, notes[], user}`; writeup (chỉ thầy cô) → `{ok}` |
 | `menu` | – | – | `{sale, items[]}` |
 | `buy` | ✔ | `item, forUid?` (đãi bạn) | `{item, user}` |
 | `purchases` | – | – | `{items[]}` (20 mới nhất) |
@@ -447,13 +478,13 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `createEvent` | ✔ | `title, date (YYYY-MM-DD), time, place, note` | `{item, user}` |
 | `joinEvent` | ✔ | `id` | `{item, joined, user}` |
 | `quiz` | ✔ | `correct, total` | `{award, user}` |
-| `score` | ✔ | `game, score` | `{best, user}` |
+| `score` | ✔ | `game, score, lop?` (kiểm tra bài cũ) | `{best, user}` |
 | `leaderboard` | – | `game` | `{items[]}` (top 20) |
 | `khoaBoard` | – | – | `{khoa[], lop[]}` |
 | `albumPost` | ✔ | `full, thumb` (JPEG data URL), `caption?`, `people[]?` | `{item, user}`; ≤ 5 ảnh/ngày, thân ≤ 400 KB |
 | `album` | – | – | `{items[]}` (60 mới nhất, chỉ ảnh nhỏ) |
 | `photo` | – | `id` | `{id, full}` |
-| `act` | ✔ | `kind` (zone/classSit/hit/diploma), `value` | `{ok, msg, user}` |
+| `act` | ✔ | `kind` (zone/classSit/hit/diploma), `value`, `scene?` (với hit) | `{ok, msg, user}` |
 | `quests` | ✔ | – | `{daily[], bonus, tiers[], achievements[], user}` |
 | `claim` | ✔ | `kind` (daily/ach), `id` | `{user}` |
 | `wallet` | ✔ | – | `{wallet, streak, ledger[], user}` |

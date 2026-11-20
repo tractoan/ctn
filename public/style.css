@@ -407,3 +407,31 @@ body.page { overflow: auto; background: var(--bg); }
   .brand b { font-size: 14px; }
   .brand small { font-size: 11px; }
 }
+
+/* ---------- Lớp học: bảng lớp, sổ đầu bài, nội quy ---------- */
+.board-menu { display: grid; gap: 8px; }
+.board-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 14px; padding: 10px 12px; }
+.board-item:active { background: var(--bg); }
+.board-item b { display: block; font-size: 15px; color: var(--navy); }
+.board-item small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.bi-icon { flex: none; width: 40px; height: 40px; display: grid; place-items: center; font-size: 20px; border-radius: 12px; background: #2F5D50; }
+.ok-box, .warn-box { margin-top: 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; }
+.ok-box { background: #E8F5EC; color: #1F6B41; }
+.warn-box { background: #FFF4DC; color: #8A5A00; }
+.board-text { margin: 4px 0 10px; padding: 14px 14px 14px 34px; background: #FFFDF6; border: 1px solid #E9DFC6; border-radius: 12px; line-height: 1.6; font-weight: 600; }
+.board-text li { margin: 2px 0; }
+.board-text.red { color: #A3262B; }
+.small { font-size: 13px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.logbook h4 { margin: 14px 0 6px; font-size: 14px; color: var(--navy); }
+.logbook table.log { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 10px; overflow: hidden; }
+.logbook table.log td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
+.logbook table.log td:first-child { width: 28px; color: var(--muted); text-align: right; }
+.logbook table.log td:last-child { width: 52px; color: var(--muted); text-align: right; }
+.logbook small { color: var(--muted); }
+.logbook tr.me td, .logbook li.me, .logbook p.me { background: #EAF2FC; }
+.notes { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.5; }
+.writeups { margin-top: 12px; padding: 10px 12px; background: #FDECEC; border-radius: 12px; font-size: 13.5px; }
+.writeups p { margin: 6px 0 0; }
+.logbook textarea.input { margin-top: 4px; }
+.logbook select.input.sm { width: auto; max-width: 70%; font-weight: 700; }

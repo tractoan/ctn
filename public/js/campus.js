@@ -102,7 +102,9 @@ export const HOTSPOTS = [
   { id: 'drum', x: 1087, y: 790, icon: '🥁', label: 'Trống trường', map: 'Trống', panel: 'drum' },
   { id: 'wish', x: 1400, y: 1150, icon: '🌠', label: 'Tường "Ước mơ vào Chuyên"', map: 'Ước mơ', panel: 'wish' },
   ...ROOM_DOORS.map((d) => ({ id: d.id, x: d.x, y: d.y, icon: d.icon, label: d.label, panel: d.id, small: true })),
-  ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'enterClass', lop: d.lop, small: true })),
+  ...CLASS_DOORS.map((d) => ({ id: 'lop-' + d.lop, x: d.x, y: d.y, icon: '🚪', label: 'Lớp ' + d.lop, panel: 'enterClass', lop: d.lop, small: true,
+    // vùng chạm: cánh cửa + biển tên trên mặt tiền (cửa mặt trong dãy 5 tầng: phía trên lối đi)
+    rect: d.side === 's' ? { x: d.x - 24, y: d.y - 70, w: 48, h: 50 } : { x: d.x - 24, y: d.y + 8, w: 48, h: 26 } })),
 ];
 
 // Cây cối (gốc cây là vật cản nhỏ). kind: tree (cây tán tròn), bonsai (bụi hoa), palm (cau vua – còn hỗ trợ vẽ)

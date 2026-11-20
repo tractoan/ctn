@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.2 – nhiệm vụ & thành tựu, ví, đãi bạn, tỏ tình, chào cờ, 20/11, 4 trò chơi mới, NPC, ngày/đêm, âm thanh |
+| Phiên bản | 1.3 – phòng học kiểu trang mẫu, sổ đầu bài theo ngày, chạm thẳng vào cửa lớp/bảng/áp phích |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -105,7 +105,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-SD-05 | Sân khấu có phông "Hiền tài là nguyên khí của quốc gia", **cột cờ ở giữa sân khấu** | P2 | ✅ |
 | YC-SD-06 | **Trống trường** ở giữa dãy 5 tầng, phía sát sân trường | P2 | ✅ |
 | YC-SD-07 | Chạm/nhấp vào sân thì nhân vật tự tìm đường đi tới, không xuyên qua nhà, tường, cây, bậc chắn | P1 | ✅ |
-| YC-SD-08 | Chạm vào nhãn địa điểm thì nhân vật đi tới đó và tự mở chức năng khi tới nơi | P1 | ✅ |
+| YC-SD-08 | Chạm vào nhãn địa điểm thì nhân vật đi tới đó và tự mở chức năng khi tới nơi (bản 1.3 sửa lỗi vùng chạm của nhãn bị sai nên chạm nhãn không có tác dụng) | P1 | ✅ |
 | YC-SD-09 | Từ cổng trường đi tới được **mọi** địa điểm và cửa lớp | P1 | ✅ |
 | YC-SD-10 | Nút 🗺️ mở **bản đồ toàn trường**; chạm vào chỗ nào trên bản đồ thì nhân vật đi tới đó; có danh sách các lớp chuyên | P1 | ✅ |
 | YC-SD-11 | Trên máy tính: đi bằng phím mũi tên/WASD, cuộn chuột để phóng to/thu nhỏ; có nút +/− | P2 | ✅ |
@@ -134,11 +134,17 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
-| YC-LH-01 | Mỗi lớp chuyên có một cửa; chạm cửa là **vào trong lớp**: phòng riêng có bảng đen (ghi thứ, ngày, tên lớp), bục giảng, bàn giáo viên có sổ đầu bài, 12 bàn đôi với 24 chỗ ngồi, tủ sách, cửa sổ, khẩu hiệu "Tiên học lễ – Hậu học văn" | P1 | ✅ |
+| YC-LH-01 | Mỗi lớp chuyên có một cửa có **biển tên lớp** trên mặt tiền; chạm nhãn "🚪 Lớp …" **hoặc chạm thẳng vào cánh cửa/biển tên** là đi tới và **vào trong lớp**: phòng dọc có bảng lớp (thứ, ngày, tên lớp), **Nội quy lớp học**, **5 điều Bác Hồ dạy**, khẩu hiệu "Tiên học lễ – Hậu học văn", đồng hồ, bục giảng, bàn giáo viên có sổ đầu bài, 18 bàn với **36 chỗ ngồi**, hành lang có lan can, chậu hoa, **ban công**, cửa sổ hai bên, giá sách lưu bút | P1 | ✅ |
 | YC-LH-06 | Trong lớp chỉ thấy những người cũng đang ở lớp đó (mọi khóa); **Ra khỏi lớp** thì về đúng trước cửa lớp; mở bản đồ khi đang trong lớp thì tự ra sân trước | P1 | ✅ |
-| YC-LH-07 | Trong lớp: chạm **bảng đen** → đố vui, **bàn giáo viên** → sổ đầu bài, **tủ sách** → lưu bút lớp; các bảng này chọn được khóa (mặc định khóa của mình) | P1 | ✅ |
+| YC-LH-07 | Trong lớp: chạm **bảng lớp** → menu Lưu bút lớp / Sổ đầu bài / Đố vui / Kiểm tra bài cũ / Kiểm tra vở ghi / Nộp sổ đầu bài; chạm **áp phích** → đọc Nội quy, 5 điều Bác Hồ dạy; **bàn giáo viên** → sổ đầu bài; **giá sách** → lưu bút lớp theo khóa; **ban công** → ra hóng gió | P1 | ✅ |
 | YC-LH-02 | **Lưu bút** theo từng lớp + khóa: đọc 100 lời mới nhất, viết lời mới ≤ 600 ký tự | P1 | ✅ |
-| YC-LH-03 | **Sổ đầu bài**: danh sách những ai đã về lớp (tự ghi danh khi vào đúng lớp + khóa của mình, hoặc khi viết lưu bút) | P2 | ✅ |
+| YC-LH-03 | **Sổ đầu bài theo ngày** (đổi ngày lúc 5 giờ sáng, xem lại 30 ngày): sĩ số và giờ có mặt (tự ký khi ngồi vào ghế trong lớp mình), ghi chú buổi học, điểm miệng kiểm tra bài cũ, người nộp sổ, ghi tên vi phạm; dòng của mình được tô màu | P1 | ✅ |
+| YC-LH-08 | **Ghi chú buổi học**: học sinh lớp đó và thầy cô viết ≤ 200 ký tự/ngày; học sinh lớp khác chỉ xem | P2 | ✅ |
+| YC-LH-09 | **Kiểm tra vở ghi**: đã ghi chú hôm nay → cô khen, +5 điểm (một lần/ngày); chưa → cô nhắc đi ghi bài | P2 | ✅ |
+| YC-LH-10 | **Nộp sổ đầu bài**: người đầu tiên mỗi ngày +10 điểm; người sau thấy ai đã nộp lúc mấy giờ | P2 | ✅ |
+| YC-LH-11 | **Ghi tên vi phạm**: ném bóng nước trúng người trong lớp giữa giờ học thì tự động bị ghi tên; thầy cô ghi tên học sinh có mặt kèm lý do; bị ghi tên thì hôm sau điểm danh không được tiền ăn vặt | P2 | ✅ |
+| YC-LH-12 | Lớp học vừa chiều ngang điện thoại, thấy trọn tường đầu lớp và cuối lớp (không bị thanh trên, thanh chat che) | P1 | ✅ |
+| YC-LH-13 | Hotspot chạm được ở **cả nhãn lẫn đồ vật** (cửa lớp, bảng, áp phích, bàn giáo viên, giá sách) | P1 | ✅ |
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
 
 ### 4.6 Hoạt động trong trường
@@ -256,7 +262,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-NV | `avatar.js` (tư thế ngồi), `main.js` (`avatarEditor`), `world.js` (`_nameTag`, `sitOn`, `seatAt`) | "presence mang cảnh… và trạng thái ngồi" | Ngồi ghế đá, ngồi ghế trong lớp; người khác thấy "(ngồi)" |
 | YC-SD | `campus.js` (`FLOWERBEDS`, `BENCHES`, `SEATS`), `world.js` (`Grid`, `CAMPUS_SCENE`, `drawOverview`) | – | Script tìm đường tới 30 điểm + 20 chỗ ngồi trên sân, 4 điểm + 24 chỗ ngồi trong lớp |
 | YC-OL | `logic.js` (`presence`, `online`), `world.js` (`updateOthers`, `throwBalloon`), `main.js` (`balloonPicker`) | "presence trả về người khác…" (gồm cú ném bóng nước) | 2 người thấy nhau, lời nói, chọn người trong danh sách rồi ném bóng nước trúng |
-| YC-LH | `classroom.js`, `logic.js` (`guestbook`, `sign`, `roster`, `attend`, `quiz`), `main.js` (`panels.enterClass`, `panels.class`) | "lưu bút, sổ đầu bài, bảng thi đua", "đố vui giới hạn…" | 2 người vào lớp Toán thấy nhau, ngồi, mở đố vui, ra khỏi lớp về đúng cửa |
+| YC-LH | `classroom.js`, `logic.js` (`guestbook`, `sign`, `roster`, `attend`, `quiz`, `classlog`, `classlogAct`), `main.js` (`panels.enterClass`, `panels.classBoard`, `classLogSheet`, `panels.class`) | "lưu bút, sổ đầu bài, bảng thi đua", "đố vui giới hạn…", "sổ đầu bài: có mặt, ghi chú, nộp sổ…" | Chạm cánh cửa lớp Toán → vào lớp; ngồi → ký có mặt; ghi chú, kiểm tra vở, nộp sổ; bạn lớp Văn vào thăm thấy nhau và xem sổ; ra sân về đúng cửa |
 | YC-HD | `logic.js` (`checkin`, `menu`, `buy`, `events`, `createEvent`, `joinEvent`, `score`, `albumPost`, `album`, `photo`), `games.js`, `main.js` (`bookSheet`, `panels.photo`, `composeYearbook`, `albumSheet`) | "đăng ký… điểm danh, mua đồ", "giờ ra chơi giảm 20%", "họp lớp: tạo, đăng ký, huỷ", "album kỷ yếu…" | Điểm danh, mua đồ, tạo họp lớp, đá cầu, chụp và đăng ảnh, ký sổ lưu bút |
 | YC-TD | `logic.js` (`khoaBoard`, `leaderboard`, `POINTS`) | "lưu bút, sổ đầu bài, bảng thi đua" | Mở bảng tin |
 | YC-AT | `logic.js` (`SCHEDULE`, `periodOf`), `main.js` (`music`, `beatDrum`) | "giờ ra chơi giảm 20%" (gồm `periodOf`) | Bấm 🎵 phát/dừng/tắt |

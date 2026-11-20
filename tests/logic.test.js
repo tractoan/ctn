@@ -249,3 +249,59 @@ test('chào cờ chỉ sáng thứ Hai, tặng hoa mỗi ngày một bó', async
   assert.equal(f.today, 2);
   assert.equal(f.recent[f.recent.length - 1].to, 'Cô Lan');
 });
+
+test('sổ đầu bài: có mặt, ghi chú, nộp sổ, kiểm tra vở, điểm miệng, ghi tên vi phạm', async () => {
+  const s = memStore();
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' })).body;
+  const b = (await call(s, 'register', { name: 'Bình', role: 'cuuhs', khoa: 'K21', lop: 'Toán' })).body;
+  const v = (await call(s, 'register', { name: 'Chi', role: 'cuuhs', khoa: 'K21', lop: 'Văn' })).body;
+  const gv = (await call(s, 'register', { name: 'Cô Hà', role: 'gv' })).body;
+  // tìm một thời điểm đang trong tiết học
+  let now = Date.UTC(2026, 5, 2, 0, 0);
+  while (!periodOf(now).label.startsWith('Tiết')) now += 5 * 60e3;
+
+  await call(s, 'act', { kind: 'classSit', value: 'Toán' }, a.token, now);
+  await call(s, 'act', { kind: 'classSit', value: 'Toán' }, b.token, now + 1000);
+  let log = (await call(s, 'classlog', { lop: 'Toán' }, a.token, now)).body;
+  assert.deepEqual(log.present.map((x) => x.name), ['An', 'Bình']);
+  assert.equal(log.present[0].mine, true);
+  assert.equal(log.present[0].label, 'K20 · Toán');
+  assert.equal(log.canWrite, true);
+
+  // học sinh lớp khác không ghi được
+  assert.equal((await call(s, 'classlogAct', { lop: 'Toán', kind: 'note', text: 'x' }, v.token, now)).status, 403);
+  // chưa ghi bài thì cô chưa khen
+  assert.equal((await call(s, 'classlogAct', { lop: 'Toán', kind: 'notebook' }, a.token, now)).body.today, false);
+  await call(s, 'classlogAct', { lop: 'Toán', kind: 'note', text: 'Học đạo hàm' }, a.token, now);
+  const nb = (await call(s, 'classlogAct', { lop: 'Toán', kind: 'notebook' }, a.token, now)).body;
+  assert.equal(nb.today, true); assert.equal(nb.fresh, true);
+  assert.equal((await call(s, 'classlogAct', { lop: 'Toán', kind: 'notebook' }, a.token, now)).body.fresh, false);
+
+  // nộp sổ: người đầu tiên được điểm
+  const s1 = (await call(s, 'classlogAct', { lop: 'Toán', kind: 'submit' }, b.token, now)).body;
+  assert.equal(s1.fresh, true);
+  const s2 = (await call(s, 'classlogAct', { lop: 'Toán', kind: 'submit' }, a.token, now)).body;
+  assert.equal(s2.fresh, false); assert.equal(s2.by, 'Bình');
+
+  // điểm miệng
+  await call(s, 'score', { game: 'baicu', score: 100, lop: 'Toán' }, a.token, now);
+
+  // ném bóng nước trong lớp giữa giờ học → bị ghi tên, hôm sau không có tiền ăn vặt
+  const hit = (await call(s, 'act', { kind: 'hit', value: 'x', scene: 'lop:Toán' }, b.token, now)).body;
+  assert.match(hit.msg, /ghi tên/);
+  // thầy cô ghi tên
+  assert.equal((await call(s, 'classlogAct', { lop: 'Toán', kind: 'writeup', target: a.user.id, reason: 'Nói chuyện' }, b.token, now)).status, 403);
+  assert.equal((await call(s, 'classlogAct', { lop: 'Toán', kind: 'writeup', target: a.user.id, reason: 'Nói chuyện' }, gv.token, now)).status, 200);
+
+  log = (await call(s, 'classlog', { lop: 'Toán' }, '', now)).body;
+  assert.equal(log.notes[0].text, 'Học đạo hàm');
+  assert.equal(log.submit.name, 'Bình');
+  assert.deepEqual(log.orals, [{ name: 'An', grade: 10 }]);
+  assert.deepEqual(log.writeups.map((x) => [x.name, x.by]).sort(), [['An', 'Cô Hà'], ['Bình', '']]);
+  assert.equal(log.canWrite, false);
+  assert.deepEqual(log.days, [log.today]);
+
+  const next = (await call(s, 'checkin', {}, b.token, now + 86400e3)).body;
+  assert.equal(next.punished, true);
+  assert.equal(next.user.wallet, 0);
+});

@@ -34,7 +34,7 @@ export const MENU = [
 export const DAILY_ALLOWANCE = 20000;
 const PRESENCE_TTL = 20000;
 
-const POINTS = { checkin: 2, guestbook: 5, event: 3, join: 3, quiz: 1, game: 1, classSit: 10, flag: 20, treat: 3, flower: 5, ach: 20 };
+const POINTS = { checkin: 2, guestbook: 5, event: 3, join: 3, quiz: 1, game: 1, classSit: 10, flag: 20, treat: 3, flower: 5, ach: 20, submit: 10, notebook: 5 };
 
 // ---------- Tiến trình: nhiệm vụ ngày, thành tựu, ví ----------
 export const TRANSPORTS = {
@@ -105,6 +105,22 @@ export const ACHIEVEMENTS = [
   A(5, 'points5000', 'Học bổng toàn phần', 'Đạt 5.000 điểm thi đua.', 'points', 5000),
 ];
 ACHIEVEMENTS.push({ tier: 6, id: 'legend', title: 'Huyền thoại Chuyên Thái Nguyên', desc: `Nhận đủ ${ACHIEVEMENTS.length} thành tựu khác.`, stat: 'achCount', n: ACHIEVEMENTS.length, reward: 200000 });
+
+export const CLASS_RULES = [
+  'Đi học đúng giờ, ra vào lớp xin phép thầy cô.',
+  'Mặc đồng phục, đeo thẻ học sinh.',
+  'Giữ trật tự, muốn phát biểu thì giơ tay.',
+  'Giữ gìn vệ sinh, không viết vẽ lên bàn ghế.',
+  'Không ném bóng nước trong giờ học.',
+  'Đoàn kết, giúp đỡ bạn bè, lễ phép với thầy cô.',
+];
+export const BAC_HO = [
+  'Yêu Tổ quốc, yêu đồng bào.',
+  'Học tập tốt, lao động tốt.',
+  'Đoàn kết tốt, kỷ luật tốt.',
+  'Giữ gìn vệ sinh thật tốt.',
+  'Khiêm tốn, thật thà, dũng cảm.',
+];
 
 export const LOVE_LINES = [
   'Cậu là crush của mình đó, biết không?',
@@ -261,6 +277,27 @@ function normKhoa(v, role) {
   return s;
 }
 
+// ---------- Sổ đầu bài: theo lớp chuyên, theo ngày (đổi ngày lúc 5 giờ sáng) ----------
+// Bảng `clog`, khóa `${lop}|${ngày}|${loại}|${id}`: p = có mặt, n = ghi chú buổi học, o = điểm miệng,
+// s = nộp sổ (một bản ghi mỗi ngày), w = ghi tên vi phạm. Bảng `clogday` liệt kê các ngày có ghi chép.
+function personLabel(u) {
+  if (u.role === 'gv') return 'Thầy cô';
+  if (u.role === 'khach' || u.role === 'em') return 'Khách';
+  return [u.khoa, u.lop].filter(Boolean).join(' · ');
+}
+async function clogPut(ctx, lop, day, kind, id, v) {
+  await ctx.store.put('clog', `${lop}|${day}|${kind}|${id}`, v);
+  if (!(await ctx.store.get('clogday', `${lop}|${day}`))) await ctx.store.put('clogday', `${lop}|${day}`, { day });
+}
+async function tokenUser(ctx) { try { return ctx.token ? await auth(ctx) : null; } catch { return null; } }
+function lopParam(b) {
+  const lop = str(b.lop, 10, true, 'lớp');
+  if (!LOPS.includes(lop)) throw new ApiError(400, 'Lớp không hợp lệ');
+  return lop;
+}
+function canWriteLog(u, lop) { return NO_CLASS.includes(u.role) || u.lop === lop; }
+function isLessonTime(now) { return periodOf(now).label.startsWith('Tiết'); }
+
 const handlers = {
   async ping() { return { ok: true, school: 'THPT Chuyên Thái Nguyên' }; },
 
@@ -373,6 +410,69 @@ const handlers = {
     return { ok: true };
   },
 
+  // Xem sổ đầu bài một ngày của một lớp
+  async classlog(ctx, b) {
+    const lop = lopParam(b);
+    const today = questDay(ctx.now);
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(b.day || '') ? b.day : today;
+    const me = await tokenUser(ctx);
+    const rows = (await ctx.store.list('clog', `${lop}|${day}|`, 500)).map((r) => ({ kind: r.k.split('|')[2], id: r.k.split('|')[3], v: r.v }));
+    const of = (k) => rows.filter((r) => r.kind === k).sort((a, c) => a.v.at - c.v.at);
+    const days = (await ctx.store.list('clogday', `${lop}|`, 400)).map((r) => r.v.day).sort().reverse().slice(0, 30);
+    const sub = of('s')[0];
+    return {
+      lop, day, today, days,
+      present: of('p').map(({ id, v }) => ({ id, name: v.name, label: v.label, at: v.at, mine: !!me && me.id === id })),
+      notes: of('n').map(({ id, v }) => ({ name: v.name, text: v.text, at: v.at, mine: !!me && me.id === id })),
+      orals: of('o').map(({ v }) => ({ name: v.name, grade: v.grade })),
+      submit: sub ? { name: sub.v.name, at: sub.v.at } : null,
+      writeups: of('w').map(({ v }) => ({ name: v.name, label: v.label, reason: v.reason, by: v.by, at: v.at, mine: !!me && me.id === v.uid })),
+      canWrite: !!me && canWriteLog(me, lop), isTeacher: !!me && me.role === 'gv',
+    };
+  },
+
+  // Ghi sổ đầu bài: ghi chú buổi học, nộp sổ, cô kiểm tra vở ghi, thầy cô ghi tên vi phạm
+  async classlogAct(ctx, b) {
+    const u = await auth(ctx);
+    const lop = lopParam(b);
+    const kind = str(b.kind, 12);
+    const day = questDay(ctx.now);
+    if (kind === 'note') {
+      if (!canWriteLog(u, lop)) throw new ApiError(403, `Chỉ học sinh lớp chuyên ${lop} mới ghi được sổ đầu bài lớp này`);
+      const t = text(b.text, 200, 'Ghi chú');
+      await clogPut(ctx, lop, day, 'n', u.id, { name: u.name, text: t, at: ctx.now });
+      u.notes = [{ lop, day, text: t }, ...(u.notes || []).filter((x) => !(x.lop === lop && x.day === day))].slice(0, 10);
+      await ctx.store.put('user', u.id, u);
+      return { ok: true, user: privateUser(u) };
+    }
+    if (kind === 'submit') {
+      if (!canWriteLog(u, lop)) throw new ApiError(403, `Chỉ học sinh lớp chuyên ${lop} mới nộp được sổ lớp này`);
+      const cur = await ctx.store.get('clog', `${lop}|${day}|s|0`);
+      if (cur) return { fresh: false, by: cur.name, at: cur.at, user: privateUser(u) };
+      await clogPut(ctx, lop, day, 's', '0', { name: u.name, at: ctx.now });
+      await addPoints(ctx, u, 'submit');
+      return { fresh: true, user: privateUser(u) };
+    }
+    if (kind === 'notebook') {
+      const notes = (u.notes || []).filter((x) => x.lop === lop);
+      const has = notes.some((x) => x.day === day);
+      let fresh = false;
+      if (has && u.today.notebook !== lop) { u.today.notebook = lop; fresh = true; await addPoints(ctx, u, 'notebook'); }
+      return { today: has, fresh, notes, user: privateUser(u) };
+    }
+    if (kind === 'writeup') {
+      if (u.role !== 'gv') throw new ApiError(403, 'Chỉ thầy cô mới được ghi tên học sinh');
+      const target = await ctx.store.get('user', str(b.target, 20, true, 'học sinh'));
+      if (!target) throw new ApiError(400, 'Không tìm thấy học sinh');
+      const reason = text(b.reason, 120, 'Lý do');
+      await clogPut(ctx, lop, day, 'w', target.id, { uid: target.id, name: target.name, label: personLabel(target), reason, by: u.name, at: ctx.now });
+      target.writeupDay = day;
+      await ctx.store.put('user', target.id, target);
+      return { ok: true };
+    }
+    throw new ApiError(400, 'Thao tác không hợp lệ');
+  },
+
   async checkin(ctx, b) {
     const u = await auth(ctx);
     const today = questDay(ctx.now);
@@ -385,11 +485,12 @@ const handlers = {
     u.lastCheckin = today;
     u.transport = TRANSPORTS[b.transport] ? b.transport : 'xedap';
     u.today.checkin = true;
-    credit(u, DAILY_ALLOWANCE, '👪 Bố mẹ cho tiền ăn vặt', ctx.now);
+    const punished = u.writeupDay === yesterday;
+    if (!punished) credit(u, DAILY_ALLOWANCE, '👪 Bố mẹ cho tiền ăn vặt', ctx.now);
     let bonus = 0;
     if (st.streak % 5 === 0) { bonus = 10000; credit(u, bonus, `🔥 Thưởng đi học đều ${st.streak} ngày`, ctx.now); }
     await addPoints(ctx, u, 'checkin');
-    return { already: false, gained: DAILY_ALLOWANCE, bonus, streak: st.streak, transport: u.transport, user: privateUser(u) };
+    return { already: false, gained: punished ? 0 : DAILY_ALLOWANCE, punished, bonus, streak: st.streak, transport: u.transport, user: privateUser(u) };
   },
 
   async menu(ctx) {
@@ -517,6 +618,10 @@ const handlers = {
       best = score;
       await ctx.store.put('score', key, { id: u.id, name: u.name, khoa: u.khoa, lop: u.lop, score, at: ctx.now });
     }
+    if (game === 'baicu' && LOPS.includes(b.lop)) {
+      const day = questDay(ctx.now);
+      await clogPut(ctx, b.lop, day, 'o', u.id, { name: u.name, label: personLabel(u), grade: Math.round(score / 10), at: ctx.now });
+    }
     const g = GAMES[game];
     u.stats.games++; u.today.game = true;
     if (g && !u.stats.gameKinds.includes(game)) u.stats.gameKinds.push(game);
@@ -541,14 +646,25 @@ const handlers = {
       const lop = str(b.value, 10);
       const ok = NO_CLASS.includes(u.role) ? LOPS.includes(lop) : lop === u.lop;
       if (!ok) return { ok: false, user: privateUser(u) };
+      const day = questDay(ctx.now);
+      if (!(await ctx.store.get('clog', `${lop}|${day}|p|${u.id}`))) await clogPut(ctx, lop, day, 'p', u.id, { name: u.name, label: personLabel(u), at: ctx.now });
       if (!t.classSit) {
         t.classSit = true; st.classDays++;
         u.points = (u.points || 0) + POINTS.classSit;
-        msg = `✍️ Đã điểm danh có mặt ở lớp ${lop}. +${POINTS.classSit} điểm`;
+        msg = `✍️ Đã điểm danh có mặt ở lớp ${lop}, tên bạn đã vào sổ đầu bài. +${POINTS.classSit} điểm`;
       }
     } else if (kind === 'hit') {
       t.hitCount = (t.hitCount || 0) + 1;
       if (t.hitCount <= 40) { st.hits++; t.hit = true; }
+      // ném bóng nước trong lớp giữa giờ học: tự động bị ghi tên vào sổ đầu bài
+      const scene = str(b.scene, 20);
+      const lop = scene.startsWith('lop:') ? scene.slice(4) : '';
+      if (LOPS.includes(lop) && isLessonTime(ctx.now)) {
+        const day = questDay(ctx.now);
+        await clogPut(ctx, lop, day, 'w', u.id, { uid: u.id, name: u.name, label: personLabel(u), reason: 'Ném bóng nước trong giờ học', by: '', at: ctx.now });
+        u.writeupDay = day;
+        msg = '📛 Ném bóng nước trong giờ học: bị ghi tên vào sổ đầu bài! Mai bố mẹ không cho tiền ăn vặt.';
+      }
     } else if (kind === 'diploma') {
       st.diploma = 1;
     } else throw new ApiError(400, 'Sự kiện không hợp lệ');

@@ -15,7 +15,7 @@ ghé lớp cũ, viết lưu bút, đăng ký họp lớp và thi đua giữa cá
 | **Dãy nhà 5 tầng** (ngay sau cổng) | Lớp chuyên (phải → trái) Tin, Nga, Pháp – cửa ở mặt trong, quay vào sân trường |
 | **Dãy nhà 4 tầng** (chữ L, hàng cây phượng – bằng lăng) | Lớp chuyên (trái → phải) Toán, Lý, Hóa, Sinh, Văn, Trung |
 | **Dãy nhà 3 tầng** | Lớp chuyên (trái → phải) Anh, Sử, Địa |
-| Trong mỗi lớp | Vào hẳn trong phòng: bảng đen (đố vui), bàn giáo viên (sổ đầu bài), tủ sách (lưu bút theo khóa), 24 chỗ ngồi; thấy bạn đang ở cùng lớp |
+| Trong mỗi lớp | Chạm cửa lớp (có biển tên) để vào phòng: bảng lớp (lưu bút, sổ đầu bài, đố vui, kiểm tra bài cũ, kiểm tra vở, nộp sổ), Nội quy, 5 điều Bác Hồ dạy, 36 chỗ ngồi (ngồi là ký sổ có mặt), hành lang, ban công; thấy bạn đang ở cùng lớp |
 | Sân trường (cao, có bậc thang) | Sân khấu có cột cờ ở giữa, bảng tin thi đua theo khóa/lớp, ghế đá; trống trường giữa dãy 5 tầng (bấm để đánh trống) |
 | Sân đá cầu | Trò đá cầu có bảng xếp hạng |
 | Nhà đa năng | Gian các CLB |

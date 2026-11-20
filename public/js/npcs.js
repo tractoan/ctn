@@ -54,9 +54,9 @@ const TEACHERS = ['Cô Thu', 'Cô Hằng', 'Cô Phương', 'Cô Yến', 'Cô H�
 export function classNpcs(lop) {
   let k = 0; for (const ch of lop) k = (k * 31 + ch.charCodeAt(0)) >>> 0;
   return [{
-    id: 'npc-gvcn', scene: 'lop:' + lop, name: TEACHERS[k % TEACHERS.length], sub: 'Cô · Chủ nhiệm', x: 560, y: 178, dir: 1, panel: 'oldLesson', lop,
+    id: 'npc-gvcn', scene: 'lop:' + lop, name: TEACHERS[k % TEACHERS.length], sub: 'Cô · Chủ nhiệm', x: 300, y: 192, dir: 1, panel: 'oldLesson', lop,
     look: L({ gender: 'nu', hair: 7, hairColor: k % 3, outfit: 'aodai', skin: k % 2 }),
-    update: walker([[400, 178], [660, 178]], 18),
+    update: walker([[262, 192], [470, 192]], 16),
     lines: ['Cả lớp trật tự nào!', 'Em nào chưa làm bài tập về nhà?', 'Hôm nay lớp mình ôn bài cũ nhé.', 'Nhớ ký sổ đầu bài đầy đủ.', 'Ai lên bảng giải bài này nào?', 'Cô tự hào về lớp mình lắm.', 'Ra chơi đừng ném bóng nước trong lớp!', 'Cả lớp về đông đủ chưa nào?'],
   }];
 }

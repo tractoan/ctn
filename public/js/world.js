@@ -316,8 +316,19 @@ function drawDoor(ctx, d) {
   ctx.fillStyle = '#7A4B2A';
   if (d.side === 'e') ctx.fillRect(d.x - 27, d.y - 14, 6, 28);
   if (d.side === 'w') ctx.fillRect(d.x + 21, d.y - 14, 6, 28);
-  if (d.side === 's') ctx.fillRect(d.x - 14, d.y - 27, 28, 6);
+  if (d.side === 's') {
+    // cửa lớp ở chân mặt tiền: khung trắng, cánh gỗ, biển tên lớp màu xanh phía trên
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(d.x - 12, d.y - 52, 24, 27);
+    ctx.fillStyle = '#8A5A35'; ctx.fillRect(d.x - 10, d.y - 50, 20, 25);
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(d.x - 0.5, d.y - 50, 1, 25);
+    ctx.fillStyle = '#F2D27A'; ctx.fillRect(d.x + 5, d.y - 39, 2, 2);
+  }
   if (d.side === 'n') ctx.fillRect(d.x - 14, d.y + 27, 28, 6);
+  if (d.lop) {
+    const y = d.side === 's' ? d.y - 62 : d.y + 16;
+    rr(ctx, d.x - 22, y - 6, 44, 12, 3); ctx.fillStyle = '#2F6FB5'; ctx.fill();
+    label(ctx, d.lop.toUpperCase(), d.x, y, { size: 7.5, color: '#fff', weight: 800 });
+  }
 }
 
 function drawTree(ctx, t, time) {
@@ -539,13 +550,15 @@ export const CAMPUS_SCENE = {
       ctx.fillStyle = '#F6F5F1';
       if (w.w > w.h) ctx.fillRect(w.x, w.y, w.w, 3); else ctx.fillRect(w.x, w.y, 3, w.h);
     }
-    for (const d of CLASS_DOORS) drawDoor(ctx, d);
+    // cửa mặt nam vẽ sau toà nhà (trong statics) để nằm trên mặt tiền
+    for (const d of CLASS_DOORS) if (d.side !== 's') drawDoor(ctx, d);
     for (const d of ROOM_DOORS) drawDoor(ctx, d);
   },
   lamps: LAMPS,
   statics(ctx, now) {
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
+    for (const d of CLASS_DOORS) if (d.side === 's') items.push({ y: d.y - 25, draw: () => drawDoor(ctx, d) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
     for (const b of BENCHES) items.push({ y: b.y - 1, draw: () => drawBench(ctx, b) });
     items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
@@ -570,6 +583,8 @@ export class World {
     this.path = [];
     this.target = null; // hotspot đang đi tới
     this.zoom = 1;
+    // phần màn hình bị thanh trên / thanh chat che (px), để lớp học căn vào vùng nhìn thấy
+    this.insets = { top: 56, bottom: 0 };
     this.cam = { x: 0, y: 0 };
     this.labelRects = [];
     this.onArrive = () => {};
@@ -614,7 +629,7 @@ export class World {
     this.bg = c;
     this.others.clear(); this.fx = []; this.path = []; this.target = null;
     // lớp học: thu nhỏ cho vừa chiều ngang màn hình; ra sân thì về mức bình thường
-    this.zoom = scene.fit ? Math.max(0.68, Math.min(1, this.vw / (scene.w * this.baseZoom))) : 1;
+    this.zoom = scene.fit ? Math.max(scene.fitMin || 0.68, Math.min(1, this.vw / (scene.w * this.baseZoom))) : 1;
     if (this.me && pos) { this.me.x = pos.x; this.me.y = pos.y; this.me.sit = null; this._snapCam(); }
     this.onSceneChange(scene);
   }
@@ -716,12 +731,16 @@ export class World {
       const sx = e.clientX - r.left, sy = e.clientY - r.top;
       for (const lr of this.labelRects) {
         if (sx >= lr.x && sx <= lr.x + lr.w && sy >= lr.y && sy <= lr.y + lr.h) {
-          if (lr.player) this.onTapPlayer(lr.player); else if (lr.npc) this.onTapNpc(lr.npc); else this.goToHotspot(lr.h);
+          if (lr.player) this.onTapPlayer(lr.player); else if (lr.npc) this.onTapNpc(lr.npc); else this.goToHotspot(lr.hs);
           return;
         }
       }
       const z = this.baseZoom * this.zoom;
-      const seat = this.seatAt(this.cam.x + sx / z, this.cam.y + sy / z);
+      const wx = this.cam.x + sx / z, wy = this.cam.y + sy / z;
+      // chạm vào chính đồ vật (cửa lớp, bảng, áp phích, bàn giáo viên…) cũng như chạm nhãn
+      const hit = this.scene.hotspots.find((h) => h.rect && wx >= h.rect.x && wx <= h.rect.x + h.rect.w && wy >= h.rect.y && wy <= h.rect.y + h.rect.h);
+      if (hit) { this.goToHotspot(hit); return; }
+      const seat = this.seatAt(wx, wy);
       if (seat) { this.walkTo(seat.x, seat.y, { sit: seat }); return; }
       this.walkTo(this.cam.x + sx / z, this.cam.y + sy / z);
       this.tapFx = { x: this.cam.x + sx / z, y: this.cam.y + sy / z, t: performance.now() };
@@ -786,10 +805,14 @@ export class World {
     this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 6);
     const W = this.scene.w, H = this.scene.h;
     // cảnh nhỏ hơn màn hình thì căn giữa
-    if (W * z < this.vw) this.cam.x = (W - this.vw / z) / 2;
-    else this.cam.x = Math.max(-100, Math.min(W - this.vw / z + 100, this.cam.x));
-    if (H * z < this.vh) this.cam.y = (H - this.vh / z) / 2;
-    else this.cam.y = Math.max(-100, Math.min(H - this.vh / z + 60, this.cam.y));
+    // lớp học (fit) không cho thấy khoảng tối ngoài phòng; sân trường cho lố ra một chút
+    const m = this.scene.fit ? 0 : 100;
+    if (W * z <= this.vw + 2) this.cam.x = (W - this.vw / z) / 2;
+    else this.cam.x = Math.max(-m, Math.min(W - this.vw / z + m, this.cam.x));
+    // lớp học: tính cả phần bị thanh trên (HUD) và thanh chat che để thấy trọn tường đầu và cuối lớp
+    const top = this.scene.fit ? this.insets.top : 0, bot = this.scene.fit ? this.insets.bottom : 0;
+    if (H * z <= this.vh - top - bot + 2) this.cam.y = -(top + (this.vh - top - bot - H * z) / 2) / z;
+    else this.cam.y = Math.max(this.scene.fit ? -top / z : -m, Math.min(H - (this.vh - bot) / z + (this.scene.fit ? 0 : 60), this.cam.y));
   }
 
   _loop(now) {
@@ -855,6 +878,7 @@ export class World {
     this.labelRects = [];
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     for (const h of this.scene.hotspots) {
+      if (h.nolabel) continue; // đồ vật đã có chữ (bảng, áp phích): chạm thẳng vào đồ vật
       const near = this.me && Math.hypot(this.me.x - h.x, this.me.y - h.y) < 60;
       // khi nhân vật đứng tại điểm, đẩy nhãn xuống dưới chân để không che người
       const sx = (h.x - this.cam.x) * z, sy = (h.y - this.cam.y) * z + (near ? 24 : h.small ? -18 : -34) * z;
@@ -862,7 +886,7 @@ export class World {
       const txt = `${h.icon} ${h.label}`;
       const size = h.small ? 11 : 12;
       const w = label(ctx, txt, sx, sy, { size, color: h.small ? '#1B2A4E' : '#fff', bg: h.small ? 'rgba(255,255,255,.92)' : near ? '#D8343A' : 'rgba(27,42,78,.88)', weight: 700, pad: 6 });
-      this.labelRects.push({ x: sx - w / 2, y: sy - size / 2 - 8, w, h: size + 16, h_: 0, h });
+      this.labelRects.push({ x: sx - w / 2, y: sy - size / 2 - 8, w, h: size + 16, hs: h });
     }
     // chạm vào người khác
     for (const o of this.others.values()) {
@@ -1025,6 +1049,7 @@ export class World {
     if (this.bg) ctx.drawImage(this.bg, 0, 0);
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
+    for (const d of CLASS_DOORS) if (d.side === 's') items.push({ y: d.y - 25, draw: () => drawDoor(ctx, d) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
     items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
     items.push({ y: DRUM.y, draw: () => drawDrum(ctx) });

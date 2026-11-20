@@ -1,5 +1,5 @@
 import { api, getToken, setToken, getMode } from './api.js';
-import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS } from './logic.js';
+import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS, CLASS_RULES, BAC_HO } from './logic.js';
 import { World, CAMPUS_SCENE } from './world.js';
 import { classroomScene } from './classroom.js';
 import { SPAWN, HOTSPOTS, PLACES } from './campus.js';
@@ -290,6 +290,12 @@ function enterSchool() {
   );
 
   world = new World(canvas);
+  const measure = () => {
+    const hud = app.querySelector('.hud'), bar = app.querySelector('.chatbar'), r = canvas.getBoundingClientRect();
+    world.insets = { top: hud ? Math.max(0, hud.getBoundingClientRect().bottom - r.top) : 56, bottom: bar ? Math.max(0, r.bottom - bar.getBoundingClientRect().top) : 0 };
+  };
+  requestAnimationFrame(measure);
+  window.addEventListener('resize', measure);
   world.setMe({ ...loadPos(), look: me.look, name: me.name, sub: '' });
   world.me.sub = world.subOf(me);
   world.npcs = campusNpcs();
@@ -298,7 +304,10 @@ function enterSchool() {
   world.onTapNpc = (n) => npcSheet(n);
   world.onSay = (p, text) => addFeed(p.name, text);
   world.onSit = (seat) => onSit(seat);
-  world.onHitOther = (id) => { sfx.splash(); if (!me.guest) call('act', { kind: 'hit', value: id }).then((r) => setMe(r.user)).catch(() => {}); };
+  world.onHitOther = (id) => {
+    sfx.splash();
+    if (!me.guest) call('act', { kind: 'hit', value: id, scene: world.scene.id }).then((r) => { setMe(r.user); if (r.msg) toast(r.msg, 'bad'); }).catch(() => {});
+  };
   world.myId = me.id || '';
   world.onSceneChange = (scene) => {
     zoneEl.textContent = scene.id === 'campus' ? (ZONES[world.zoneOf(world.me.x, world.me.y)] || 'Sân trường') : scene.name;
@@ -523,7 +532,8 @@ const panels = {
             if (r.already) { out.replaceChildren(ticket(r), h('p', { class: 'ok' }, 'Hôm nay bạn đã điểm danh rồi.')); return; }
             sfx.coin();
             out.replaceChildren(ticket(r),
-              h('p', { class: 'ok big' }, `👪 Bố mẹ cho ${money(r.gained)} ăn vặt hôm nay!`),
+              r.punished ? h('p', { class: 'err' }, '📛 Hôm qua bị ghi tên vào sổ đầu bài nên hôm nay bố mẹ không cho tiền ăn vặt!')
+                : h('p', { class: 'ok big' }, `👪 Bố mẹ cho ${money(r.gained)} ăn vặt hôm nay!`),
               r.bonus ? h('p', { class: 'ok' }, `🔥 Đi học đều ${r.streak} ngày: thưởng thêm ${money(r.bonus)}!`) : null,
               h('p', { class: 'muted' }, k === 'bus' ? '🚌 Xe bus miễn phí! ' : k === 'dibo' ? '🚶 Đi bộ cho khỏe! ' : '', 'Trong ví: ' + money(me.wallet)));
             world.say('me', `${t.icon} Đến trường rồi!`);
@@ -784,12 +794,65 @@ const panels = {
   enterClass(hs) {
     classReturn = { x: hs.x, y: hs.y };
     world.npcs = [...world.npcs.filter((n) => n.scene === 'campus'), ...classNpcs(hs.lop)];
-    world.setScene(classroomScene(hs.lop), classroomScene(hs.lop).spawn);
+    const sc = classroomScene(hs.lop);
+    world.setScene(sc, sc.spawn);
     sfx.click();
-    toast(`Vào lớp chuyên ${hs.lop}. Chạm ghế để ngồi, chạm bảng đen để đố vui.`);
+    const mine = !me.guest && (me.lop === hs.lop || ['gv', 'khach', 'em'].includes(me.role));
+    toast(mine ? `Vào lớp chuyên ${hs.lop}. Ngồi vào ghế để ký sổ đầu bài, chạm bảng lớp để xem lưu bút, đố vui…`
+      : `Lớp chuyên ${hs.lop}. Chạm ghế để ngồi, chạm bảng lớp để xem lưu bút, sổ đầu bài, đố vui.`);
   },
 
   exitClass() { backToCampus(); },
+
+  // Bảng lớp: menu giống bảng đen của lớp
+  classBoard(hs) {
+    const lop = hs.lop;
+    openSheet('🖍️ Lớp chuyên ' + lop, (b) => {
+      const msg = h('div', {});
+      const notes = h('div', {});
+      const need = () => { if (me.guest) { closeSheet(); createFlow(); return true; } return false; };
+      const item = (icon, title, sub, fn) => h('button', { class: 'board-item', onclick: fn }, h('span', { class: 'bi-icon' }, icon), h('span', {}, h('b', {}, title), h('small', {}, sub)));
+      b.append(h('div', { class: 'board-menu' },
+        item('✍️', 'Lưu bút lớp', 'Viết vài dòng cho bạn cùng lớp', () => panels.class({ lop, tab: 0 })),
+        item('📒', 'Sổ đầu bài', 'Sĩ số, ghi chú, điểm miệng, vi phạm hôm nay', () => classLogSheet(lop)),
+        item('❓', 'Đố vui về lớp', 'Có bảng xếp hạng riêng', () => panels.class({ lop, tab: 2 })),
+        item('🙋', 'Kiểm tra bài cũ', '2 câu hỏi nhanh, điểm miệng ghi vào sổ đầu bài', () => {
+          const t = world.npcs.find((n) => n.id === 'npc-gvcn');
+          oldLessonSheet({ name: t ? t.name : 'Cô chủ nhiệm', lop });
+        }),
+        item('📓', 'Kiểm tra vở ghi', 'Cô xem ghi chú buổi học hôm nay của bạn', async () => {
+          if (need()) return;
+          try {
+            const r = await call('classlogAct', { lop, kind: 'notebook' });
+            setMe(r.user);
+            if (r.fresh) sfx.coin();
+            msg.replaceChildren(h('div', { class: r.today ? 'ok-box' : 'warn-box' }, r.today
+              ? (r.fresh ? '👩‍🏫 Cô khen: vở ghi hôm nay đầy đủ! +5 điểm thi đua.' : '👩‍🏫 Hôm nay cô kiểm tra vở của em rồi, vẫn đầy đủ nhé!')
+              : '👩‍🏫 Hôm nay em chưa ghi bài! Mở Sổ đầu bài, viết "Ghi chú buổi học" rồi quay lại cho cô kiểm tra nhé.'));
+            notes.replaceChildren(r.notes.length ? h('ul', { class: 'notes' }, ...r.notes.map((n) => h('li', {}, h('b', {}, dayText(n.day)), ': ', n.text))) : '');
+          } catch (e) { toast(e.message, 'bad'); }
+        }),
+        item('📤', 'Nộp sổ đầu bài', 'Người đầu tiên nộp sổ hôm nay được +10 điểm', async () => {
+          if (need()) return;
+          try {
+            const r = await call('classlogAct', { lop, kind: 'submit' });
+            setMe(r.user);
+            if (r.fresh) sfx.coin();
+            msg.replaceChildren(h('div', { class: r.fresh ? 'ok-box' : 'warn-box' }, r.fresh ? '📤 Bạn đã nộp sổ đầu bài hôm nay. +10 điểm thi đua!'
+              : `Sổ đầu bài hôm nay đã được ${r.by} nộp lúc ${clock(r.at)}.`));
+          } catch (e) { msg.replaceChildren(h('div', { class: 'warn-box' }, e.message)); }
+        })), msg, notes);
+    });
+  },
+
+  classRules() { boardText('📋 Nội quy lớp học', CLASS_RULES, false, 'Ném bóng nước trong giờ học sẽ bị ghi tên vào sổ đầu bài, hôm sau bố mẹ không cho tiền ăn vặt.'); },
+  classBacHo() { boardText('⭐ 5 điều Bác Hồ dạy', BAC_HO, true); },
+  classLog(hs) { classLogSheet(hs.lop); },
+  balcony() {
+    sfx.whoosh();
+    toast('🌤️ Ra ban công hóng gió, nhìn xuống sân trường.');
+    world.say('me', ['Gió mát quá!', 'Nhìn xuống sân trường nhớ ghê…', 'Ngày xưa ra đây ngắm mưa đó!'][Math.floor(Math.random() * 3)]);
+  },
 
   class(hs) {
     const lop = hs.lop;
@@ -805,7 +868,7 @@ const panels = {
         if (me.lop === lop && me.khoa === khoa) call('attend', { room }).catch(() => {});
         content.replaceChildren(tabs([
           { label: '📒 Lưu bút', render: (c) => guestbook(c, room, { placeholder: `Lưu bút lớp ${lop} ${khoa}…`, empty: `Lớp ${lop} ${khoa} chưa có lưu bút nào.` }) },
-          { label: '📋 Sổ đầu bài', render: async (c) => {
+          { label: '👥 Cả lớp khóa này', render: async (c) => {
             const r = await call('roster', { room });
             c.append(h('p', { class: 'muted' }, `Những bạn đã về lớp ${lop} ${khoa}:`),
               r.items.length ? h('ol', { class: 'roster' }, ...r.items.map((x) => h('li', {}, x.name, h('span', { class: 'muted' }, ' · ' + ago(x.at))))) : h('p', { class: 'muted' }, 'Chưa có ai điểm danh.'));
@@ -819,6 +882,61 @@ const panels = {
     }, { wide: true });
   },
 };
+
+// ======================= Sổ đầu bài, nội quy =======================
+const dayText = (d) => { const [y, m, dd] = d.split('-'); return `${+dd}/${+m}/${y}`; };
+const clock = (t) => vnClock(t);
+
+function boardText(title, lines, red, note) {
+  openSheet(title, (b) => {
+    b.append(h('ol', { class: 'board-text' + (red ? ' red' : '') }, ...lines.map((x) => h('li', {}, x))), note ? h('p', { class: 'muted small' }, note) : '');
+  });
+}
+
+function classLogSheet(lop) {
+  openSheet('📒 Sổ đầu bài · Lớp chuyên ' + lop, (b) => {
+    let day = '';
+    const body = h('div', { class: 'logbook' });
+    const load = async () => {
+      body.replaceChildren(h('p', { class: 'muted' }, 'Đang mở sổ…'));
+      try {
+        const r = await call('classlog', { lop, day });
+        const isToday = r.day === r.today;
+        const sel = h('select', { class: 'input sm', 'aria-label': 'Chọn ngày', onchange: (e) => { day = e.target.value; load(); } },
+          ...[r.today, ...r.days.filter((d) => d !== r.today)].map((d) => h('option', { value: d, selected: d === r.day }, (d === r.today ? 'Hôm nay, ' : '') + dayText(d))));
+        const parts = [
+          h('div', { class: 'row-between' }, h('span', {}, '📅 ', sel), h('span', { class: 'muted small' }, 'Sĩ số: ', h('b', {}, String(r.present.length)), ' có mặt')),
+          r.present.length ? h('table', { class: 'log' }, h('tbody', {}, ...r.present.map((x, i) => h('tr', { class: x.mine ? 'me' : '' },
+            h('td', {}, String(i + 1)), h('td', {}, h('b', {}, x.name), ' ', h('small', {}, x.label)), h('td', {}, clock(x.at))))))
+            : h('p', { class: 'muted small' }, 'Chưa ai ký sổ ngày này.'),
+        ];
+        if (r.notes.length) parts.push(h('h4', {}, '📝 Ghi chú buổi học'), h('ul', { class: 'notes' }, ...r.notes.map((n) => h('li', { class: n.mine ? 'me' : '' }, h('b', {}, n.name), ': ', n.text))));
+        if (r.orals.length) parts.push(h('p', { class: 'small' }, '🙋 Kiểm tra miệng: ', r.orals.map((o) => `${o.name} ${o.grade}/10`).join(' · ')));
+        if (r.submit) parts.push(h('p', { class: 'small ok' }, `📤 Đã nộp sổ: ${r.submit.name} lúc ${clock(r.submit.at)}`));
+        if (r.writeups.length) parts.push(h('div', { class: 'writeups' }, h('b', {}, '📛 Ghi tên vi phạm'),
+          ...r.writeups.map((w) => h('p', { class: w.mine ? 'me' : '' }, h('b', {}, w.name), ' ', h('small', {}, w.label), ': ', w.reason, ' ', h('small', {}, `(${w.by ? 'GV ' + w.by : 'tự động'})`))),
+          h('p', { class: 'muted small' }, 'Bị ghi tên thì hôm sau bố mẹ không cho tiền ăn vặt.')));
+        if (isToday && me.guest) parts.push(h('button', { class: 'btn primary', onclick: () => { closeSheet(); createFlow(); } }, 'Ghi danh rồi ngồi vào đúng lớp mình là tự ký có mặt'));
+        else if (isToday && r.canWrite) {
+          const note = h('textarea', { class: 'input', rows: 2, maxlength: 200, placeholder: 'Hôm nay lớp học gì? Ghi vài dòng…' });
+          parts.push(h('h4', {}, '✏️ Ghi chú buổi học'), note, h('button', { class: 'btn primary', onclick: async () => {
+            try { const x = await call('classlogAct', { lop, kind: 'note', text: note.value }); setMe(x.user); toast('Đã ghi vào sổ đầu bài'); load(); } catch (e) { toast(e.message, 'bad'); }
+          } }, 'Ghi vào sổ'));
+          if (r.isTeacher && r.present.length) {
+            const who = h('select', { class: 'input' }, ...r.present.filter((x) => !x.mine).map((x) => h('option', { value: x.id }, `${x.name} · ${x.label}`)));
+            const why = h('input', { class: 'input', maxlength: 120, placeholder: 'Lý do (nói chuyện riêng, đi muộn…)' });
+            parts.push(h('h4', {}, '📛 Ghi tên học sinh'), who, why, h('button', { class: 'btn ghost', onclick: async () => {
+              try { await call('classlogAct', { lop, kind: 'writeup', target: who.value, reason: why.value }); toast('Đã ghi tên vào sổ'); load(); } catch (e) { toast(e.message, 'bad'); }
+            } }, 'Ghi tên'));
+          }
+        } else if (isToday && !me.guest) parts.push(h('p', { class: 'muted small' }, `Chỉ học sinh lớp chuyên ${lop} (và thầy cô) mới ghi được sổ lớp này.`));
+        body.replaceChildren(...parts);
+      } catch (e) { body.replaceChildren(h('p', { class: 'err' }, e.message)); }
+    };
+    b.append(body);
+    load();
+  }, { wide: true });
+}
 
 // ======================= Ném bóng nước: chọn người =======================
 function balloonPicker() {
@@ -1188,7 +1306,7 @@ function oldLessonSheet(n) {
     b.append(h('p', { class: 'muted' }, `${n.name} gọi em lên bảng trả bài môn chuyên ${n.lop}.`), root);
     oldLesson(root, n.lop, (score) => {
       if (me.guest) return;
-      call('score', { game: 'baicu', score }).then((r) => { setMe(r.user); toast(`${n.name} đã ghi ${score / 10}/10 vào sổ đầu bài hôm nay.`); }).catch(() => {});
+      call('score', { game: 'baicu', score, lop: n.lop }).then((r) => { setMe(r.user); toast(`${n.name} đã ghi ${score / 10}/10 vào sổ đầu bài hôm nay.`); }).catch(() => {});
     });
   });
 }
