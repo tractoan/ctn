@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.4 – tạo nhân vật và chọn ngoại hình giống trang mẫu |
+| Phiên bản | 1.5 – các phòng bên trong (thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin, nhà đa năng), nhạc nền 3 bài tự phát |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -183,11 +183,10 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
 | YC-AT-01 | Thanh trên hiện **đồng hồ giờ Việt Nam** và **tiết học hiện tại** (Tiết 1 sáng … Tiết 5 chiều, Ra chơi, Nghỉ trưa, Tan học) | P2 | ✅ |
-| YC-AT-02 | Nút **🎵** phát **bài ca truyền thống** (video YouTube `N7Rl5xQd538`, không bản quyền) bằng trình phát nhúng: phát / tạm dừng / tắt; có link mở trên YouTube; không tải file về máy chủ | P2 | 🟡 |
-| YC-AT-03 | Không tự phát âm thanh khi người dùng chưa bấm | P1 | ✅ |
+| YC-AT-02 | **Nhạc nền 3 bài** phát lần lượt: *Hanoi n U (beat)* → *Tháng 5 không trở lại* → *Ngày ấy bạn và tôi*, hết bài cuối quay lại bài đầu. Nút **🎵** mở bảng có tên bài đang phát, ⏮ ⏯ ⏭, danh sách bài (chạm để nghe ngay), âm lượng | P1 | ✅ |
+| YC-AT-03 | Nhạc **tự phát** khi vào trường; trình duyệt chặn tự phát thì nhạc bắt đầu ở lần chạm/bấm phím đầu tiên. Người dùng đã tạm dừng thì lần sau không tự phát nữa (lưu trên máy) | P1 | ✅ |
 
-> YC-AT-02: các nút đã kiểm thử; chưa nghe được nhạc thật vì môi trường kiểm thử không truy cập YouTube.
-> Trên link chạy thử trong Claude, YouTube bị chặn nhúng nên chỉ dùng được link "Mở trên YouTube".
+> YC-AT-02/03: đã kiểm thử tự động việc phát, chuyển bài khi hết bài, quay vòng sau bài cuối; chưa nghe thử trên điện thoại thật.
 
 ### 4.9 Thông tin
 
@@ -222,6 +221,19 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-TT2-19 | **Trang phục**: sơ mi cà vạt, sơ mi trắng/xanh/vàng, áo khoác trường, áo lớp (6 màu), áo dài trắng/tím/hồng/xanh/đỏ, vest, áo phông, khăn quàng đỏ, áo "Tôi yêu CTN" trắng/đen – danh sách tuỳ vai (xem YC-NV-02) | P2 | ✅ |
 | YC-TT2-20 | **Phòng chức năng**: phòng thí nghiệm, phòng máy, thư viện (góc giới thiệu sách hay); **Sổ lưu bút của trường** đặt trên giá ở sân | P2 | ✅ |
 
+### 4.11 Các phòng bên trong (giống trang mẫu)
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-PH-01 | Chạm cửa **thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ (cả phòng giáo viên, phòng truyền thống), căng tin, nhà đa năng** thì nhân vật đi tới và **vào hẳn trong phòng**; có cửa "Ra sân" về đúng trước cửa đã vào | P1 | ✅ |
+| YC-PH-02 | **Thư viện**: giá sách quanh tường, 4 bàn đọc 16 chỗ ngồi, bàn thủ thư (cô thủ thư) → giới thiệu sách hay, giá báo (Hoa học trò, Mực tím…) | P1 | ✅ |
+| YC-PH-03 | **Phòng máy**: màn chiếu bài Pascal, nội quy phòng máy, 6 dãy bàn 18 máy tính có ghế ngồi, bàn thầy dạy Tin → Dò mìn, góc kỷ niệm | P1 | ✅ |
+| YC-PH-04 | **Phòng thí nghiệm**: tủ hoá chất, bảng tuần hoàn, tủ hút khí độc, bàn của thầy Minh → Pha chế hóa học, 4 bàn thí nghiệm có bồn rửa và ghế đẩu, vòi rửa mắt | P1 | ✅ |
+| YC-PH-05 | **Nhà hiệu bộ**: bảng thông báo họp lớp, phòng truyền thống (album), **bảng vàng đội tuyển** (lưu bút ghi giải thưởng), gian Tri ân thầy cô, Phòng giáo viên, Phòng cấp bằng; cô Lan văn phòng | P1 | ✅ |
+| YC-PH-06 | **Căng tin**: bảng thực đơn có giá, quầy căng tin (cô căng tin) → mua đồ / đãi bạn, 5 bàn tròn 10 ghế đẩu ngồi được, tủ nước | P1 | ✅ |
+| YC-PH-07 | **Nhà đa năng · CLB**: nửa sân bóng rổ có rổ → ném bóng rổ, bảng tỉ số, 6 gian CLB (chạm gian để vào lưu bút CLB) | P1 | ✅ |
+| YC-PH-08 | Trong phòng chỉ thấy người cùng phòng; vào phòng được tính "ghé khu" cho nhiệm vụ ngày | P2 | ✅ |
+
 > YC-TT2-08: chưa kiểm thử vào đúng sáng thứ Hai trên trình duyệt (kiểm thử tự động đã giả lập giờ thứ Hai cho máy chủ).
 > YC-TT2-17: chưa nghe thử trên thiết bị thật.
 
@@ -239,7 +251,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-PN-08 | Toàn bộ giao diện và thông báo lỗi bằng tiếng Việt, dễ hiểu, nói cách khắc phục | P1 | ✅ |
 | YC-PN-09 | **An toàn nội dung**: mọi nội dung người dùng nhập hiển thị dưới dạng văn bản thuần, không chạy được mã | P1 | ✅ |
 | YC-PN-10 | **Kiểm tra dữ liệu vào** ở máy chủ: giới hạn độ dài, danh sách giá trị hợp lệ, định dạng ngày; thân request ≤ 8 KB (riêng đăng ảnh ≤ 400 KB, chỉ nhận JPEG) | P1 | ✅ |
-| YC-PN-11 | **Riêng tư**: không thu thập email, số điện thoại; không dùng cookie theo dõi; nhạc YouTube dùng tên miền `youtube-nocookie.com` | P2 | ✅ |
+| YC-PN-11 | **Riêng tư**: không thu thập email, số điện thoại; không dùng cookie theo dõi; nhạc nền là file trên chính trang, không gọi dịch vụ ngoài | P2 | ✅ |
 | YC-PN-12 | **Chống lạm dụng**: giới hạn tần suất gọi API; báo cáo và ẩn lưu bút, **ảnh album** xấu; chặn người dùng | P1 trước khi công bố rộng | ⬜ |
 | YC-PN-13 | **Khả năng bảo trì**: nghiệp vụ viết một lần, dùng chung cho máy chủ và chế độ ngoại tuyến; có kiểm thử tự động (`npm test`) | P1 | ✅ |
 | YC-PN-14 | **Triển khai**: một lệnh `npm run deploy` sau khi tạo cơ sở dữ liệu | P2 | 🟡 |
@@ -252,7 +264,8 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 
 - Sơ đồ và vị trí lớp dựa trên trí nhớ của cựu học sinh (bản vẽ tay + mô tả), không phải bản vẽ kỹ thuật.
 - Tên, logo, ảnh chính thức của nhà trường chỉ dùng ở mức chữ trên biển cổng; không dùng ảnh có bản quyền.
-- Bài ca truyền thống: người đặt hàng xác nhận không bản quyền; vẫn phát qua YouTube nhúng thay vì sao chép file.
+- Nhạc nền: 3 file MP3 do người đặt hàng cung cấp (`public/music/`). Đây là các bài hát có bản quyền của tác giả/ca sĩ;
+  cần có quyền sử dụng trước khi đưa trang lên mạng công khai, nếu không thì thay bằng nhạc không bản quyền.
 - Danh sách CLB, câu đố, thực đơn căng tin hiện là **nội dung mẫu**, cần thay bằng nội dung thật.
 - Không có quản trị viên; nội dung người dùng tự chịu trách nhiệm cho tới khi có YC-PN-12.
 

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.7 – tạo nhân vật và chọn ngoại hình giống trang mẫu: nhân vật chibi, 13 kiểu tóc, 8 màu tóc, trang phục theo vai |
+| Phiên bản | 1.8 – 6 phòng bên trong (rooms.js) giống trang mẫu; nhạc nền 3 bài MP3 phát lần lượt, tự phát và lặp lại |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -141,7 +141,27 @@ Vị trí chỉ được lưu vào `localStorage` khi đang ở sân trường.
 Mỗi lượt `presence` gửi kèm `scene`; máy khách chỉ hiện những người có cùng `scene`, nên ai đang trong lớp Toán
 chỉ thấy người cũng trong lớp Toán (mọi khóa). Số người online trên thanh trên vẫn đếm toàn trường.
 
-### 3.2 Ngồi ghế
+### 3.2 Các phòng bên trong (`rooms.js`)
+
+Giống trang mẫu, các phòng là cảnh riêng. Hàm `room()` dựng khung chung: sàn ô, tường trên 96 px có biển tên,
+tường hai bên có cửa sổ, tường dưới có **cửa "Ra sân"** ở giữa (hotspot `exitRoom`); `thing()` thêm đồ vật có vật cản
+và vẽ theo thứ tự y; `tableWithSeats()` thêm bàn kèm ghế ngồi được (ghế phía trên nhìn ra người xem, phía dưới
+quay lưng). Mỗi phòng có `spots` (điểm xuất hiện theo cửa đã vào) và `zone` (tính "ghé khu").
+
+| Cảnh | Cửa ngoài sân | Kích thước | Bên trong | Nhân vật |
+|---|---|---|---|---|
+| `p:thuvien` 📚 Thư viện | `library` (dãy 5 tầng) | 640 × 660 | 2 giá sách trên tường, 2 giá dọc tường, 4 bàn đọc (16 ghế), bàn thủ thư → `library`, giá báo → `newsRack` | Cô Hạnh (thủ thư) |
+| `p:phongmay` 💻 Phòng máy | `computer` | 640 × 660 | Màn chiếu bài Pascal, nội quy, điều hoà, bàn thầy, 6 bàn × 3 máy CRT (18 ghế); Dò mìn → `domin`, kỷ niệm → `computer` | Thầy Quang (Tin) |
+| `p:phongtn` 🧪 Phòng thí nghiệm | `lab` (dãy 3 tầng) | 640 × 660 | Tủ hoá chất, bảng tuần hoàn, tủ hút khí độc, bàn thầy → `hoahoc`, 4 bàn thí nghiệm có bồn rửa (8 ghế đẩu), vòi rửa mắt | Thầy Minh (Hóa) |
+| `p:hieubo` 🏛️ Nhà hiệu bộ | `office`, `teachers`, `history` | 640 × 760 | Bảng thông báo họp lớp → `office` tab 0, phòng truyền thống → `history`, tủ cúp **bảng vàng đội tuyển** → `honor` (lưu bút `doituyen`), gian Tri ân → `office` tab 1, Phòng giáo viên → `teachers`, Phòng cấp bằng → `office` tab 2 | Cô Lan (văn phòng) |
+| `p:cangtin` 🍜 Căng tin | `canteen` | 560 × 720 | Bảng thực đơn (từ `MENU`), quầy → `canteen`, 5 bàn tròn (10 ghế đẩu), tủ nước, biển giảm giá giờ ra chơi | Cô căng tin, anh Dũng (ngồi) |
+| `p:dana` 🏀 Nhà đa năng · CLB | `clubs` | 640 × 860 | Bảng tỉ số, nửa sân bóng rổ có rổ → `bongro`, 6 gian CLB → `club` (lưu bút `clb:<id>`) | Bạn Nam |
+
+Vào phòng: `panels.enterRoom(hs)` (hotspot có `room`, `spot`) → `ROOMS[room]()`, nhớ cửa trong `classReturn`, thay nhân
+vật phụ bằng `campusNpcs` + `roomNpcs(id)`, `setScene(sc, sc.spots[spot])`, `visitZone(sc.zone)`. Ra: `exitRoom` →
+`backToCampus()`. Đồ vật có chữ (gian CLB, quầy trong nhà hiệu bộ) dùng `nolabel` + `rect` để chạm thẳng.
+
+### 3.3 Ngồi ghế
 
 Chỗ ngồi là điểm `{x, y, dir, back}` của cảnh (ghế đá: 2 chỗ/ghế, nhìn ra phía người xem; ghế lớp: quay lưng).
 Chạm gần chỗ ngồi (≤ 24 px) → `walkTo(seat, { sit })` → tới nơi thì `sitOn(seat)`: đặt `me.sit`, xoay theo `dir`.
@@ -162,7 +182,7 @@ cẳng chân thõng trước ghế (nhìn thẳng) hoặc chỉ thấy lưng (qu
 | Nút 🎈 (mọi nơi) | – | Danh sách người cùng cảnh để chọn ném bóng nước | Thấy được bởi người khác: có |
 | Thẻ người chơi | – | Vẫy tay, ném bóng nước, viết sổ lưu bút, đi tới | Một số: có |
 | Nhân vật của tôi | – | Đổi kiểu, sổ lưu bút của tôi, album kỷ yếu, mã khôi phục | Có |
-| Nút 🎵 (thanh trên) | – | Bài ca truyền thống qua YouTube nhúng | Không |
+| Nút 🎵 (thanh trên) | – | Nhạc nền 3 bài: bài đang phát, ⏮ ⏯ ⏭, danh sách bài, âm lượng | Không |
 | Sân trường · ghế đá | `garden` | Lưu bút tâm sự | Ghi: có |
 | Nhà hiệu bộ | `office` | Lịch họp lớp (tạo, đăng ký/huỷ), thiệp tri ân thầy cô | Ghi: có |
 | Phòng giáo viên | `teachers` | Lưu bút `gv` | Ghi: có |
@@ -258,7 +278,7 @@ Ngoại hình lưu dạng `{v: 2, gender, skin, hair, hairColor, bottom, outfit,
 
 | Thành phần | Thiết kế | Yêu cầu |
 |---|---|---|
-| Nhạc nền 🎵 | `music` trong `main.js`: lần bấm đầu tạo `<iframe>` YouTube (`youtube-nocookie.com/embed/<id>?enablejsapi=1&autoplay=1&loop=1`) trong hộp nổi góc dưới trái; các lần sau gửi lệnh `playVideo`/`pauseVideo` qua `postMessage`; ✕ gỡ iframe. Đổi bài ở hằng số `MUSIC` | YC-AT-02, YC-AT-03 |
+| Nhạc nền 🎵 | `music` trong `main.js`: một phần tử `Audio`, danh sách `PLAYLIST` (3 file trong `public/music/`). Sự kiện `ended` → bài kế tiếp, sau bài cuối quay về bài đầu; `error` → bỏ qua bài lỗi. `autostart()` gọi khi vào trường; nếu trình duyệt chặn tự phát thì gắn `pointerdown`/`keydown` để phát ở lần tương tác đầu. Tạm dừng thì lưu `musicOn = false` (khoá `ctn.sound`), lần sau không tự phát. Âm lượng = `settings.music / 100`. Đổi bài: sửa `PLAYLIST` | YC-AT-02, YC-AT-03 |
 | Trống trường 🥁 | `beatDrum()`: 3 nhịp, mỗi nhịp một `OscillatorNode` sóng sine trượt 110 → 45 Hz trong 0,4 s, âm lượng tắt dần theo hàm mũ. `AudioContext` chỉ tạo khi người dùng bấm | YC-HD-09 |
 | Bóng nước 🎈 | `World.throwBalloon`: quỹ đạo nội suy tuyến tính + cung `sin(πk)`, thời gian bay `450 + khoảng cách × 1,3` ms, bám theo vị trí hiện tại của mục tiêu; khi chạm: vòng nước + 10 giọt bắn trong 0,7 s; đặt `wet[id]` 4 s → `_wetFx` vẽ giọt nước rơi quanh người | YC-OL-07 |
 | Bong bóng lời nói | `World.say(id, text)`: hiện 5 s trên đầu, cắt bớt chữ quá dài | YC-OL-05 |
@@ -389,7 +409,7 @@ Mỗi lượt presence trả kèm inbox của người gọi rồi xoá (nhận 
   cảnh có `lamps`, rồi vẽ quầng sáng đèn bằng `globalCompositeOperation = 'lighter'`; `drawBuilding` thắp cửa sổ.
   Lớp học không có `lamps` nên luôn sáng. Kiểm thử có thể ép `world.forceNight`.
 - Âm thanh (`sound.js`): bộ dao động + nhiễu Web Audio cho `click, coin, pop, whoosh, splash, drum, bell, win,
-  lose, shutter, heart`; âm lượng nhạc nền gửi `setVolume` cho trình phát YouTube qua `postMessage`; lưu ở
+  lose, shutter, heart`; âm lượng nhạc nền đặt trực tiếp cho phần tử `Audio`; lưu ở
   `localStorage` (`ctn.sound`).
 - Thẻ ảnh (`cards.js`): giấy chứng nhận 900 × 640 và thiệp tri ân 720 × 900 vẽ bằng canvas; `shareCanvas` dùng
   Web Share (gửi file) nếu máy hỗ trợ, nếu không thì tải về.
@@ -428,6 +448,7 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 | `npcs.js` | Nhân vật phụ sân trường và cô chủ nhiệm từng lớp |
 | `sound.js` | Hiệu ứng âm thanh Web Audio, cài đặt âm lượng |
 | `classroom.js` | Cảnh lớp học (640 × 980): bố cục, vật cản, 36 chỗ ngồi, điểm tương tác, vẽ bảng lớp, áp phích, bàn ghế, hành lang |
+| `rooms.js` | 6 phòng bên trong (`ROOMS`): thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin, nhà đa năng; danh sách `CLUBS` |
 | `world.js` | `Grid` (lưới va chạm 20 px, A* 8 hướng + làm mượt) theo từng cảnh, `CAMPUS_SCENE`, camera (căn giữa cảnh nhỏ), vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, ngồi ghế, chụp ảnh (`capture`), bản đồ toàn cảnh |
 | `campus.js` | Dữ liệu sơ đồ (mục 3) |
 | `avatar.js` | Vẽ nhân vật (đứng, đi, quay lưng, ngồi), ảnh đại diện nhỏ |
@@ -477,7 +498,7 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `score` | `trò chơi\|uid` | `{id, name, khoa, lop, score, at}` |
 | `buy` | `thời gian-id` | `{id, uid, name, item, emoji, price, forName, at}` |
 
-Tên phòng lưu bút: `lop:<Lớp>:<Khóa>`, `so:<id người dùng>` (sổ lưu bút cá nhân), `gv`, `trian`, `kyniem`, `clb:<id>`, `ghe-da`, `san-khau`, `tronhoc`, `cong-phu`, `uocmo`. Bản ghi `user` có thêm `photoDay`, `photoCount` (giới hạn 5 ảnh/ngày).
+Tên phòng lưu bút: `lop:<Lớp>:<Khóa>`, `doituyen` (bảng vàng đội tuyển), `so:<id người dùng>` (sổ lưu bút cá nhân), `gv`, `trian`, `kyniem`, `clb:<id>`, `ghe-da`, `san-khau`, `tronhoc`, `cong-phu`, `uocmo`. Bản ghi `user` có thêm `photoDay`, `photoCount` (giới hạn 5 ảnh/ngày).
 
 ## 8. API
 
@@ -551,7 +572,7 @@ khách cùng lúc; ghi danh, thấy nhau online, lời nói và cú ném bóng n
 không có lỗi JavaScript. Khi đổi sơ đồ, chạy script tìm đường tới mọi điểm tương tác và chỗ ngồi của sân trường và lớp học (YC-SD-09). Lần này còn chạy: 2 người vào lớp Toán thấy nhau, ngồi ghế, chọn người ném bóng, mở đố vui ở bảng đen, ra lớp về đúng cửa, ngồi ghế đá, chụp và đăng ảnh kỷ yếu, xem album, ký sổ lưu bút.
 Bảng truy vết yêu cầu → mã → kiểm thử: [YEU-CAU.md mục 7](YEU-CAU.md#7-truy-vết-yêu-cầu--mã-nguồn--kiểm-thử).
 
-**Chưa kiểm thử:** thiết bị Android/iOS thật, tiếng nhạc YouTube và tiếng trống thật, triển khai thật lên Cloudflare.
+**Chưa kiểm thử:** thiết bị Android/iOS thật, nghe nhạc nền và tiếng trống trên thiết bị thật, triển khai thật lên Cloudflare.
 
 ## 11. Hướng phát triển
 

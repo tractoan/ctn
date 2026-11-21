@@ -7,7 +7,8 @@ import { avatarCanvas, avatarStage, normLook, randomLook, outfitsFor, SKINS, HAI
 import { MINIGAMES, oldLesson } from './minigames.js';
 import { drawDiploma, drawThanksCard, shareCanvas, DIPLOMA_QUOTES } from './cards.js';
 import { sfx, settings as soundSettings, saveSettings } from './sound.js';
-import { campusNpcs, classNpcs } from './npcs.js';
+import { campusNpcs, classNpcs, roomNpcs } from './npcs.js';
+import { ROOMS, CLUBS } from './rooms.js';
 import { h, openSheet, closeSheet, toast, money, ago, tabs } from './ui.js';
 import { startDaCau, QUIZ } from './games.js';
 
@@ -230,42 +231,71 @@ function avatarEditor(look, role = me.role, onChange = () => {}) {
   return root;
 }
 
-// ======================= Nhạc nền: bài ca truyền thống =======================
-// Phát qua trình phát nhúng của YouTube (không tải file về). Đổi video tại MUSIC.youtubeId.
-const MUSIC = { youtubeId: 'N7Rl5xQd538', title: 'Bài ca truyền thống' };
+// ======================= Nhạc nền: 3 bài phát lần lượt, hết bài cuối quay lại bài đầu =======================
+// File nằm trong public/music/. Trình duyệt chỉ cho phát tiếng sau khi người dùng chạm/bấm lần đầu,
+// nên nếu tự phát bị chặn thì nhạc bắt đầu ngay ở lần chạm đầu tiên.
+const PLAYLIST = [
+  { src: 'music/hanoi-n-u.mp3', title: 'Hanoi n U (beat)' },
+  { src: 'music/thang-5-khong-tro-lai.mp3', title: 'Tháng 5 không trở lại' },
+  { src: 'music/ngay-ay-ban-va-toi.mp3', title: 'Ngày ấy bạn và tôi' },
+];
 const music = {
+  audio: null,
+  i: 0,
   playing: false,
-  frame: null,
-  box: null,
+  onChange: null,
   button: h('button', { class: 'music-btn', 'aria-label': 'Âm thanh: nhạc nền và hiệu ứng', title: 'Âm thanh', onclick: () => soundSheet() }, '🎵'),
-  cmd(func, args = []) {
-    try { this.frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*'); } catch { /* */ }
+  el() {
+    if (!this.audio) {
+      const a = this.audio = new Audio();
+      a.preload = 'auto';
+      a.addEventListener('ended', () => this.next());
+      a.addEventListener('play', () => { this.playing = true; this.sync(); });
+      a.addEventListener('pause', () => { this.playing = false; this.sync(); });
+      a.addEventListener('error', () => { if (this.playing) this.next(); });
+    }
+    return this.audio;
   },
-  volume(v) { this.cmd('setVolume', [v]); },
-  open() {
-    const id = MUSIC.youtubeId;
-    this.frame = h('iframe', {
-      src: `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1&autoplay=1&loop=1&playlist=${id}&playsinline=1&rel=0`,
-      title: MUSIC.title, allow: 'autoplay; encrypted-media', referrerpolicy: 'strict-origin-when-cross-origin',
-    });
-    this.box = h('div', { class: 'music-box', role: 'region', 'aria-label': 'Trình phát nhạc' },
-      h('div', { class: 'music-head' },
-        h('b', {}, '🎵 ' + MUSIC.title),
-        h('button', { class: 'icon-btn sm', 'aria-label': 'Tắt nhạc', onclick: () => this.close() }, '✕')),
-      this.frame,
-      h('a', { href: `https://www.youtube.com/watch?v=${id}`, target: '_blank', rel: 'noopener' }, 'Không nghe được? Mở trên YouTube ↗'));
-    document.body.append(this.box);
-    this.frame.addEventListener('load', () => setTimeout(() => this.volume(soundSettings.music), 800));
-    this.playing = true;
-  },
-  close() { this.box?.remove(); this.box = this.frame = null; this.playing = false; this.sync(); },
-  toggle() {
-    if (!this.box) this.open();
-    else if (this.playing) { this.cmd('pauseVideo'); this.playing = false; }
-    else { this.cmd('playVideo'); this.playing = true; }
+  load(i) {
+    this.i = (i + PLAYLIST.length) % PLAYLIST.length;
+    const a = this.el();
+    a.src = PLAYLIST[this.i].src;
+    a.volume = soundSettings.music / 100;
     this.sync();
   },
-  sync() { this.button.classList.toggle('on', this.playing); this.button.setAttribute('aria-pressed', String(this.playing)); },
+  play() {
+    const a = this.el();
+    if (!a.src) this.load(this.i);
+    a.volume = soundSettings.music / 100;
+    return a.play().then(() => true, () => false);
+  },
+  pause() { this.audio?.pause(); },
+  next() { this.load(this.i + 1); this.play(); },
+  prev() { this.load(this.i - 1); this.play(); },
+  pick(i) { this.load(i); this.play(); soundSettings.musicOn = true; saveSettings(); },
+  toggle() {
+    if (this.playing) { this.pause(); soundSettings.musicOn = false; } else { this.play(); soundSettings.musicOn = true; }
+    saveSettings();
+  },
+  volume(v) { if (this.audio) this.audio.volume = v / 100; },
+  // Tự phát khi vào trường (trừ khi người dùng đã tắt nhạc lần trước)
+  autostart() {
+    if (soundSettings.musicOn === false) return;
+    this.play().then((ok) => {
+      if (ok) return;
+      const go = () => {
+        window.removeEventListener('pointerdown', go, true); window.removeEventListener('keydown', go, true);
+        if (!this.playing && soundSettings.musicOn !== false) this.play();
+      };
+      window.addEventListener('pointerdown', go, true); window.addEventListener('keydown', go, true);
+    });
+  },
+  title() { return PLAYLIST[this.i].title; },
+  sync() {
+    this.button.classList.toggle('on', this.playing); this.button.setAttribute('aria-pressed', String(this.playing));
+    this.button.title = this.playing ? '🎵 Đang phát: ' + this.title() : 'Âm thanh';
+    this.onChange?.();
+  },
 };
 
 // ======================= Sân trường =======================
@@ -364,7 +394,8 @@ function enterSchool() {
   };
   world.onWet = (fromName) => { sfx.splash(); toast(`💦 ${fromName || 'Ai đó'} vừa ném bóng nước trúng bạn!`); world.say('me', 'Ướt hết rồi! 💦'); };
   world.start();
-  if (new URLSearchParams(location.search).has('debug')) { window.ctnWorld = world; window.ctnDebug = { panels, gameSheet, questSheet, walletSheet, onlineSheet, npcSheet }; } // dùng cho kiểm thử tự động
+  music.autostart();
+  if (new URLSearchParams(location.search).has('debug')) { window.ctnWorld = world; window.ctnDebug = { panels, gameSheet, questSheet, walletSheet, onlineSheet, npcSheet, music }; } // dùng cho kiểm thử tự động
   hud.update();
   updateClock();
   setInterval(updateClock, 15000);
@@ -521,14 +552,6 @@ function gbItem(it) {
     h('p', {}, it.body));
 }
 
-const CLUBS = [
-  { id: 'vannghe', icon: '🎤', name: 'CLB Văn nghệ', desc: 'Hát, múa, nhảy – sân khấu các đêm 20/11, 26/3.' },
-  { id: 'bongda', icon: '⚽', name: 'CLB Bóng đá', desc: 'Giải bóng đá giữa các lớp chuyên.' },
-  { id: 'english', icon: '🇬🇧', name: 'CLB Tiếng Anh', desc: 'Nói tiếng Anh, debate, hùng biện.' },
-  { id: 'khoahoc', icon: '🔬', name: 'CLB Khoa học – STEM', desc: 'Nghiên cứu khoa học kĩ thuật, robot.' },
-  { id: 'truyenthong', icon: '📷', name: 'CLB Truyền thông', desc: 'Chụp ảnh, quay phim, viết báo tường.' },
-  { id: 'tinhnguyen', icon: '🤲', name: 'CLB Tình nguyện', desc: 'Mùa hè xanh, quyên góp vùng cao.' },
-];
 
 const panels = {
   gate() {
@@ -625,14 +648,50 @@ const panels = {
     });
   },
 
-  office() {
+  office(hs) {
     openSheet('🏛️ Nhà hiệu bộ', (b) => {
       b.append(tabs([
         { label: '📅 Họp lớp', render: (c) => eventsView(c) },
         { label: '💐 Tri ân', render: (c) => thanksView(c) },
         { label: '🎓 Phòng cấp bằng', render: (c) => diplomaView(c) },
-      ], isTeachersDay() ? 1 : 0));
+      ], hs?.tab ?? (isTeachersDay() ? 1 : 0)));
     }, { wide: true });
+  },
+
+  // Đi vào một phòng (rooms.js): nhớ cửa để ra đúng chỗ, thêm nhân vật trong phòng, đếm "ghé khu"
+  enterRoom(hs) {
+    const make = ROOMS[hs.room];
+    if (!make) return;
+    const sc = make();
+    classReturn = { x: hs.x, y: hs.y };
+    world.npcs = [...world.npcs.filter((n) => n.scene === 'campus'), ...roomNpcs(sc.id)];
+    world.setScene(sc, (hs.spot && sc.spots[hs.spot]) || sc.spawn);
+    if (sc.zone) visitZone(sc.zone);
+    sfx.click();
+    toast(`${sc.name}: chạm vào đồ vật, nhãn hoặc nhân vật để dùng. Chạm "Ra sân" để ra.`);
+  },
+  exitRoom() { backToCampus(); },
+  domin() { gameSheet('domin'); },
+  hoahoc() { gameSheet('hoahoc'); },
+  bongro() { gameSheet('bongro'); },
+  honor() {
+    openSheet('🏅 Bảng vàng đội tuyển', (b) => {
+      b.append(h('p', { class: 'muted' }, 'Các thế hệ đội tuyển học sinh giỏi quốc gia, Olympic của trường. Ghi lại giải thưởng của bạn hoặc của lớp mình: môn, năm, giải.'));
+      guestbook(b, 'doituyen', { placeholder: 'Vd: Giải Nhì HSG quốc gia môn Toán năm 2008…', empty: 'Bảng vàng còn trống. Bạn ghi danh đầu tiên nhé!' });
+    });
+  },
+  newsRack() {
+    const t = ['📰 Hoa học trò số mới: "Mùa thi, mùa phượng…"', '📰 Báo Mực tím có bài về lớp chuyên Văn!', '📰 Toán tuổi thơ: thử giải bài đố tuần này nào.', '📰 Báo tường 20/11 của các lớp được treo ở đây.'];
+    toast(t[Math.floor(Math.random() * t.length)]);
+    world.say('me', 'Đọc báo chút đã 📰');
+  },
+  club(hs) {
+    const c = CLUBS.find((x) => x.id === hs.club);
+    if (!c) return;
+    openSheet(c.icon + ' ' + c.name, (b) => {
+      b.append(h('p', { class: 'muted' }, c.desc));
+      guestbook(b, 'clb:' + c.id, { placeholder: 'Nhắn gì đó cho CLB…' });
+    });
   },
 
   teachers() {
@@ -1254,18 +1313,34 @@ function onlineSheet() {
 }
 
 function soundSheet() {
-  openSheet('🎵 Âm thanh', (b) => {
+  openSheet('🎵 Âm thanh', (b, { onCleanup }) => {
     const slider = (label, key, onInput) => {
       const val = h('b', {}, soundSettings[key] + '%');
       const inp = h('input', { type: 'range', min: 0, max: 100, value: soundSettings[key], class: 'range', 'aria-label': label });
       inp.addEventListener('input', () => { soundSettings[key] = Number(inp.value); val.textContent = inp.value + '%'; saveSettings(); onInput?.(); });
       return h('div', { class: 'range-row' }, h('span', {}, label), inp, val);
     };
+    const now = h('p', { class: 'now-playing' });
+    const playBtn = h('button', { class: 'mp-btn main', 'aria-label': 'Phát / tạm dừng', onclick: () => music.toggle() });
+    const list = h('ol', { class: 'playlist' });
+    const render = () => {
+      now.replaceChildren(music.playing ? '▶️ Đang phát: ' : '⏸ Tạm dừng: ', h('b', {}, music.title()));
+      playBtn.textContent = music.playing ? '⏸' : '▶️';
+      list.replaceChildren(...PLAYLIST.map((t, i) => h('li', {}, h('button', { class: 'pl-item' + (i === music.i ? ' on' : ''), onclick: () => music.pick(i) },
+        h('span', { class: 'pl-no' }, i === music.i && music.playing ? '🔊' : String(i + 1)), t.title))));
+    };
+    music.onChange = render;
+    onCleanup(() => { if (music.onChange === render) music.onChange = null; });
+    render();
     b.append(
       h('div', { class: 'card' },
-        h('h3', {}, '🎶 ' + MUSIC.title),
-        h('p', { class: 'muted' }, 'Phát qua trình phát YouTube, hiện ở góc dưới bên trái.'),
-        h('button', { class: 'btn primary', onclick: () => { music.toggle(); closeSheet(); } }, music.playing ? '⏸ Tạm dừng nhạc' : '▶️ Phát nhạc'),
+        h('h3', {}, '🎶 Nhạc nền'),
+        h('p', { class: 'muted' }, 'Ba bài phát lần lượt, hết bài cuối tự quay lại bài đầu. Chạm tên bài để nghe ngay.'),
+        now,
+        h('div', { class: 'mp-row' },
+          h('button', { class: 'mp-btn', 'aria-label': 'Bài trước', onclick: () => music.prev() }, '⏮'), playBtn,
+          h('button', { class: 'mp-btn', 'aria-label': 'Bài sau', onclick: () => music.next() }, '⏭')),
+        list,
         slider('Âm lượng nhạc nền', 'music', () => music.volume(soundSettings.music))),
       h('div', { class: 'card' }, h('h3', {}, '🔔 Hiệu ứng'), slider('Âm lượng hiệu ứng', 'sfx', () => sfx.click()),
         h('button', { class: 'btn ghost', onclick: () => sfx.bell() }, 'Nghe thử tiếng chuông')));
@@ -1337,6 +1412,8 @@ const NPC_ACTIONS = {
   football: ['🏸 Chơi đá cầu', () => panels.football()],
   lab: ['🧪 Pha chế hóa học', () => gameSheet('hoahoc')],
   oldLesson: ['📝 Kiểm tra bài cũ', (n) => oldLessonSheet(n)],
+  computer: ['💣 Chơi dò mìn', () => gameSheet('domin')],
+  library: ['📖 Giới thiệu sách hay', () => panels.library()],
 };
 function npcSheet(n) {
   openSheet(n.name, (b) => {

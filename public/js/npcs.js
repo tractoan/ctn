@@ -20,14 +20,6 @@ export function campusNpcs() {
     { id: 'npc-codo', name: 'Đội cờ đỏ', sub: 'Trực cổng', x: 830, y: 1150, dir: 1,
       look: L({ gender: 'nu', hair: 3, bottom: 'vay', scarf: true }),
       lines: ['Đi muộn là bị ghi tên đấy nhé!', 'Nhớ đeo thẻ học sinh!', 'Áo phải bỏ trong quần nhé.', 'Sau 7 giờ là muộn rồi!', 'Bạn lớp nào thế?', 'Thứ Hai nhớ ra chào cờ!', 'Hôm nay lớp mình được cộng điểm thi đua!', 'Chào bạn, chúc học tốt!'] },
-    { id: 'npc-vanphong', name: 'Cô Lan', sub: 'Cô · Văn phòng', x: 412, y: 760, dir: -1, panel: 'office',
-      look: L({ gender: 'nu', hair: 5, hairColor: 1, outfit: 'aodaitim', skin: 0 }),
-      update: walker([[412, 700], [412, 950]], 30),
-      lines: ['Các em về thăm trường, cô vui lắm!', 'Ai chưa nhận bằng thì vào phòng cấp bằng nhé.', 'Có ảnh kỷ yếu thì gửi lên phòng truyền thống nhé.', 'Họp lớp thì đăng thông báo ở nhà hiệu bộ.', 'Nhớ ghé tri ân thầy cô cũ nhé.', 'Cô vẫn nhớ mặt nhiều em lắm.'] },
-    { id: 'npc-cook', name: 'Cô căng tin', sub: 'Căng tin', x: 1884, y: 745, dir: 1, panel: 'canteen',
-      look: L({ gender: 'nu', skin: 1, hair: 3, hairColor: 1, bottom: 'vay', outfit: 'phong' }),
-      update: walker([[1850, 745], [1925, 745]], 22),
-      lines: ['Bánh mì pate nóng giòn đây!', 'Giờ ra chơi mua rẻ hơn đấy.', 'Bánh cuốn Thái Nguyên phải thử một lần.', 'Chè Tân Cương nóng không cháu?', 'Ăn xong nhớ dọn khay nhé.', 'Hết tiền thì mai bố mẹ cho tiếp!'] },
     { id: 'npc-hung', name: 'Bác Hùng', sub: 'K1 · Toán', x: 780, y: 590, dir: 1,
       look: L({ skin: 2, hair: 0, hairColor: 2, outfit: 'khoac' }),
       update: walker([[780, 590], [1000, 600], [1290, 590], [1000, 600]], 26),
@@ -43,9 +35,6 @@ export function campusNpcs() {
       look: L({ gender: 'nu', hair: 2, hairColor: 6, bottom: 'vay', outfit: 'teew' }),
       update: walker([[700, 1040], [1500, 1040]], 36),
       lines: ['Hôm nay có kiểm tra 15 phút đó!', 'Ra căng tin mua trà đá không?', 'Lớp Anh ở dãy 3 tầng nha.', 'Chụp ảnh kỷ yếu ở sân khấu đẹp lắm!', 'Nhớ ký sổ đầu bài nhé.'] },
-    { id: 'npc-minh', name: 'Thầy Minh', sub: 'Thầy · Hóa', x: 1480, y: 300, dir: -1, panel: 'lab',
-      look: L({ skin: 2, hair: 6, outfit: 'vest' }),
-      lines: ['Đeo kính bảo hộ vào các em!', 'Thí nghiệm hôm nay vui lắm đây.', 'Rót axit vào nước, không làm ngược lại!', 'Thử pha chế 5 vòng xem được mấy điểm.', 'Đội tuyển Hóa năm nay mạnh lắm!'] },
   ].map((n) => ({ scene: 'campus', moving: false, ...n }));
 }
 
@@ -59,4 +48,37 @@ export function classNpcs(lop) {
     update: walker([[262, 192], [470, 192]], 16),
     lines: ['Cả lớp trật tự nào!', 'Em nào chưa làm bài tập về nhà?', 'Hôm nay lớp mình ôn bài cũ nhé.', 'Nhớ ký sổ đầu bài đầy đủ.', 'Ai lên bảng giải bài này nào?', 'Cô tự hào về lớp mình lắm.', 'Ra chơi đừng ném bóng nước trong lớp!', 'Cả lớp về đông đủ chưa nào?'],
   }];
+}
+
+// Nhân vật trong các phòng (thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin, nhà đa năng)
+export function roomNpcs(sceneId) {
+  const list = {
+    'p:thuvien': [{ id: 'npc-thuthu', name: 'Cô Hạnh', sub: 'Cô · Thủ thư', x: 160, y: 476, dir: 1, panel: 'library',
+      look: L({ gender: 'nu', hair: 5, hairColor: 1, outfit: 'somixanh', skin: 0 }),
+      lines: ['Thư viện giữ trật tự nhé các em.', 'Mượn sách nhớ trả đúng hạn!', 'Cuốn nào hay thì giới thiệu cho các bạn nhé.', 'Báo Hoa học trò số mới về rồi đấy.', 'Ngày xưa các em hay trốn vào đây đọc truyện.'] }],
+    'p:phongmay': [{ id: 'npc-thaytin', name: 'Thầy Quang', sub: 'Thầy · Tin', x: 535, y: 114, dir: -1, panel: 'computer',
+      look: L({ skin: 1, hair: 6, outfit: 'somitrang' }),
+      lines: ['Không ăn uống trong phòng máy!', 'Ai chơi dò mìn trong giờ là thầy biết hết đấy.', 'Lưu bài vào ổ D nhé, ổ C bị xoá.', 'Pascal: nhớ dấu chấm phẩy cuối dòng!', 'Đội tuyển Tin năm nay tập ở đây đến tối.'] }],
+    'p:phongtn': [{ id: 'npc-minh', name: 'Thầy Minh', sub: 'Thầy · Hóa', x: 320, y: 112, dir: 1, panel: 'lab',
+      look: L({ skin: 2, hair: 6, outfit: 'vest' }),
+      lines: ['Đeo kính bảo hộ vào các em!', 'Thí nghiệm hôm nay vui lắm đây.', 'Rót axit vào nước, không làm ngược lại!', 'Thử pha chế 5 vòng xem được mấy điểm.', 'Đội tuyển Hóa năm nay mạnh lắm!'] }],
+    'p:hieubo': [{ id: 'npc-vanphong', name: 'Cô Lan', sub: 'Cô · Văn phòng', x: 320, y: 300, dir: -1, panel: 'office',
+      look: L({ gender: 'nu', hair: 5, hairColor: 1, outfit: 'aodaitim', skin: 0 }),
+      update: walker([[250, 300], [400, 300]], 26),
+      lines: ['Các em về thăm trường, cô vui lắm!', 'Ai chưa nhận bằng thì vào phòng cấp bằng nhé.', 'Có ảnh kỷ yếu thì gửi lên phòng truyền thống nhé.', 'Họp lớp thì đăng thông báo ở bảng bên kia.', 'Nhớ ghé tri ân thầy cô cũ nhé.', 'Cô vẫn nhớ mặt nhiều em lắm.'] }],
+    'p:cangtin': [
+      { id: 'npc-cook', name: 'Cô căng tin', sub: 'Căng tin', x: 280, y: 106, dir: 1, panel: 'canteen',
+        look: L({ gender: 'nu', skin: 1, hair: 3, hairColor: 1, bottom: 'vay', outfit: 'phong' }),
+        update: walker([[180, 106], [380, 106]], 22),
+        lines: ['Bánh mì pate nóng giòn đây!', 'Giờ ra chơi mua rẻ hơn đấy.', 'Bánh cuốn Thái Nguyên phải thử một lần.', 'Chè Tân Cương nóng không cháu?', 'Ăn xong nhớ dọn khay nhé.', 'Hết tiền thì mai bố mẹ cho tiếp!'] },
+      { id: 'npc-dung', name: 'Anh Dũng', sub: 'K20 · Hóa', x: 186, y: 324, dir: -1, sit: true,
+        look: L({ skin: 2, hair: 9, outfit: 'teeb' }),
+        lines: ['Bánh mì căng tin là ngon nhất!', 'Đãi anh cốc trà đá đi!', 'Ngày xưa ra chơi là chạy xuống đây xếp hàng.', 'Nem chua rán ở đây ăn mãi không chán.'] },
+    ],
+    'p:dana': [{ id: 'npc-nam', name: 'Bạn Nam', sub: 'K35 · Tin', x: 320, y: 420, dir: 1,
+      look: L({ hair: 10, outfit: 'aolop', color: 5 }),
+      update: walker([[320, 420], [320, 690]], 30),
+      lines: ['Vào CLB nào cũng vui hết!', 'CLB Văn nghệ đang tập tiết mục 20/11 đó.', 'Ném thử vài quả bóng rổ đi!', 'CLB Tình nguyện sắp đi Mùa hè xanh.', 'Ghé gian CLB Tiếng Anh nói chuyện chút nhé.'] }],
+  }[sceneId] || [];
+  return list.map((n) => ({ scene: sceneId, moving: false, ...n }));
 }

@@ -28,8 +28,13 @@ vào là thấy ngay sân trường với tư cách khách; muốn viết lưu b
 giờ Việt Nam và tiết học hiện tại; thanh dưới có câu nói nhanh, biểu cảm, ô chat và nút 🗺️ mở bản đồ toàn trường
 (chạm vào đâu trên bản đồ thì nhân vật tự đi tới đó).
 
-Nút 🎵 trên thanh trên phát **bài ca truyền thống** qua trình phát nhúng của YouTube (đổi video ở hằng số `MUSIC`
-trong `public/js/main.js`). Trình phát hiện ở góc dưới bên trái, có nút tắt và link mở trên YouTube.
+**Nhạc nền** tự phát khi vào trường, 3 bài lần lượt rồi lặp lại: *Hanoi n U (beat)* → *Tháng 5 không trở lại* →
+*Ngày ấy bạn và tôi* (file trong `public/music/`, danh sách ở hằng số `PLAYLIST` trong `public/js/main.js`).
+Nút 🎵 mở bảng chọn bài, ⏮ ⏯ ⏭ và âm lượng. Lưu ý: đây là các bài hát có bản quyền, cần có quyền sử dụng
+trước khi đưa trang lên mạng công khai.
+
+**Các phòng bên trong** (giống trang mẫu): chạm cửa thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin,
+nhà đa năng để vào hẳn trong phòng có bàn ghế, nhân vật và hoạt động riêng (`public/js/rooms.js`).
 
 Nút 🎈 bên phải mở danh sách người đang online để **chọn người ném bóng nước** vào; người bị ném trúng ướt sũng
 vài giây, mọi người cùng thấy. Nút 📸 **chụp ảnh kỷ yếu** có khung logo trường, lưu về máy hoặc đăng album chung.
@@ -66,6 +71,8 @@ public/            giao diện tĩnh (không cần build)
   js/world.js      vẽ canvas 2D, camera, tìm đường A*, người chơi khác
   js/avatar.js     vẽ nhân vật chibi (13 kiểu tóc, 8 màu tóc, trang phục theo vai)
   js/main.js       luồng tạo nhân vật và các bảng chức năng
+  js/rooms.js      6 phòng bên trong: thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin, nhà đa năng
+  music/           3 bài nhạc nền (MP3)
   js/games.js      đá cầu, câu hỏi đố vui
   js/logic.js      nghiệp vụ dùng chung cho server và chế độ ngoại tuyến
   js/api.js        gọi /api; nếu không có server thì chạy logic.js trên localStorage
