@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.6 – tải ảnh lên làm ảnh kỷ yếu, sửa tên thầy cô chủ nhiệm, lối đi giữa bồn hoa vào dãy 5 tầng |
+| Phiên bản | 1.7 – sửa tên thầy cô ở phòng chức năng; cửa nhà đa năng ở mặt trái (phía sân trường) |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -149,6 +149,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-LH-12 | Lớp học vừa chiều ngang điện thoại, thấy trọn tường đầu lớp và cuối lớp (không bị thanh trên, thanh chat che) | P1 | ✅ |
 | YC-LH-13 | Hotspot chạm được ở **cả nhãn lẫn đồ vật** (cửa lớp, bảng, áp phích, bàn giáo viên, giá sách) | P1 | ✅ |
 | YC-LH-14 | **Sửa tên thầy cô chủ nhiệm**: chạm cô chủ nhiệm hoặc mục "Thầy cô chủ nhiệm" trên bảng lớp → chọn Thầy/Cô, nhập họ tên. Học sinh/cựu học sinh lớp đó sửa cho **khóa mình**; thầy cô sửa cho khóa bất kỳ hoặc "tất cả các khóa"; lớp khác không sửa được. Vào lớp thấy tên của khóa mình, chưa có thì tên chung, rồi tên được đặt gần nhất; xem được danh sách tên theo khóa và ai sửa | P1 | ✅ |
+| YC-LH-15 | **Sửa tên thầy cô ở phòng chức năng**: cô thủ thư (thư viện), thầy dạy Tin (phòng máy), thầy dạy Hóa (phòng thí nghiệm), cô văn phòng (nhà hiệu bộ). Chạm nhân vật → "✏️ Sửa tên thầy cô": chọn Thầy/Cô (nhân vật đổi dáng theo), nhập họ tên. Học sinh/cựu học sinh lớp bất kỳ sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ hoặc mọi khóa; khách không sửa được | P2 | ✅ |
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
 
 ### 4.6 Hoạt động trong trường
@@ -234,7 +235,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-PH-04 | **Phòng thí nghiệm**: tủ hoá chất, bảng tuần hoàn, tủ hút khí độc, bàn của thầy Minh → Pha chế hóa học, 4 bàn thí nghiệm có bồn rửa và ghế đẩu, vòi rửa mắt | P1 | ✅ |
 | YC-PH-05 | **Nhà hiệu bộ**: bảng thông báo họp lớp, phòng truyền thống (album), **bảng vàng đội tuyển** (lưu bút ghi giải thưởng), gian Tri ân thầy cô, Phòng giáo viên, Phòng cấp bằng; cô Lan văn phòng | P1 | ✅ |
 | YC-PH-06 | **Căng tin**: bảng thực đơn có giá, quầy căng tin (cô căng tin) → mua đồ / đãi bạn, 5 bàn tròn 10 ghế đẩu ngồi được, tủ nước | P1 | ✅ |
-| YC-PH-07 | **Nhà đa năng · CLB**: nửa sân bóng rổ có rổ → ném bóng rổ, bảng tỉ số, 6 gian CLB (chạm gian để vào lưu bút CLB) | P1 | ✅ |
+| YC-PH-07 | **Nhà đa năng · CLB** (cửa ở **mặt trái, quay ra sân trường**; bên trong cửa cũng ở tường trái): nửa sân bóng rổ có rổ → ném bóng rổ, bảng tỉ số, 6 gian CLB (chạm gian để vào lưu bút CLB) | P1 | ✅ |
 | YC-PH-08 | Trong phòng chỉ thấy người cùng phòng; vào phòng được tính "ghé khu" cho nhiệm vụ ngày | P2 | ✅ |
 
 > YC-TT2-08: chưa kiểm thử vào đúng sáng thứ Hai trên trình duyệt (kiểm thử tự động đã giả lập giờ thứ Hai cho máy chủ).

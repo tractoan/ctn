@@ -236,10 +236,12 @@ function drawBuilding(ctx, b) {
   ctx.fillStyle = 'rgba(0,0,0,.05)'; for (let x = b.x; x < b.x + b.w; x += 6) ctx.fillRect(x, fy, 1, depth);
   ctx.fillStyle = 'rgba(120,80,40,.25)'; ctx.fillRect(b.x, b.y + b.h - 4, b.w, 4); // chân tường
   if (b.hall) {
-    // nhà đa năng: cửa lớn ở giữa, ô kính, vòm trang trí
-    rr(ctx, b.x + b.w / 2 - 36, fy + 12, 72, depth - 12, 4); ctx.fillStyle = '#5E6F63'; ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(b.x + b.w / 2 - 1, fy + 12, 2, depth - 12);
-    for (let x = b.x + 14; x < b.x + b.w - 20; x += 28) if (Math.abs(x + 8 - (b.x + b.w / 2)) > 48) {
+    // nhà đa năng: ô kính, vòm trang trí; cửa lớn ở giữa mặt Nam (nếu không có cửa bên trái)
+    if (!b.doorW) {
+      rr(ctx, b.x + b.w / 2 - 36, fy + 12, 72, depth - 12, 4); ctx.fillStyle = '#5E6F63'; ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(b.x + b.w / 2 - 1, fy + 12, 2, depth - 12);
+    }
+    for (let x = b.x + 14; x < b.x + b.w - 20; x += 28) if (b.doorW || Math.abs(x + 8 - (b.x + b.w / 2)) > 48) {
       ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x - 1, fy + 9, 18, 14);
       ctx.fillStyle = NIGHT > 0.4 ? '#FFD97A' : '#A9CBE8'; ctx.fillRect(x + 1, fy + 11, 14, 10);
     }
@@ -298,6 +300,18 @@ function drawBuilding(ctx, b) {
       ctx.fillStyle = '#E3E6EC'; ctx.fillRect(tx - 12, ty - 4, 24, 4);
       ctx.fillStyle = '#9AA3B2'; rr(ctx, tx + 30, ty, 20, 14, 2); ctx.fill();
     }
+  }
+  if (b.doorW) {
+    // cửa đôi ở mặt trái (phía sân trường): khung trắng, hai cánh, mái hiên và bậc tam cấp
+    const y = b.doorW;
+    ctx.fillStyle = 'rgba(20,30,50,.12)'; ctx.fillRect(b.x - 14, y - 30, 14, 60);
+    ctx.fillStyle = '#C9C1B2'; ctx.fillRect(b.x - 12, y - 28, 12, 56);
+    ctx.fillStyle = '#E9E4D8'; for (let k = 0; k < 3; k++) ctx.fillRect(b.x - 11 + k * 4, y - 26, 2, 52);
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(b.x - 1, y - 26, 10, 52);
+    ctx.fillStyle = '#5E6F63'; ctx.fillRect(b.x + 1, y - 24, 7, 23); ctx.fillRect(b.x + 1, y + 1, 7, 23);
+    ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(b.x + 3, y - 20, 2, 16); ctx.fillRect(b.x + 3, y + 5, 2, 16);
+    ctx.fillStyle = '#2F6FB5'; rr(ctx, b.x + 12, y - 22, 16, 44, 4); ctx.fill();
+    ctx.save(); ctx.translate(b.x + 20, y); ctx.rotate(-Math.PI / 2); label(ctx, 'CLB', 0, 0, { size: 8, color: '#fff', weight: 800 }); ctx.restore();
   }
   if (!b.short) return;
   const cx = b.x + b.w / 2, cy = b.y + rh / 2;
@@ -892,8 +906,12 @@ export class World {
       if (sx < -100 || sy < -40 || sx > this.vw + 100 || sy > this.vh + 40) continue;
       const txt = `${h.icon} ${h.label}`;
       const size = h.small ? 11 : 12;
-      const w = label(ctx, txt, sx, sy, { size, color: h.small ? '#1B2A4E' : '#fff', bg: h.small ? 'rgba(255,255,255,.92)' : near ? '#D8343A' : 'rgba(27,42,78,.88)', weight: 700, pad: 6 });
-      this.labelRects.push({ x: sx - w / 2, y: sy - size / 2 - 8, w, h: size + 16, hs: h });
+      // giữ nhãn trong màn hình khi điểm tương tác sát mép (vd cửa ở tường trái của phòng)
+      ctx.font = `700 ${size}px "Be Vietnam Pro", system-ui, sans-serif`;
+      const half = ctx.measureText(txt).width / 2 + 6;
+      const lx = sx >= 0 && sx <= this.vw ? Math.max(half + 4, Math.min(this.vw - half - 4, sx)) : sx;
+      const w = label(ctx, txt, lx, sy, { size, color: h.small ? '#1B2A4E' : '#fff', bg: h.small ? 'rgba(255,255,255,.92)' : near ? '#D8343A' : 'rgba(27,42,78,.88)', weight: 700, pad: 6 });
+      this.labelRects.push({ x: lx - w / 2, y: sy - size / 2 - 8, w, h: size + 16, hs: h });
     }
     // chạm vào người khác
     for (const o of this.others.values()) {

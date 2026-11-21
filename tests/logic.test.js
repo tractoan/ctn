@@ -335,3 +335,14 @@ test('tên thầy cô chủ nhiệm: lớp mình sửa cho khóa mình, thầy c
   assert.equal((await call(s, 'setClassTeacher', { lop: 'Toán', name: '' }, a.token)).status, 400);
   assert.equal((await call(s, 'classTeacher', { lop: 'Lớp lạ' })).status, 400);
 });
+
+test('tên thầy cô phòng chức năng: học sinh lớp bất kỳ sửa cho khóa mình, khách không sửa được', async () => {
+  const s = memStore();
+  const v = (await call(s, 'register', { name: 'Chi', role: 'cuuhs', khoa: 'K12', lop: 'Văn' })).body;
+  const k = (await call(s, 'register', { name: 'Bạn', role: 'khach' })).body;
+  const r = (await call(s, 'setClassTeacher', { lop: 'phongtn', title: 'Thầy', name: 'Phạm Văn Hòa' }, v.token)).body.item;
+  assert.deepEqual([r.lop, r.khoa, r.name], ['phongtn', 'K12', 'Phạm Văn Hòa']);
+  assert.equal((await call(s, 'setClassTeacher', { lop: 'thuvien', name: 'X' }, k.token)).status, 403);
+  assert.equal((await call(s, 'setClassTeacher', { lop: 'canteen', name: 'X' }, v.token)).status, 400);
+  assert.equal((await call(s, 'classTeacher', { lop: 'phongtn' })).body.items[0].name, 'Phạm Văn Hòa');
+});

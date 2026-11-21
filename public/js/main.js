@@ -1,5 +1,5 @@
 import { api, getToken, setToken, getMode } from './api.js';
-import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS, CLASS_RULES, BAC_HO } from './logic.js';
+import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS, CLASS_RULES, BAC_HO, ROOM_TEACHERS } from './logic.js';
 import { World, CAMPUS_SCENE } from './world.js';
 import { classroomScene } from './classroom.js';
 import { SPAWN, HOTSPOTS, PLACES } from './campus.js';
@@ -666,6 +666,7 @@ const panels = {
     classReturn = { x: hs.x, y: hs.y };
     world.npcs = [...world.npcs.filter((n) => n.scene === 'campus'), ...roomNpcs(sc.id)];
     world.setScene(sc, (hs.spot && sc.spots[hs.spot]) || sc.spawn);
+    if (isRoomSlot(sc.id.slice(2))) loadTeacher(sc.id.slice(2));
     if (sc.zone) visitZone(sc.zone);
     sfx.click();
     toast(`${sc.name}: chạm vào đồ vật, nhãn hoặc nhân vật để dùng. Chạm "Ra sân" để ra.`);
@@ -993,37 +994,52 @@ const panels = {
   },
 };
 
-// ======================= Thầy cô chủ nhiệm (sửa tên) =======================
-// Mỗi khóa đặt tên thầy cô chủ nhiệm của lớp mình; vào lớp thấy tên của khóa mình, không có thì tên chung (thầy cô
-// đặt), không có nữa thì tên được đặt gần nhất, cuối cùng là tên mặc định.
-function pickTeacher(items, lop) {
-  const mine = me.lop === lop && me.khoa ? items.find((x) => x.khoa === me.khoa) : null;
+// ======================= Tên thầy cô (chủ nhiệm lớp, phòng chức năng) =======================
+// Mỗi khóa đặt tên thầy cô của mình; vào lớp/phòng thấy tên của khóa mình, không có thì tên chung (thầy cô đặt),
+// không có nữa thì tên được đặt gần nhất, cuối cùng là tên mặc định. "slot" = tên lớp chuyên hoặc mã phòng.
+const ROOM_TEACHER_NAMES = { thuvien: 'thư viện', phongmay: 'phòng máy', phongtn: 'phòng thí nghiệm', hieubo: 'văn phòng nhà hiệu bộ' };
+const isRoomSlot = (slot) => ROOM_TEACHERS.includes(slot);
+function pickTeacher(items, slot) {
+  const mine = me.khoa && (isRoomSlot(slot) || me.lop === slot) ? items.find((x) => x.khoa === me.khoa) : null;
   return mine || items.find((x) => x.khoa === '*') || items[0] || null;
 }
-function applyTeacher(lop, t) {
-  const n = world.npcs.find((x) => x.id === 'npc-gvcn' && x.lop === lop);
+// Đổi dáng nhân vật theo danh xưng (Thầy → nam, Cô → nữ), giữ nguyên nếu đã đúng
+function lookForTitle(base, title) {
+  const want = title === 'Thầy' ? 'nam' : 'nu';
+  if ((base.gender || 'nam') === want) return base;
+  return want === 'nam'
+    ? { ...base, gender: 'nam', hair: 6, bottom: 'quan', outfit: String(base.outfit).startsWith('aodai') ? 'somitrang' : base.outfit }
+    : { ...base, gender: 'nu', hair: 5, outfit: base.outfit === 'vest' ? 'aodaitim' : base.outfit };
+}
+function applyTeacher(slot, t) {
+  const n = world.npcs.find((x) => x.slot === slot);
   if (!n || !t) return;
   n.baseLook ||= n.look;
   n.name = `${t.title} ${t.name}`;
-  n.sub = `${t.title} · Chủ nhiệm${t.khoa && t.khoa !== '*' ? ' ' + t.khoa : ''}`;
-  n.look = t.title === 'Thầy' ? { ...n.baseLook, gender: 'nam', hair: 6, outfit: 'somitrang', bottom: 'quan' } : n.baseLook;
+  n.sub = `${t.title} · ${n.subject}${!isRoomSlot(slot) && t.khoa && t.khoa !== '*' ? ' ' + t.khoa : ''}`;
+  n.look = lookForTitle(n.baseLook, t.title);
 }
-async function loadTeacher(lop) {
-  try { const r = await call('classTeacher', { lop }); applyTeacher(lop, pickTeacher(r.items, lop)); return r.items; } catch { return []; }
+async function loadTeacher(slot) {
+  try { const r = await call('classTeacher', { lop: slot }); applyTeacher(slot, pickTeacher(r.items, slot)); return r.items; } catch { return []; }
 }
-function teacherEditSheet(lop) {
+function teacherEditSheet(slot) {
   if (!needMe()) return;
+  const room = isRoomSlot(slot);
   const isGv = me.role === 'gv';
-  const canEdit = isGv || ((me.role === 'cuuhs' || me.role === 'hs') && me.lop === lop);
-  openSheet('👩‍🏫 Thầy cô chủ nhiệm · Lớp chuyên ' + lop, async (b) => {
+  const canEdit = isGv || ((me.role === 'cuuhs' || me.role === 'hs') && (room || me.lop === slot));
+  const npc = world.npcs.find((x) => x.slot === slot);
+  openSheet(room ? `👩‍🏫 Thầy cô ${ROOM_TEACHER_NAMES[slot]}` : '👩‍🏫 Thầy cô chủ nhiệm · Lớp chuyên ' + slot, async (b) => {
     const listEl = h('div', {});
     const render = (items) => listEl.replaceChildren(items.length
       ? h('ul', { class: 'notes' }, ...items.map((x) => h('li', {}, h('b', {}, x.khoa === '*' ? 'Các khóa' : x.khoa), `: ${x.title} ${x.name} `, h('small', { class: 'muted' }, `(${x.by} sửa · ${ago(x.at)})`))))
-      : h('p', { class: 'muted' }, 'Chưa khóa nào đặt tên. Hãy là người đầu tiên!'));
+      : h('p', { class: 'muted' }, `Chưa khóa nào đặt tên. Đang hiện tên mặc định${npc ? ': ' + npc.name : ''}.`));
     b.append(listEl);
-    render(await loadTeacher(lop));
-    if (!canEdit) { b.append(h('p', { class: 'muted small' }, `Chỉ học sinh lớp chuyên ${lop} (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.`)); return; }
-    let title = 'Cô';
+    render(await loadTeacher(slot));
+    if (!canEdit) {
+      b.append(h('p', { class: 'muted small' }, room ? 'Chỉ học sinh, cựu học sinh (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.' : `Chỉ học sinh lớp chuyên ${slot} (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.`));
+      return;
+    }
+    let title = npc && npc.name.startsWith('Thầy') ? 'Thầy' : 'Cô';
     const nameInp = h('input', { class: 'input', id: 'gvcn-name', maxlength: 30, placeholder: 'Ví dụ: Nguyễn Thị Hoa', 'aria-label': 'Họ tên thầy cô' });
     const khoaSel = isGv ? h('select', { class: 'input', 'aria-label': 'Khóa' }, h('option', { value: '' }, 'Tất cả các khóa'),
       ...Array.from({ length: 40 }, (_, i) => 40 - i).map((n) => h('option', { value: 'K' + n }, 'Khóa ' + n))) : null;
@@ -1034,14 +1050,15 @@ function teacherEditSheet(lop) {
         title = t; e.currentTarget.parentNode.querySelectorAll('.ob-chip').forEach((x) => x.classList.toggle('on', x === e.currentTarget));
       } }, t))),
       h('label', { class: 'ob-lbl', for: 'gvcn-name' }, 'Họ tên'), nameInp,
-      ...(isGv ? [h('label', { class: 'ob-lbl' }, 'Chủ nhiệm khóa'), khoaSel] : []),
-      h('p', { class: 'muted small' }, isGv ? 'Chọn khóa thầy cô đã chủ nhiệm; "Tất cả các khóa" là tên dùng khi khóa đó chưa đặt.' : `Tên này hiện khi các bạn ${me.khoa} ${lop} vào lớp.`),
+      ...(isGv ? [h('label', { class: 'ob-lbl' }, room ? 'Công tác cùng khóa' : 'Chủ nhiệm khóa'), khoaSel] : []),
+      h('p', { class: 'muted small' }, isGv ? 'Chọn khóa; "Tất cả các khóa" là tên dùng khi khóa đó chưa đặt.'
+        : room ? `Tên này hiện khi các bạn khóa ${me.khoa} vào ${ROOM_TEACHER_NAMES[slot]}.` : `Tên này hiện khi các bạn ${me.khoa} ${slot} vào lớp.`),
       err,
       h('button', { class: 'btn primary', onclick: async () => {
         try {
-          await call('setClassTeacher', { lop, title, name: nameInp.value, khoa: khoaSel?.value || undefined });
-          sfx.coin(); toast('Đã lưu tên thầy cô chủ nhiệm'); nameInp.value = ''; err.textContent = '';
-          render(await loadTeacher(lop));
+          await call('setClassTeacher', { lop: slot, title, name: nameInp.value, khoa: khoaSel?.value || undefined });
+          sfx.coin(); toast('Đã lưu tên thầy cô'); nameInp.value = ''; err.textContent = '';
+          render(await loadTeacher(slot));
         } catch (e) { err.textContent = e.message; }
       } }, 'Lưu tên'));
   });
@@ -1531,7 +1548,7 @@ function npcSheet(n) {
       h('div', { class: 'row-btns' },
         h('button', { class: 'btn ghost', onclick: () => { line.textContent = n.lines[Math.floor(Math.random() * n.lines.length)]; } }, '💬 Nói chuyện tiếp'),
         act ? h('button', { class: 'btn primary', onclick: () => act[1](n) }, act[0]) : null),
-      ...(n.id === 'npc-gvcn' ? [h('button', { class: 'btn link', onclick: () => teacherEditSheet(n.lop) }, '✏️ Sửa tên thầy cô chủ nhiệm')] : []));
+      ...(n.slot ? [h('button', { class: 'btn link', onclick: () => teacherEditSheet(n.slot) }, n.id === 'npc-gvcn' ? '✏️ Sửa tên thầy cô chủ nhiệm' : '✏️ Sửa tên thầy cô')] : []));
   });
 }
 

@@ -23,15 +23,20 @@ const txt = (ctx, s, x, y, size, color, weight = 700, align = 'center') => {
 const BOOK = ['#E8483F', '#2F6FB5', '#F2B84B', '#3E8E7E', '#8E6BBF', '#F28C38'];
 
 // Khung phòng: sàn, tường trên có biển tên, hai tường bên có cửa sổ, tường dưới có cửa ra ở giữa.
-function room({ id, name, w, h, floor = '#EAD7B0', line = 'rgba(150,115,70,.14)', wall = '#FBF3DC', title, zone, windows = [] }) {
+// door: 's' = cửa ra ở giữa tường dưới (mặc định); 'w' = cửa ở tường trái, giữa cửa tại doorY.
+function room({ id, name, w, h, floor = '#EAD7B0', line = 'rgba(150,115,70,.14)', wall = '#FBF3DC', title, zone, windows = [], door = 's', doorY = 0 }) {
+  const west = door === 'w';
   const sc = {
     id, name, w, h, bgColor: '#2B3348', fit: true, fitMin: 0.6, zone,
-    solids: [{ x: 0, y: 0, w, h: TOP }, { x: 0, y: TOP, w: 10, h: h - TOP }, { x: w - 10, y: TOP, w: 10, h: h - TOP },
-      { x: 0, y: h - 16, w: w / 2 - 46, h: 16 }, { x: w / 2 + 46, y: h - 16, w: w / 2 - 46, h: 16 }],
+    solids: [{ x: 0, y: 0, w, h: TOP }, { x: w - 10, y: TOP, w: 10, h: h - TOP }, { x: 0, y: h - 16, w, h: 16 }],
     seats: [], hotspots: [], items: [], bg: [],
-    spawn: { x: w / 2, y: h - 66 }, spots: {},
+    spawn: west ? { x: 66, y: doorY } : { x: w / 2, y: h - 66 }, spots: {},
   };
-  sc.hotspots.push({ id: id + '-exit', x: w / 2, y: h - 38, icon: '🚪', label: 'Ra sân trường', panel: 'exitRoom', rect: { x: w / 2 - 46, y: h - 22, w: 92, h: 22 } });
+  if (west) sc.solids.push({ x: 0, y: TOP, w: 10, h: doorY - 46 - TOP }, { x: 0, y: doorY + 46, w: 10, h: h - doorY - 46 });
+  else { sc.solids.push({ x: 0, y: TOP, w: 10, h: h - TOP }); sc.solids.splice(2, 1, { x: 0, y: h - 16, w: w / 2 - 46, h: 16 }, { x: w / 2 + 46, y: h - 16, w: w / 2 - 46, h: 16 }); }
+  sc.hotspots.push(west
+    ? { id: id + '-exit', x: 38, y: doorY, icon: '🚪', label: 'Ra sân trường', panel: 'exitRoom', rect: { x: 0, y: doorY - 46, w: 24, h: 92 } }
+    : { id: id + '-exit', x: w / 2, y: h - 38, icon: '🚪', label: 'Ra sân trường', panel: 'exitRoom', rect: { x: w / 2 - 46, y: h - 22, w: 92, h: 22 } });
   sc.drawBg = (ctx) => {
     ctx.fillStyle = floor; ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = line; ctx.lineWidth = 1;
@@ -48,9 +53,17 @@ function room({ id, name, w, h, floor = '#EAD7B0', line = 'rgba(150,115,70,.14)'
       ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x + 3, y + 6, 2, 40);
     }
     // tường dưới + thảm cửa
-    ctx.fillStyle = wall; ctx.fillRect(0, h - 16, w / 2 - 46, 16); ctx.fillRect(w / 2 + 46, h - 16, w / 2 - 46, 16);
-    box(ctx, '#C9A26B', w / 2 - 40, h - 26, 80, 22, 6);
-    txt(ctx, '🚪 RA SÂN', w / 2, h - 15, 9, '#5A3E1E', 800);
+    ctx.fillStyle = wall;
+    if (west) {
+      ctx.fillRect(0, h - 16, w, 16);
+      ctx.fillStyle = floor; ctx.fillRect(0, doorY - 46, 10, 92);
+      box(ctx, '#C9A26B', 2, doorY - 40, 24, 80, 6);
+      ctx.save(); ctx.translate(14, doorY); ctx.rotate(-Math.PI / 2); txt(ctx, '🚪 RA SÂN', 0, 0, 9, '#5A3E1E', 800); ctx.restore();
+    } else {
+      ctx.fillRect(0, h - 16, w / 2 - 46, 16); ctx.fillRect(w / 2 + 46, h - 16, w / 2 - 46, 16);
+      box(ctx, '#C9A26B', w / 2 - 40, h - 26, 80, 22, 6);
+      txt(ctx, '🚪 RA SÂN', w / 2, h - 15, 9, '#5A3E1E', 800);
+    }
     for (const f of sc.bg) f(ctx);
     if (title) { box(ctx, '#FFFFFF', w / 2 - 92, 4, 184, 20, 10); txt(ctx, title, w / 2, 14.5, 11, '#1B2A4E', 800); }
   };
@@ -310,7 +323,8 @@ function cangtin() {
 // ======================= 🏀 Nhà đa năng · CLB =======================
 function dana() {
   const W = 640, H = 860;
-  const sc = room({ id: 'p:dana', name: '🏀 Nhà đa năng · CLB', w: W, h: H, floor: '#E2B77A', line: 'rgba(120,70,20,.10)', wall: '#E9F0F7', title: '🏀 NHÀ ĐA NĂNG · CLB', zone: 'DN', windows: [200, 420, 640] });
+  // cửa ở tường trái (phía sân trường), mở vào lối giữa gian CLB thứ nhất và thứ hai
+  const sc = room({ id: 'p:dana', name: '🏀 Nhà đa năng · CLB', w: W, h: H, floor: '#E2B77A', line: 'rgba(120,70,20,.10)', wall: '#E9F0F7', title: '🏀 NHÀ ĐA NĂNG · CLB', zone: 'DN', windows: [200, 640], door: 'w', doorY: 477 });
   sc.bg.push((ctx) => {
     // bảng tỉ số
     box(ctx, '#22252E', 40, 34, 120, 50, 6); txt(ctx, 'NHÀ  ·  KHÁCH', 100, 46, 7, '#9AA3B2', 700); txt(ctx, '24 : 21', 100, 66, 16, '#FFD45E', 800);
@@ -341,7 +355,7 @@ function dana() {
     });
     hot(sc, { id: 'dn-' + c.id, x: left ? x + 230 : x - 30, y: y + 40, icon: c.icon, label: c.name, panel: 'club', club: c.id, nolabel: true, rect: { x, y, w: 200, h: 64 } });
   });
-  sc.spots.clubs = { x: W / 2, y: H - 70 };
+  sc.spots.clubs = { x: 70, y: 477 };
   return sc;
 }
 

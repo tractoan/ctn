@@ -303,6 +303,13 @@ function lopParam(b) {
   if (!LOPS.includes(lop)) throw new ApiError(400, 'Lớp không hợp lệ');
   return lop;
 }
+// Phòng chức năng có thầy cô đặt được tên (ngoài 12 lớp chuyên)
+export const ROOM_TEACHERS = ['thuvien', 'phongmay', 'phongtn', 'hieubo'];
+function teacherSlot(b) {
+  const v = str(b.lop, 10, true, 'lớp');
+  if (!LOPS.includes(v) && !ROOM_TEACHERS.includes(v)) throw new ApiError(400, 'Lớp hoặc phòng không hợp lệ');
+  return v;
+}
 function canWriteLog(u, lop) { return NO_CLASS.includes(u.role) || u.lop === lop; }
 function isLessonTime(now) { return periodOf(now).label.startsWith('Tiết'); }
 
@@ -419,21 +426,24 @@ const handlers = {
     return { ok: true };
   },
 
-  // Thầy cô chủ nhiệm của lớp chuyên: mỗi khóa một tên (khóa '*' = dùng chung khi khóa đó chưa đặt)
+  // Thầy cô của lớp chuyên (chủ nhiệm) hoặc của phòng chức năng (thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ):
+  // mỗi khóa một tên (khóa '*' = dùng chung khi khóa đó chưa đặt)
   async classTeacher(ctx, b) {
-    const lop = lopParam(b);
+    const lop = teacherSlot(b);
     const rows = await ctx.store.list('gvcn', lop + '|', 100);
     return { items: rows.map((r) => r.v).sort((a, c) => c.at - a.at) };
   },
 
-  // Sửa tên thầy cô chủ nhiệm: học sinh/cựu học sinh của lớp đó sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ
+  // Sửa tên thầy cô. Lớp chuyên: học sinh/cựu học sinh lớp đó sửa cho khóa mình. Phòng chức năng: học sinh/cựu học sinh
+  // lớp bất kỳ sửa cho khóa mình. Thầy cô sửa cho khóa bất kỳ hoặc mọi khóa.
   async setClassTeacher(ctx, b) {
     const u = await auth(ctx);
-    const lop = lopParam(b);
+    const lop = teacherSlot(b);
+    const room = ROOM_TEACHERS.includes(lop);
     let khoa;
     if (u.role === 'gv') khoa = b.khoa ? normKhoa(b.khoa, 'cuuhs') : '*';
-    else if ((u.role === 'cuuhs' || u.role === 'hs') && u.lop === lop) khoa = u.khoa;
-    else throw new ApiError(403, `Chỉ học sinh lớp chuyên ${lop} hoặc thầy cô mới sửa được tên thầy cô chủ nhiệm`);
+    else if ((u.role === 'cuuhs' || u.role === 'hs') && (room || u.lop === lop)) khoa = u.khoa;
+    else throw new ApiError(403, room ? 'Chỉ học sinh, cựu học sinh hoặc thầy cô mới sửa được tên thầy cô' : `Chỉ học sinh lớp chuyên ${lop} hoặc thầy cô mới sửa được tên thầy cô chủ nhiệm`);
     const title = b.title === 'Thầy' ? 'Thầy' : 'Cô';
     const name = str(b.name, 30, true, 'tên thầy cô').replace(/^(thầy|cô)\s+/i, '');
     const item = { lop, khoa, title, name, by: u.name, at: ctx.now };

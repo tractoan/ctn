@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.9 – tải ảnh lên làm ảnh kỷ yếu; sửa tên thầy cô chủ nhiệm theo khóa; lối đi giữa bồn hoa xuống dãy 5 tầng |
+| Phiên bản | 2.0 – sửa tên thầy cô ở phòng chức năng; cửa nhà đa năng ở mặt trái phía sân trường; nhãn không tràn mép màn hình |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -158,7 +158,7 @@ quay lưng). Mỗi phòng có `spots` (điểm xuất hiện theo cửa đã và
 | `p:phongtn` 🧪 Phòng thí nghiệm | `lab` (dãy 3 tầng) | 640 × 660 | Tủ hoá chất, bảng tuần hoàn, tủ hút khí độc, bàn thầy → `hoahoc`, 4 bàn thí nghiệm có bồn rửa (8 ghế đẩu), vòi rửa mắt | Thầy Minh (Hóa) |
 | `p:hieubo` 🏛️ Nhà hiệu bộ | `office`, `teachers`, `history` | 640 × 760 | Bảng thông báo họp lớp → `office` tab 0, phòng truyền thống → `history`, tủ cúp **bảng vàng đội tuyển** → `honor` (lưu bút `doituyen`), gian Tri ân → `office` tab 1, Phòng giáo viên → `teachers`, Phòng cấp bằng → `office` tab 2 | Cô Lan (văn phòng) |
 | `p:cangtin` 🍜 Căng tin | `canteen` | 560 × 720 | Bảng thực đơn (từ `MENU`), quầy → `canteen`, 5 bàn tròn (10 ghế đẩu), tủ nước, biển giảm giá giờ ra chơi | Cô căng tin, anh Dũng (ngồi) |
-| `p:dana` 🏀 Nhà đa năng · CLB | `clubs` | 640 × 860 | Bảng tỉ số, nửa sân bóng rổ có rổ → `bongro`, 6 gian CLB → `club` (lưu bút `clb:<id>`) | Bạn Nam |
+| `p:dana` 🏀 Nhà đa năng · CLB | `clubs` (cửa mặt trái, x 1482 y 552, quay ra sân trường; `doorW` trên toà nhà vẽ cửa đôi, tam cấp, biển CLB) | 640 × 860, cửa ở tường trái (`room({ door: 'w', doorY: 477 })`) | Bảng tỉ số, nửa sân bóng rổ có rổ → `bongro`, 6 gian CLB → `club` (lưu bút `clb:<id>`) | Bạn Nam |
 
 Vào phòng: `panels.enterRoom(hs)` (hotspot có `room`, `spot`) → `ROOMS[room]()`, nhớ cửa trong `classReturn`, thay nhân
 vật phụ bằng `campusNpcs` + `roomNpcs(id)`, `setScene(sc, sc.spots[spot])`, `visitZone(sc.zone)`. Ra: `exitRoom` →
@@ -330,12 +330,17 @@ hỗ trợ thì dùng `Image`), thu nhỏ cạnh dài ≤ 1400 px. `composeYearb
 theo tỉ lệ ảnh trong khoảng 300–820 px, ảnh phủ kín khung và cắt phần thừa ở giữa. Tên người trong ảnh lấy từ ô nhập (cách
 nhau bởi dấu phẩy), bỏ trống thì là tên mình. Ảnh chỉ rời máy khi bấm "Đăng lên album" (JPEG ≤ 290 KB, ảnh nhỏ ≤ 38 KB).
 
-### 5.6c Thầy cô chủ nhiệm
+### 5.6c Thầy cô chủ nhiệm và thầy cô phòng chức năng
 
 Tên cô chủ nhiệm trong lớp mặc định lấy theo danh sách (`classNpcs`). Bảng `gvcn`, khóa `lớp|khóa` (`*` = chung), giá trị
 `{lop, khoa, title, name, by, at}`. `setClassTeacher`: học sinh/cựu học sinh lớp đó ghi cho khóa mình; thầy cô ghi cho khóa
 chọn hoặc `*`; người khác bị từ chối (403). Khi vào lớp, `loadTeacher` gọi `classTeacher` và chọn: tên của khóa mình → tên
 chung → tên đặt gần nhất; "Thầy" thì nhân vật đổi sang dáng nam, sơ mi.
+
+Cùng cơ chế cho thầy cô phòng chức năng: mỗi NPC có `slot` (`thuvien`, `phongmay`, `phongtn`, `hieubo`; với cô chủ nhiệm là
+tên lớp) và `subject` (Thủ thư, Tin, Hóa, Văn phòng). Với phòng chức năng (`ROOM_TEACHERS` trong `logic.js`), học sinh/
+cựu học sinh **lớp bất kỳ** sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ; khách bị từ chối. Vào phòng thì `loadTeacher(slot)`.
+`lookForTitle` đổi dáng theo danh xưng (Thầy → nam, sơ mi; Cô → nữ, áo dài nếu đang mặc vest).
 
 ### 5.7 Phong cách
 
@@ -539,7 +544,7 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `attend` | ✔ | `room` (`lop:*`) | `{ok}` |
 | `checkin` | ✔ | `transport` (xedap/xemay/oto/bus/dibo) | `{already, gained, punished, bonus, streak, transport, user}` |
 | `classlog` | – (có token thì đánh dấu dòng của mình) | `lop, day?` | `{lop, day, today, days[], present[], notes[], orals[], submit, writeups[], canWrite, isTeacher}` |
-| `classTeacher` | – | `lop` | `{items[]}` (mới nhất trước) |
+| `classTeacher` | – | `lop` (lớp chuyên hoặc `thuvien`/`phongmay`/`phongtn`/`hieubo`) | `{items[]}` (mới nhất trước) |
 | `setClassTeacher` | ✔ | `lop, title` (Thầy/Cô), `name` (≤ 30), `khoa?` (thầy cô) | `{item}`; 403 nếu không phải lớp mình |
 | `classlogAct` | ✔ | `lop, kind` (note/submit/notebook/writeup), `text?`, `target?`, `reason?` | note → `{ok, user}`; submit → `{fresh, by?, at?, user}`; notebook → `{today, fresh, notes[], user}`; writeup (chỉ thầy cô) → `{ok}` |
 | `menu` | – | – | `{sale, items[]}` |
