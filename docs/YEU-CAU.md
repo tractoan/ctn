@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.6 – tải ảnh lên làm ảnh kỷ yếu, sửa tên thầy cô chủ nhiệm, lối đi giữa sân vào dãy 5 tầng |
+| Phiên bản | 1.6 – tải ảnh lên làm ảnh kỷ yếu, sửa tên thầy cô chủ nhiệm, lối đi giữa bồn hoa vào dãy 5 tầng |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -106,7 +106,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-SD-04 | Vị trí lớp chuyên: **dãy 4 tầng** trái → phải Toán, Lý, Hóa, Sinh, Văn, Trung (Lý sát Hóa, các lớp giãn đều); **dãy 3 tầng** trái → phải Anh, Sử, Địa; **dãy 5 tầng** phải → trái Tin, Nga, Pháp, cửa ở mặt trong quay vào sân trường | P1 | ✅ |
 | YC-SD-05 | Sân khấu có phông "Hiền tài là nguyên khí của quốc gia", **cột cờ ở giữa sân khấu** | P2 | ✅ |
 | YC-SD-06 | **Trống trường** ở giữa dãy 5 tầng, phía sát sân trường (ngay cạnh lối đi giữa) | P2 | ✅ |
-| YC-SD-17 | **Lối đi giữa dãy 5 tầng**: từ sân trường, giữa hai nửa dải bồn hoa ở chỗ trống trường, có bậc thang xuống, đi xuyên qua dãy 5 tầng ra sân trước cổng; hai đầu có biển "Lối đi" / "Lên sân trường" | P1 | ✅ |
+| YC-SD-17 | **Lối đi giữa sân vào dãy 5 tầng**: dải bồn hoa mép sân chia đôi đúng chỗ trống trường, có bậc thang xuống hành lang trước mặt trong dãy 5 tầng (cửa các lớp Pháp, Nga, Tin, thư viện, phòng máy); dãy 5 tầng giữ nguyên, không chia đôi | P1 | ✅ |
 | YC-SD-07 | Chạm/nhấp vào sân thì nhân vật tự tìm đường đi tới, không xuyên qua nhà, tường, cây, bậc chắn | P1 | ✅ |
 | YC-SD-08 | Chạm vào nhãn địa điểm thì nhân vật đi tới đó và tự mở chức năng khi tới nơi (bản 1.3 sửa lỗi vùng chạm của nhãn bị sai nên chạm nhãn không có tác dụng) | P1 | ✅ |
 | YC-SD-09 | Từ cổng trường đi tới được **mọi** địa điểm và cửa lớp | P1 | ✅ |

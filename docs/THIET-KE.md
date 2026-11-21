@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.9 – tải ảnh lên làm ảnh kỷ yếu; sửa tên thầy cô chủ nhiệm theo khóa; lối đi giữa sân xuyên dãy 5 tầng |
+| Phiên bản | 1.9 – tải ảnh lên làm ảnh kỷ yếu; sửa tên thầy cô chủ nhiệm theo khóa; lối đi giữa bồn hoa xuống dãy 5 tầng |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -81,10 +81,10 @@ dãy 4 tầng. Mỗi pixel của bản vẽ gốc = **1,6 px thế giới**. Th�
 | `TREES` (`tree` + `bloom`: `phuong`/`banglang`/`hoasua`, `planter`: bồn gốc cây; `bonsai`: bụi hoa; `palm` vẫn vẽ được), `LAMPS`, `FLAG`, `BOARD`, `STAGE`, `DRUM` | Trang trí; gốc cây, bảng tin, bục sân khấu là vật cản |
 
 Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối vào** giữa nhà hiệu bộ và dãy 5 tầng → **bậc thang
-chính** lên sân trường. **Lối đi giữa dãy 5 tầng** (`PASSAGE`, x 1052–1122): dãy 5 tầng tách hai khối, mép sân và
-dải bồn hoa hở đúng chỗ trống trường, có **bậc thang giữa** (`dir: 's'`) xuống hành lang rồi xuyên qua dãy nhà ra sân
-trước cổng (bồn hoa và bụi cây phía trước cũng chừa lối). Trống trường dời sang cạnh phải lối đi (x 1172); cửa lớp Nga,
-Tin dời sang phải (x 1310, 1480) để nhãn không chồng nhau. Căng tin và chỗ trốn học đi vòng phía
+chính** lên sân trường. **Lối đi giữa** (x 1052–1122): dải bồn hoa mép sân **chia đôi** đúng chỗ trống trường, mép sân hở và có **bậc thang
+giữa** (`dir: 's'`) xuống hành lang trước mặt trong dãy 5 tầng (nơi có cửa lớp Pháp, Nga, Tin, thư viện, phòng máy);
+dãy 5 tầng giữ nguyên một khối. Trống trường dời sang cạnh phải bậc thang (x 1172); cửa lớp Nga, Tin dời sang phải
+(x 1310, 1480) để nhãn không chồng nhau. Căng tin và chỗ trốn học đi vòng phía
 Đông nhà đa năng.
 
 Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), rồi Lý, Hóa, Sinh,
