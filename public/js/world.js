@@ -1,5 +1,5 @@
 // Sân trường: vẽ bản đồ, camera, tìm đường (A* trên lưới), nhân vật mình + người khác.
-import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, SEATS, CHAIR_ROWS, ROOM_DOORS, FLOWERBEDS, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
+import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, SEATS, CHAIR_ROWS, ROOM_DOORS, FLOWERBEDS, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, PASSAGE, solids } from './campus.js';
 import { drawAvatar } from './avatar.js';
 
 const CELL = 20;
@@ -213,6 +213,13 @@ function drawGround(ctx, g) {
 }
 
 function drawStairs(ctx, st) {
+  if (st.dir === 's') {
+    // bậc thang đi xuống phía Nam (bậc nằm ngang), hai bên có thành
+    ctx.fillStyle = '#C8C1B2'; ctx.fillRect(st.x, st.y, st.w, st.h);
+    ctx.fillStyle = '#E9E4D8'; for (let y = st.y + 2; y < st.y + st.h; y += 7) ctx.fillRect(st.x + 4, y, st.w - 8, 4);
+    ctx.fillStyle = '#9C9586'; ctx.fillRect(st.x, st.y, 4, st.h); ctx.fillRect(st.x + st.w - 4, st.y, 4, st.h);
+    return;
+  }
   ctx.fillStyle = '#C8C1B2'; ctx.fillRect(st.x - 8, st.y, st.w + 8, st.h);
   ctx.fillStyle = '#E9E4D8';
   for (let x = st.x - 6; x < st.x + st.w; x += 8) ctx.fillRect(x, st.y + 2, 5, st.h - 4);
@@ -328,6 +335,16 @@ function drawDoor(ctx, d) {
     const y = d.side === 's' ? d.y - 62 : d.y + 16;
     rr(ctx, d.x - 22, y - 6, 44, 12, 3); ctx.fillStyle = '#2F6FB5'; ctx.fill();
     label(ctx, d.lop.toUpperCase(), d.x, y, { size: 7.5, color: '#fff', weight: 800 });
+  }
+}
+
+// Biển cổng lối đi giữa dãy 5 tầng (hai trụ + biển nhỏ ở hai đầu)
+function drawPassageSign(ctx) {
+  const p = PASSAGE, top = 830, bot = top + 160;
+  for (const y of [top, bot - 6]) { ctx.fillStyle = '#C9B79A'; ctx.fillRect(p.x - 2, y, 6, 8); ctx.fillRect(p.x + p.w - 4, y, 6, 8); }
+  for (const [y, t] of [[top - 8, '⇣ LỐI ĐI'], [bot + 4, '⇡ LÊN SÂN TRƯỜNG']]) {
+    rr(ctx, p.x + p.w / 2 - 40, y - 6, 80, 12, 4); ctx.fillStyle = '#2F6FB5'; ctx.fill();
+    label(ctx, t, p.x + p.w / 2, y, { size: 7, color: '#fff', weight: 800 });
   }
 }
 
@@ -538,6 +555,8 @@ export const CAMPUS_SCENE = {
   solids: solids(), hotspots: HOTSPOTS, seats: SEATS, spawn: null,
   drawBg(ctx) {
     for (const g of GROUNDS) drawGround(ctx, g);
+    // lối đi giữa dãy 5 tầng: lát gạch như sân, hai bên có viền
+    { const p = PASSAGE; tiles(ctx, p.x, p.y, p.w, p.h, '#E7D9C4'); ctx.fillStyle = 'rgba(120,90,50,.25)'; ctx.fillRect(p.x, p.y, 3, p.h); ctx.fillRect(p.x + p.w - 3, p.y, 3, p.h); }
     for (const st of STAIRS) drawStairs(ctx, st);
     for (const fb of FLOWERBEDS) drawFlowerbed(ctx, fb);
     // tường rào thấp màu kem
@@ -559,6 +578,7 @@ export const CAMPUS_SCENE = {
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
     for (const d of CLASS_DOORS) if (d.side === 's') items.push({ y: d.y - 25, draw: () => drawDoor(ctx, d) });
+    items.push({ y: PASSAGE.y + PASSAGE.h + 1, draw: () => drawPassageSign(ctx) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
     for (const b of BENCHES) items.push({ y: b.y - 1, draw: () => drawBench(ctx, b) });
     items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
@@ -1050,6 +1070,7 @@ export class World {
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
     for (const d of CLASS_DOORS) if (d.side === 's') items.push({ y: d.y - 25, draw: () => drawDoor(ctx, d) });
+    items.push({ y: PASSAGE.y + PASSAGE.h + 1, draw: () => drawPassageSign(ctx) });
     for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
     items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
     items.push({ y: DRUM.y, draw: () => drawDrum(ctx) });

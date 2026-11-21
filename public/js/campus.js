@@ -10,9 +10,12 @@ export const SPAWN = { x: 910, y: 1035 };
 
 // Sân trường cao hơn mặt đất, lên/xuống bằng bậc thang ở cạnh trái.
 export const YARD = { x: 592, y: 192, w: 880, h: 570 };
+// Lối đi giữa dãy 5 tầng (x 1052–1122): từ sân trường xuống bậc thang, xuyên qua dãy nhà ra sân trước cổng
+export const PASSAGE = { x: 1052, w: 70, y: 764, h: 226 };
 export const STAIRS = [
   { x: 592, y: 200, w: 46, h: 168, label: 'Bậc thang xuống sân đá cầu', dir: 'w' },
   { x: 592, y: 595, w: 66, h: 163, label: 'Bậc thang chính lên sân', dir: 'w' },
+  { x: 1052, y: 746, w: 70, h: 30, label: 'Bậc thang giữa xuống dãy 5 tầng', dir: 's' },
 ];
 
 // Mặt đất: vẽ theo thứ tự (sau đè trước)
@@ -34,7 +37,9 @@ export const BUILDINGS = [
   { id: 'D3', name: 'Dãy nhà 3 tầng', short: 'DÃY NHÀ 3 TẦNG', x: 797, y: 8, w: 891, h: 168, floors: 3, wall: '#F4E2A6', roof: '#D9C9A0' },
   { id: 'D3', name: 'Dãy nhà 3 tầng', x: 1507, y: 160, w: 181, h: 149, floors: 3, wall: '#F4E2A6', roof: '#D9C9A0' },
   { id: 'HB', name: 'Nhà hiệu bộ', short: 'NHÀ HIỆU BỘ', x: 6, y: 600, w: 363, h: 392, floors: 4, wall: '#F2EEE4', roof: '#CFC9BD', bands: '#3E8E4A' },
-  { id: 'D5', name: 'Dãy nhà 5 tầng', short: 'DÃY NHÀ 5 TẦNG', x: 578, y: 830, w: 1019, h: 160, floors: 5, wall: '#F4E2A6', roof: '#D9C9A0' },
+  // dãy 5 tầng tách hai khối, chừa lối đi ở giữa (PASSAGE)
+  { id: 'D5', name: 'Dãy nhà 5 tầng', short: 'DÃY NHÀ 5 TẦNG', x: 578, y: 830, w: 474, h: 160, floors: 5, wall: '#F4E2A6', roof: '#D9C9A0' },
+  { id: 'D5', name: 'Dãy nhà 5 tầng', x: 1122, y: 830, w: 475, h: 160, floors: 5, wall: '#F4E2A6', roof: '#D9C9A0' },
   { id: 'DN', name: 'Nhà đa năng', short: 'NHÀ ĐA NĂNG', x: 1501, y: 339, w: 328, h: 426, floors: 1, wall: '#EFE6C8', roof: '#8FA3BF', hall: true },
   { id: 'CT', name: 'Căng tin', short: 'CĂNG TIN', x: 1835, y: 373, w: 98, h: 320, floors: 1, wall: '#FFF1D6', roof: '#E08A4B', vertical: true },
 ];
@@ -55,7 +60,7 @@ export const SIDE_GATE = { x: 0, y: 414, w: 10, h: 150 };
 // Mép sân trường (tường chắn) – vật cản, chừa chỗ bậc thang.
 export const EDGES = [
   { x: 586, y: 368, w: 8, h: 227 },
-  { x: 658, y: 756, w: 814, h: 8 },
+  { x: 658, y: 756, w: 394, h: 8 }, { x: 1122, y: 756, w: 350, h: 8 }, // chừa bậc thang giữa
 ];
 
 // Lớp chuyên theo dãy nhà (theo trí nhớ của cựu học sinh). side: phía cửa quay ra.
@@ -68,8 +73,8 @@ export const CLASS_DOORS = [
   { lop: 'Sử', b: 'D3', x: 940, y: 202, side: 's' },
   { lop: 'Địa', b: 'D3', x: 1400, y: 202, side: 's' },
   // Dãy 5 tầng, phải → trái; cửa ở mặt trong (quay vào sân trường), đi theo hành lang dưới chân tường sân
-  { lop: 'Tin', b: 'D5', x: 1450, y: 800, side: 'n' },
-  { lop: 'Nga', b: 'D5', x: 1200, y: 800, side: 'n' },
+  { lop: 'Tin', b: 'D5', x: 1480, y: 800, side: 'n' },
+  { lop: 'Nga', b: 'D5', x: 1310, y: 800, side: 'n' },
   { lop: 'Pháp', b: 'D5', x: 950, y: 800, side: 'n' },
 ];
 
@@ -99,7 +104,7 @@ export const HOTSPOTS = [
   { id: 'canteen', x: 1884, y: 718, icon: '🍜', label: 'Căng tin', panel: 'enterRoom', room: 'cangtin', spot: 'canteen' },
   { id: 'tronhoc', x: 1805, y: 150, icon: '⚽', label: 'Chỗ trốn học đá bóng', map: 'Trốn học', panel: 'tronhoc' },
   { id: 'photo', x: 1370, y: 300, icon: '📸', label: 'Chụp ảnh kỷ yếu', map: 'Chụp ảnh', panel: 'photo' },
-  { id: 'drum', x: 1087, y: 790, icon: '🥁', label: 'Trống trường', map: 'Trống', panel: 'drum' },
+  { id: 'drum', x: 1172, y: 790, icon: '🥁', label: 'Trống trường', map: 'Trống', panel: 'drum' },
   { id: 'wish', x: 1400, y: 1150, icon: '🌠', label: 'Tường "Ước mơ vào Chuyên"', map: 'Ước mơ', panel: 'wish' },
   // phòng chức năng: đi vào trong phòng (rooms.js)
   ...ROOM_DOORS.map((d) => ({ id: d.id, x: d.x, y: d.y, icon: d.icon, label: d.label, panel: 'enterRoom', room: { lab: 'phongtn', computer: 'phongmay', library: 'thuvien' }[d.id], spot: d.id, small: true })),
@@ -119,7 +124,7 @@ for (const [y, bloom] of [[260, 'phuong'], [340], [560, 'banglang'], [700, 'phuo
 // Hàng cây phía phải sân trường
 for (const [y, bloom] of [[240, 'phuong'], [360, 'hoasua'], [480, 'banglang'], [620, 'phuong']]) yardTree(1440, y, bloom);
 // Hàng chậu cảnh dưới sân
-for (let x = 760; x <= 1380; x += 90) trees.push({ x, y: 715, kind: 'bonsai' });
+for (let x = 760; x <= 1380; x += 90) if (Math.abs(x - 1087) > 70) trees.push({ x, y: 715, kind: 'bonsai' });
 // Cây to quanh cổng, góc vườn
 for (const [x, y, bloom] of [[60, 1070, 'phuong'], [170, 1120], [280, 1060, 'banglang'], [1660, 860, 'phuong'], [1780, 940], [1900, 880, 'banglang'], [1700, 1080, 'hoasua'], [1880, 1110, 'phuong'], [1600, 1150, 'phuong']]) trees.push({ x, y, kind: 'tree', bloom, planter: x < 1610 && y > 1000 && x > 1500 });
 // Cây có bồn dọc lối vào (trên nền gạch)
@@ -127,7 +132,7 @@ trees.push({ x: 505, y: 690, kind: 'tree', bloom: 'phuong', planter: true }, { x
 // Chỗ trốn học
 for (const [x, y] of [[1730, 60], [1880, 90], [1750, 250], [1890, 260]]) trees.push({ x, y, kind: 'tree' });
 // Bờ cây trước dãy 5 tầng
-for (let x = 640; x <= 1560; x += 120) if (x < 860 || x > 960) trees.push({ x, y: 1070, kind: 'bonsai' });
+for (let x = 640; x <= 1560; x += 120) if ((x < 860 || x > 960) && Math.abs(x - 1087) > 70) trees.push({ x, y: 1070, kind: 'bonsai' });
 export const TREES = trees;
 
 export const LAMPS = [{ x: 940, y: 560 }, { x: 1140, y: 560 }, { x: 760, y: 1110 }, { x: 1300, y: 1110 }];
@@ -152,8 +157,8 @@ export const SEATS = [
 // Bồn hoa (là vật cản). round: bồn tròn bán kính r; còn lại hình chữ nhật.
 export const FLOWERBEDS = [
   { round: true, x: 735, y: 560, r: 26 }, { round: true, x: 1375, y: 560, r: 26 }, { round: true, x: 1040, y: 655, r: 36 },
-  { x: 720, y: 728, w: 700, h: 18 },
-  { x: 600, y: 1086, w: 250, h: 16 }, { x: 970, y: 1086, w: 600, h: 16 },
+  { x: 720, y: 728, w: 327, h: 18 }, { x: 1127, y: 728, w: 293, h: 18 }, // dải hoa mép sân, hở ở lối đi giữa
+  { x: 600, y: 1086, w: 250, h: 16 }, { x: 970, y: 1086, w: 77, h: 16 }, { x: 1127, y: 1086, w: 443, h: 16 },
   { x: 1650, y: 1120, w: 200, h: 26, colors: ['#E5382F', '#F2B233', '#FFFFFF'] },
   { x: 200, y: 1150, w: 120, h: 24, colors: ['#F06292', '#BA68C8', '#FFFFFF'] },
   { round: true, x: 1790, y: 860, r: 26 },
@@ -162,7 +167,7 @@ export const FLOWERBEDS = [
 // Cột cờ ở giữa sân khấu
 export const FLAG = { x: 1151, y: 250 };
 // Trống trường: giữa dãy 5 tầng, phía sát sân trường
-export const DRUM = { x: 1087, y: 806 };
+export const DRUM = { x: 1172, y: 806 };
 export const BOARD = { x: 603, y: 395, w: 40, h: 133 };
 export const STAGE = { x: 987, y: 195, w: 328, h: 72, label: 'HIỀN TÀI LÀ NGUYÊN KHÍ CỦA QUỐC GIA' };
 

@@ -319,3 +319,19 @@ test('ngoại hình phiên bản 2: đổi kiểu cũ, giữ kiểu mới, thầ
   const gv = (await call(s, 'register', { name: 'Hà', role: 'gv', school: 'Cô · Toán' })).body;
   assert.equal(gv.user.school, 'Cô · Toán');
 });
+
+test('tên thầy cô chủ nhiệm: lớp mình sửa cho khóa mình, thầy cô sửa chung, lớp khác không sửa được', async () => {
+  const s = memStore();
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' })).body;
+  const v = (await call(s, 'register', { name: 'Chi', role: 'cuuhs', khoa: 'K20', lop: 'Văn' })).body;
+  const gv = (await call(s, 'register', { name: 'Hà', role: 'gv', school: 'Cô · Toán' })).body;
+  assert.equal((await call(s, 'setClassTeacher', { lop: 'Toán', title: 'Cô', name: 'Nguyễn Thị Hoa' }, v.token)).status, 403);
+  const r = (await call(s, 'setClassTeacher', { lop: 'Toán', title: 'Cô', name: 'Cô Nguyễn Thị Hoa' }, a.token)).body.item;
+  assert.deepEqual([r.khoa, r.title, r.name, r.by], ['K20', 'Cô', 'Nguyễn Thị Hoa', 'An']);
+  await call(s, 'setClassTeacher', { lop: 'Toán', title: 'Thầy', name: 'Trần Văn Nam' }, gv.token, Date.now() + 1000);
+  await call(s, 'setClassTeacher', { lop: 'Toán', title: 'Thầy', name: 'Lê Minh' , khoa: '5' }, gv.token, Date.now() + 2000);
+  const items = (await call(s, 'classTeacher', { lop: 'Toán' })).body.items;
+  assert.deepEqual(items.map((x) => `${x.khoa}:${x.title} ${x.name}`), ['K5:Thầy Lê Minh', '*:Thầy Trần Văn Nam', 'K20:Cô Nguyễn Thị Hoa']);
+  assert.equal((await call(s, 'setClassTeacher', { lop: 'Toán', name: '' }, a.token)).status, 400);
+  assert.equal((await call(s, 'classTeacher', { lop: 'Lớp lạ' })).status, 400);
+});

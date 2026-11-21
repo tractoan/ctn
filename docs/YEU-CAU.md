@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.5 – các phòng bên trong (thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin, nhà đa năng), nhạc nền 3 bài tự phát |
+| Phiên bản | 1.6 – tải ảnh lên làm ảnh kỷ yếu, sửa tên thầy cô chủ nhiệm, lối đi giữa sân vào dãy 5 tầng |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -101,11 +101,12 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
 | YC-SD-01 | Sơ đồ dựng theo bản vẽ của cựu học sinh: dãy nhà 4 tầng (chữ L), dãy 3 tầng, dãy 5 tầng, nhà hiệu bộ, sân trường cao có bậc thang, sân đá cầu, nhà đa năng, căng tin (sau nhà đa năng), chỗ trốn học đá bóng, cổng phụ, cổng chính ra đường Lương Ngọc Quyến | P1 | ✅ |
-| YC-SD-02 | Sân trường chỉ lên/xuống được qua **bậc thang chính** và **bậc thang xuống sân đá cầu** ở cạnh trái | P2 | ✅ |
+| YC-SD-02 | Sân trường lên/xuống qua **bậc thang chính** và **bậc thang xuống sân đá cầu** ở cạnh trái, và **bậc thang giữa** xuống lối đi dãy 5 tầng | P2 | ✅ |
 | YC-SD-03 | Cổng chính giống ảnh thật: trụ xanh nhạt, biển trắng chữ đỏ "SỞ GIÁO DỤC & ĐÀO TẠO TỈNH THÁI NGUYÊN – TRƯỜNG THPT CHUYÊN THÁI NGUYÊN", băng rôn xanh | P2 | ✅ |
 | YC-SD-04 | Vị trí lớp chuyên: **dãy 4 tầng** trái → phải Toán, Lý, Hóa, Sinh, Văn, Trung (Lý sát Hóa, các lớp giãn đều); **dãy 3 tầng** trái → phải Anh, Sử, Địa; **dãy 5 tầng** phải → trái Tin, Nga, Pháp, cửa ở mặt trong quay vào sân trường | P1 | ✅ |
 | YC-SD-05 | Sân khấu có phông "Hiền tài là nguyên khí của quốc gia", **cột cờ ở giữa sân khấu** | P2 | ✅ |
-| YC-SD-06 | **Trống trường** ở giữa dãy 5 tầng, phía sát sân trường | P2 | ✅ |
+| YC-SD-06 | **Trống trường** ở giữa dãy 5 tầng, phía sát sân trường (ngay cạnh lối đi giữa) | P2 | ✅ |
+| YC-SD-17 | **Lối đi giữa dãy 5 tầng**: từ sân trường, giữa hai nửa dải bồn hoa ở chỗ trống trường, có bậc thang xuống, đi xuyên qua dãy 5 tầng ra sân trước cổng; hai đầu có biển "Lối đi" / "Lên sân trường" | P1 | ✅ |
 | YC-SD-07 | Chạm/nhấp vào sân thì nhân vật tự tìm đường đi tới, không xuyên qua nhà, tường, cây, bậc chắn | P1 | ✅ |
 | YC-SD-08 | Chạm vào nhãn địa điểm thì nhân vật đi tới đó và tự mở chức năng khi tới nơi (bản 1.3 sửa lỗi vùng chạm của nhãn bị sai nên chạm nhãn không có tác dụng) | P1 | ✅ |
 | YC-SD-09 | Từ cổng trường đi tới được **mọi** địa điểm và cửa lớp | P1 | ✅ |
@@ -147,6 +148,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-LH-11 | **Ghi tên vi phạm**: ném bóng nước trúng người trong lớp giữa giờ học thì tự động bị ghi tên; thầy cô ghi tên học sinh có mặt kèm lý do; bị ghi tên thì hôm sau điểm danh không được tiền ăn vặt | P2 | ✅ |
 | YC-LH-12 | Lớp học vừa chiều ngang điện thoại, thấy trọn tường đầu lớp và cuối lớp (không bị thanh trên, thanh chat che) | P1 | ✅ |
 | YC-LH-13 | Hotspot chạm được ở **cả nhãn lẫn đồ vật** (cửa lớp, bảng, áp phích, bàn giáo viên, giá sách) | P1 | ✅ |
+| YC-LH-14 | **Sửa tên thầy cô chủ nhiệm**: chạm cô chủ nhiệm hoặc mục "Thầy cô chủ nhiệm" trên bảng lớp → chọn Thầy/Cô, nhập họ tên. Học sinh/cựu học sinh lớp đó sửa cho **khóa mình**; thầy cô sửa cho khóa bất kỳ hoặc "tất cả các khóa"; lớp khác không sửa được. Vào lớp thấy tên của khóa mình, chưa có thì tên chung, rồi tên được đặt gần nhất; xem được danh sách tên theo khóa và ai sửa | P1 | ✅ |
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
 
 ### 4.6 Hoạt động trong trường
@@ -166,6 +168,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-HD-11 | **Sổ lưu bút** của từng người, dạng quyển sổ: bìa có logo và tên chủ sổ, mỗi trang một lời lưu bút trên giấy kẻ dòng chữ viết tay ("Gửi …", nội dung, chữ ký, ngày), lật trang trước/sau, trang cuối để ký vào sổ (≤ 600 ký tự). Mở sổ của mình từ "Nhân vật của tôi", sổ của bạn từ thẻ của bạn | P1 | ✅ |
 | YC-HD-12 | **Chụp ảnh kỷ yếu** (nút 📸 hoặc điểm "Chụp ảnh kỷ yếu" trước sân khấu): đếm ngược 3–2–1, nhân vật hô "📸 Cười lên nào!" cho mọi người cùng thấy; chụp khung cảnh quanh mình (không có nhãn), ghép vào **khung kỷ yếu** có logo, ngày, khóa/lớp, lời ghi, tên những người trong ảnh | P1 | ✅ |
 | YC-HD-13 | Ảnh kỷ yếu **lưu về máy** (JPEG) hoặc **đăng lên album trường**; mỗi người tối đa 5 ảnh/ngày | P2 | 🟡 |
+| YC-HD-17 | **Tải ảnh lên làm ảnh kỷ yếu**: nút "🖼️ Tải ảnh lên" chọn ảnh từ máy/điện thoại (JPG, PNG…, ≤ 20 MB); ảnh được xoay đúng chiều, thu nhỏ và đóng khung kỷ yếu ngay trên máy (khung giãn theo tỉ lệ ảnh, ảnh quá dài cắt giữa); nhập lời ghi và tên những người trong ảnh; lưu về máy hoặc đăng album (chung giới hạn 5 ảnh/ngày); có lời nhắc chỉ đăng ảnh được phép chia sẻ | P1 | ✅ |
 | YC-HD-14 | **Album kỷ yếu** (từ phòng truyền thống, nút 📸, "Nhân vật của tôi"): lưới 60 ảnh mới nhất, chạm để xem ảnh lớn, người chụp, người trong ảnh, lưu về máy | P2 | ✅ |
 
 > YC-HD-09: âm thanh tổng hợp bằng Web Audio, chưa nghe thử trên thiết bị thật.

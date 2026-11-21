@@ -419,6 +419,28 @@ const handlers = {
     return { ok: true };
   },
 
+  // Thầy cô chủ nhiệm của lớp chuyên: mỗi khóa một tên (khóa '*' = dùng chung khi khóa đó chưa đặt)
+  async classTeacher(ctx, b) {
+    const lop = lopParam(b);
+    const rows = await ctx.store.list('gvcn', lop + '|', 100);
+    return { items: rows.map((r) => r.v).sort((a, c) => c.at - a.at) };
+  },
+
+  // Sửa tên thầy cô chủ nhiệm: học sinh/cựu học sinh của lớp đó sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ
+  async setClassTeacher(ctx, b) {
+    const u = await auth(ctx);
+    const lop = lopParam(b);
+    let khoa;
+    if (u.role === 'gv') khoa = b.khoa ? normKhoa(b.khoa, 'cuuhs') : '*';
+    else if ((u.role === 'cuuhs' || u.role === 'hs') && u.lop === lop) khoa = u.khoa;
+    else throw new ApiError(403, `Chỉ học sinh lớp chuyên ${lop} hoặc thầy cô mới sửa được tên thầy cô chủ nhiệm`);
+    const title = b.title === 'Thầy' ? 'Thầy' : 'Cô';
+    const name = str(b.name, 30, true, 'tên thầy cô').replace(/^(thầy|cô)\s+/i, '');
+    const item = { lop, khoa, title, name, by: u.name, at: ctx.now };
+    await ctx.store.put('gvcn', `${lop}|${khoa}`, item);
+    return { item };
+  },
+
   // Xem sổ đầu bài một ngày của một lớp
   async classlog(ctx, b) {
     const lop = lopParam(b);

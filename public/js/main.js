@@ -904,6 +904,7 @@ const panels = {
     world.npcs = [...world.npcs.filter((n) => n.scene === 'campus'), ...classNpcs(hs.lop)];
     const sc = classroomScene(hs.lop);
     world.setScene(sc, sc.spawn);
+    loadTeacher(hs.lop);
     sfx.click();
     const mine = !me.guest && (me.lop === hs.lop || ['gv', 'khach', 'em'].includes(me.role));
     toast(mine ? `Vào lớp chuyên ${hs.lop}. Ngồi vào ghế để ký sổ đầu bài, chạm bảng lớp để xem lưu bút, đố vui…`
@@ -924,6 +925,7 @@ const panels = {
         item('✍️', 'Lưu bút lớp', 'Viết vài dòng cho bạn cùng lớp', () => panels.class({ lop, tab: 0 })),
         item('📒', 'Sổ đầu bài', 'Sĩ số, ghi chú, điểm miệng, vi phạm hôm nay', () => classLogSheet(lop)),
         item('❓', 'Đố vui về lớp', 'Có bảng xếp hạng riêng', () => panels.class({ lop, tab: 2 })),
+        item('👩‍🏫', 'Thầy cô chủ nhiệm', `${world.npcs.find((n) => n.id === 'npc-gvcn')?.name || 'Cô chủ nhiệm'} · chạm để sửa tên`, () => teacherEditSheet(lop)),
         item('🙋', 'Kiểm tra bài cũ', '2 câu hỏi nhanh, điểm miệng ghi vào sổ đầu bài', () => {
           const t = world.npcs.find((n) => n.id === 'npc-gvcn');
           oldLessonSheet({ name: t ? t.name : 'Cô chủ nhiệm', lop });
@@ -990,6 +992,60 @@ const panels = {
     }, { wide: true });
   },
 };
+
+// ======================= Thầy cô chủ nhiệm (sửa tên) =======================
+// Mỗi khóa đặt tên thầy cô chủ nhiệm của lớp mình; vào lớp thấy tên của khóa mình, không có thì tên chung (thầy cô
+// đặt), không có nữa thì tên được đặt gần nhất, cuối cùng là tên mặc định.
+function pickTeacher(items, lop) {
+  const mine = me.lop === lop && me.khoa ? items.find((x) => x.khoa === me.khoa) : null;
+  return mine || items.find((x) => x.khoa === '*') || items[0] || null;
+}
+function applyTeacher(lop, t) {
+  const n = world.npcs.find((x) => x.id === 'npc-gvcn' && x.lop === lop);
+  if (!n || !t) return;
+  n.baseLook ||= n.look;
+  n.name = `${t.title} ${t.name}`;
+  n.sub = `${t.title} · Chủ nhiệm${t.khoa && t.khoa !== '*' ? ' ' + t.khoa : ''}`;
+  n.look = t.title === 'Thầy' ? { ...n.baseLook, gender: 'nam', hair: 6, outfit: 'somitrang', bottom: 'quan' } : n.baseLook;
+}
+async function loadTeacher(lop) {
+  try { const r = await call('classTeacher', { lop }); applyTeacher(lop, pickTeacher(r.items, lop)); return r.items; } catch { return []; }
+}
+function teacherEditSheet(lop) {
+  if (!needMe()) return;
+  const isGv = me.role === 'gv';
+  const canEdit = isGv || ((me.role === 'cuuhs' || me.role === 'hs') && me.lop === lop);
+  openSheet('👩‍🏫 Thầy cô chủ nhiệm · Lớp chuyên ' + lop, async (b) => {
+    const listEl = h('div', {});
+    const render = (items) => listEl.replaceChildren(items.length
+      ? h('ul', { class: 'notes' }, ...items.map((x) => h('li', {}, h('b', {}, x.khoa === '*' ? 'Các khóa' : x.khoa), `: ${x.title} ${x.name} `, h('small', { class: 'muted' }, `(${x.by} sửa · ${ago(x.at)})`))))
+      : h('p', { class: 'muted' }, 'Chưa khóa nào đặt tên. Hãy là người đầu tiên!'));
+    b.append(listEl);
+    render(await loadTeacher(lop));
+    if (!canEdit) { b.append(h('p', { class: 'muted small' }, `Chỉ học sinh lớp chuyên ${lop} (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.`)); return; }
+    let title = 'Cô';
+    const nameInp = h('input', { class: 'input', id: 'gvcn-name', maxlength: 30, placeholder: 'Ví dụ: Nguyễn Thị Hoa', 'aria-label': 'Họ tên thầy cô' });
+    const khoaSel = isGv ? h('select', { class: 'input', 'aria-label': 'Khóa' }, h('option', { value: '' }, 'Tất cả các khóa'),
+      ...Array.from({ length: 40 }, (_, i) => 40 - i).map((n) => h('option', { value: 'K' + n }, 'Khóa ' + n))) : null;
+    const err = h('p', { class: 'err', role: 'alert' });
+    b.append(h('h4', {}, '✏️ Sửa tên'),
+      h('div', { class: 'ob-lbl' }, 'Danh xưng'),
+      h('div', { class: 'ob-chips' }, ...['Thầy', 'Cô'].map((t) => h('button', { class: 'ob-chip' + (t === title ? ' on' : ''), onclick: (e) => {
+        title = t; e.currentTarget.parentNode.querySelectorAll('.ob-chip').forEach((x) => x.classList.toggle('on', x === e.currentTarget));
+      } }, t))),
+      h('label', { class: 'ob-lbl', for: 'gvcn-name' }, 'Họ tên'), nameInp,
+      ...(isGv ? [h('label', { class: 'ob-lbl' }, 'Chủ nhiệm khóa'), khoaSel] : []),
+      h('p', { class: 'muted small' }, isGv ? 'Chọn khóa thầy cô đã chủ nhiệm; "Tất cả các khóa" là tên dùng khi khóa đó chưa đặt.' : `Tên này hiện khi các bạn ${me.khoa} ${lop} vào lớp.`),
+      err,
+      h('button', { class: 'btn primary', onclick: async () => {
+        try {
+          await call('setClassTeacher', { lop, title, name: nameInp.value, khoa: khoaSel?.value || undefined });
+          sfx.coin(); toast('Đã lưu tên thầy cô chủ nhiệm'); nameInp.value = ''; err.textContent = '';
+          render(await loadTeacher(lop));
+        } catch (e) { err.textContent = e.message; }
+      } }, 'Lưu tên'));
+  });
+}
 
 // ======================= Sổ đầu bài, nội quy =======================
 const dayText = (d) => { const [y, m, dd] = d.split('-'); return `${+dd}/${+m}/${y}`; };
@@ -1068,9 +1124,12 @@ function balloonPicker() {
 // ======================= Ảnh kỷ yếu =======================
 const LOGO = Object.assign(new Image(), { src: 'logo.jpg' });
 
+// Khung ảnh kỷ yếu. Ảnh chụp ở sân có tỉ lệ cố định; ảnh tải lên giữ tỉ lệ (cao 300–820 px, cắt giữa nếu quá dài).
 async function composeYearbook(shot, people, caption) {
   await LOGO.decode().catch(() => {});
-  const W = 720, H = 660;
+  const W = 720, PW = W - 88;
+  const PH = Math.round(Math.max(300, Math.min(820, PW * shot.height / shot.width)));
+  const H = 660 - 404 + PH;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
   const font = (w, size, fam = '"Be Vietnam Pro", system-ui, sans-serif') => `${w} ${size}px ${fam}`;
@@ -1084,19 +1143,36 @@ async function composeYearbook(shot, people, caption) {
   x.textAlign = 'right'; x.fillStyle = '#5B6577'; x.font = font(600, 13);
   x.fillText(new Date().toLocaleDateString('vi-VN'), W - 40, 70);
   x.fillText(me.guest ? '' : [me.khoa, me.lop && 'Chuyên ' + me.lop].filter(Boolean).join(' · '), W - 40, 92);
-  // ảnh
-  x.fillStyle = '#fff'; x.fillRect(34, 124, W - 68, 424);
-  x.drawImage(shot, 44, 134, W - 88, 404);
+  // ảnh: phủ kín khung, cắt phần thừa ở giữa
+  x.fillStyle = '#fff'; x.fillRect(34, 124, W - 68, PH + 20);
+  const k = Math.max(PW / shot.width, PH / shot.height), sw = PW / k, sh = PH / k;
+  x.drawImage(shot, (shot.width - sw) / 2, (shot.height - sh) / 2, sw, sh, 44, 134, PW, PH);
   // chú thích + tên
+  const y0 = 134 + PH;
   x.textAlign = 'center'; x.fillStyle = '#1D2433';
   x.font = font(400, 24, 'Pangolin, "Be Vietnam Pro", cursive');
-  if (caption) x.fillText(caption.slice(0, 60), W / 2, 588);
+  if (caption) x.fillText(caption.slice(0, 60), W / 2, y0 + 50);
   x.fillStyle = '#5B6577'; x.font = font(600, 13);
   let names = people.join(', ');
   while (x.measureText(names).width > W - 90 && names.length > 4) names = names.slice(0, -4) + '…';
-  x.fillText(names, W / 2, caption ? 614 : 596);
+  x.fillText(names, W / 2, caption ? y0 + 76 : y0 + 58);
   x.fillStyle = '#9AA0A6'; x.font = font(600, 11);
   x.fillText('234A Lương Ngọc Quyến · TP Thái Nguyên', W / 2, H - 28);
+  return c;
+}
+
+// Đọc ảnh người dùng chọn (xoay đúng chiều theo EXIF nếu trình duyệt hỗ trợ), thu nhỏ còn cạnh dài ≤ 1400 px
+async function readPhoto(file) {
+  let src;
+  try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch {
+    src = await new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => bad(new Error('Không đọc được ảnh này')); im.src = URL.createObjectURL(file); });
+  }
+  const w0 = src.width || src.naturalWidth, h0 = src.height || src.naturalHeight;
+  const k = Math.min(1, 1400 / Math.max(w0, h0));
+  const c = document.createElement('canvas'); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  src.close?.();
   return c;
 }
 
@@ -1113,11 +1189,30 @@ function jpeg(canvas, maxW, quality, maxLen) {
 
 panels.photo = () => {
   openSheet('📸 Chụp ảnh kỷ yếu', (b, { onCleanup }) => {
-    const stage = h('div', { class: 'shot-stage' }, h('p', { class: 'muted' }, 'Gọi bạn bè đứng gần nhau (trong khoảng 13 bước quanh bạn), tạo dáng rồi bấm Chụp. Ảnh có khung kỷ yếu, lưu về máy hoặc đăng lên album trường.'));
+    const intro = () => h('div', { class: 'shot-stage' }, h('p', { class: 'muted' }, 'Chụp ở sân trường: gọi bạn bè đứng gần nhau (khoảng 13 bước quanh bạn), tạo dáng rồi bấm Chụp. Hoặc tải ảnh thật từ máy lên để làm ảnh kỷ yếu. Ảnh có khung kỷ yếu, lưu về máy hoặc đăng lên album trường.'));
+    const stage = intro();
     const caption = h('input', { class: 'input', maxlength: 60, placeholder: 'Lời ghi trên ảnh (vd: Họp lớp 10 năm 🎉)', 'aria-label': 'Lời ghi trên ảnh' });
+    const peopleInp = h('input', { class: 'input', maxlength: 200, placeholder: 'Ảnh tải lên: những ai trong ảnh (cách nhau bởi dấu phẩy)', 'aria-label': 'Những ai trong ảnh' });
     const actions = h('div', { class: 'stack' });
+    const fileInp = h('input', { type: 'file', accept: 'image/*', hidden: true, 'aria-label': 'Chọn ảnh' });
     let timer = 0;
     onCleanup(() => clearInterval(timer));
+
+    const show = (framed, people, again) => {
+      const full = jpeg(framed, 720, 0.82, 290000);
+      stage.replaceChildren(h('img', { class: 'shot', src: full, alt: 'Ảnh kỷ yếu: ' + people.join(', ') }));
+      const post = h('button', { class: 'btn primary', onclick: async () => {
+        if (!needMe()) return;
+        post.disabled = true;
+        try {
+          const r = await call('albumPost', { full, thumb: jpeg(framed, 240, 0.72, 38000), caption: caption.value.trim(), people });
+          setMe(r.user); toast('Đã đăng lên album kỷ yếu!'); post.textContent = '✅ Đã đăng lên album';
+        } catch (e) { toast(e.message, 'bad'); post.disabled = false; }
+      } }, '🖼️ Đăng lên album trường');
+      actions.replaceChildren(
+        h('a', { class: 'btn ghost', href: full, download: `ky-yeu-chuyen-thai-nguyen-${Date.now()}.jpg` }, '⬇️ Lưu ảnh về máy'),
+        post, again, home());
+    };
     const shoot = () => {
       let n = 3;
       const cd = h('div', { class: 'countdown', 'aria-live': 'assertive' }, String(n));
@@ -1132,25 +1227,38 @@ panels.photo = () => {
         cd.classList.add('flash');
         const people = world.peopleNear();
         const framed = await composeYearbook(world.capture(640, 404, 1.6), people, caption.value.trim());
-        const full = jpeg(framed, 720, 0.82, 290000);
-        const img = h('img', { class: 'shot', src: full, alt: 'Ảnh kỷ yếu: ' + people.join(', ') });
-        stage.replaceChildren(img);
-        const post = h('button', { class: 'btn primary', onclick: async () => {
-          if (!needMe()) return;
-          post.disabled = true;
-          try {
-            const r = await call('albumPost', { full, thumb: jpeg(framed, 240, 0.72, 38000), caption: caption.value.trim(), people });
-            setMe(r.user); toast('Đã đăng lên album kỷ yếu!'); post.textContent = '✅ Đã đăng lên album';
-          } catch (e) { toast(e.message, 'bad'); post.disabled = false; }
-        } }, '🖼️ Đăng lên album trường');
-        actions.replaceChildren(
-          h('a', { class: 'btn ghost', href: full, download: `ky-yeu-chuyen-thai-nguyen-${Date.now()}.jpg` }, '⬇️ Lưu ảnh về máy'),
-          post,
-          h('button', { class: 'btn ghost', onclick: shoot }, '🔁 Chụp lại'));
+        show(framed, people, h('button', { class: 'btn ghost', onclick: shoot }, '🔁 Chụp lại'));
       }, 1000);
     };
-    actions.append(h('button', { class: 'btn primary big', onclick: shoot }, '📸 Chụp'), h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Xem album'));
-    b.append(stage, caption, actions);
+    // Tải ảnh từ máy: ảnh thật của lớp, buổi họp lớp…
+    fileInp.addEventListener('change', async () => {
+      const f = fileInp.files[0];
+      fileInp.value = '';
+      if (!f) return;
+      if (!/^image\//.test(f.type)) { toast('Hãy chọn một file ảnh (JPG, PNG…)', 'bad'); return; }
+      if (f.size > 20e6) { toast('Ảnh quá lớn (tối đa 20 MB)', 'bad'); return; }
+      stage.replaceChildren(h('p', { class: 'muted' }, 'Đang xử lý ảnh…'));
+      try {
+        const pic = await readPhoto(f);
+        const typed = peopleInp.value.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 12);
+        const people = typed.length ? typed : [me.name];
+        const framed = await composeYearbook(pic, people, caption.value.trim());
+        sfx.shutter();
+        show(framed, people, h('button', { class: 'btn ghost', onclick: () => fileInp.click() }, '🔁 Chọn ảnh khác'));
+      } catch (e) { stage.replaceChildren(h('p', { class: 'err' }, e.message || 'Không đọc được ảnh này')); }
+    });
+    const home = () => h('button', { class: 'btn link muted', onclick: start }, '← Chọn cách khác');
+    const start = () => {
+      stage.replaceChildren(...intro().childNodes);
+      actions.replaceChildren(
+        h('div', { class: 'row-btns' },
+          h('button', { class: 'btn primary big', onclick: shoot }, '📸 Chụp ở sân'),
+          h('button', { class: 'btn ghost big', onclick: () => fileInp.click() }, '🖼️ Tải ảnh lên')),
+        h('p', { class: 'muted small' }, 'Ảnh tải lên được đóng khung kỷ yếu ngay trên máy bạn. Chỉ đăng lên album những ảnh bạn có quyền chia sẻ và mọi người trong ảnh đồng ý.'),
+        h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Xem album'));
+    };
+    start();
+    b.append(stage, caption, peopleInp, fileInp, actions);
   }, { wide: true });
 };
 
@@ -1422,7 +1530,8 @@ function npcSheet(n) {
     b.append(h('div', { class: 'me-card' }, avatarCanvas(n.look, 72), h('div', {}, h('b', {}, n.name), h('div', { class: 'muted' }, n.sub))), line,
       h('div', { class: 'row-btns' },
         h('button', { class: 'btn ghost', onclick: () => { line.textContent = n.lines[Math.floor(Math.random() * n.lines.length)]; } }, '💬 Nói chuyện tiếp'),
-        act ? h('button', { class: 'btn primary', onclick: () => act[1](n) }, act[0]) : null));
+        act ? h('button', { class: 'btn primary', onclick: () => act[1](n) }, act[0]) : null),
+      ...(n.id === 'npc-gvcn' ? [h('button', { class: 'btn link', onclick: () => teacherEditSheet(n.lop) }, '✏️ Sửa tên thầy cô chủ nhiệm')] : []));
   });
 }
 

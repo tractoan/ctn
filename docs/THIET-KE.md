@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.8 – 6 phòng bên trong (rooms.js) giống trang mẫu; nhạc nền 3 bài MP3 phát lần lượt, tự phát và lặp lại |
+| Phiên bản | 1.9 – tải ảnh lên làm ảnh kỷ yếu; sửa tên thầy cô chủ nhiệm theo khóa; lối đi giữa sân xuyên dãy 5 tầng |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -81,7 +81,10 @@ dãy 4 tầng. Mỗi pixel của bản vẽ gốc = **1,6 px thế giới**. Th�
 | `TREES` (`tree` + `bloom`: `phuong`/`banglang`/`hoasua`, `planter`: bồn gốc cây; `bonsai`: bụi hoa; `palm` vẫn vẽ được), `LAMPS`, `FLAG`, `BOARD`, `STAGE`, `DRUM` | Trang trí; gốc cây, bảng tin, bục sân khấu là vật cản |
 
 Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối vào** giữa nhà hiệu bộ và dãy 5 tầng → **bậc thang
-chính** lên sân trường (sân chỉ lên được bằng hai bậc thang bên trái). Căng tin và chỗ trốn học đi vòng phía
+chính** lên sân trường. **Lối đi giữa dãy 5 tầng** (`PASSAGE`, x 1052–1122): dãy 5 tầng tách hai khối, mép sân và
+dải bồn hoa hở đúng chỗ trống trường, có **bậc thang giữa** (`dir: 's'`) xuống hành lang rồi xuyên qua dãy nhà ra sân
+trước cổng (bồn hoa và bụi cây phía trước cũng chừa lối). Trống trường dời sang cạnh phải lối đi (x 1172); cửa lớp Nga,
+Tin dời sang phải (x 1310, 1480) để nhãn không chồng nhau. Căng tin và chỗ trốn học đi vòng phía
 Đông nhà đa năng.
 
 Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), rồi Lý, Hóa, Sinh,
@@ -319,6 +322,21 @@ Be Vietnam Pro nếu không tải được font.
 `world.capture` tạm thay `ctx`, kích thước, camera của `World` rồi gọi `_draw` với cờ `_capturing`, sau đó khôi phục.
 Logo là file cùng nguồn nên canvas không bị "nhiễm bẩn" và xuất được JPEG.
 
+### 5.6b Tải ảnh lên làm ảnh kỷ yếu
+
+Bảng 📸 có hai cách: **Chụp ở sân** (như trên) hoặc **Tải ảnh lên** (`<input type=file accept=image/*>`).
+`readPhoto(file)` dùng `createImageBitmap(file, { imageOrientation: 'from-image' })` để xoay đúng chiều theo EXIF (không
+hỗ trợ thì dùng `Image`), thu nhỏ cạnh dài ≤ 1400 px. `composeYearbook` nhận ảnh tỉ lệ bất kỳ: khung ảnh rộng 632 px, cao
+theo tỉ lệ ảnh trong khoảng 300–820 px, ảnh phủ kín khung và cắt phần thừa ở giữa. Tên người trong ảnh lấy từ ô nhập (cách
+nhau bởi dấu phẩy), bỏ trống thì là tên mình. Ảnh chỉ rời máy khi bấm "Đăng lên album" (JPEG ≤ 290 KB, ảnh nhỏ ≤ 38 KB).
+
+### 5.6c Thầy cô chủ nhiệm
+
+Tên cô chủ nhiệm trong lớp mặc định lấy theo danh sách (`classNpcs`). Bảng `gvcn`, khóa `lớp|khóa` (`*` = chung), giá trị
+`{lop, khoa, title, name, by, at}`. `setClassTeacher`: học sinh/cựu học sinh lớp đó ghi cho khóa mình; thầy cô ghi cho khóa
+chọn hoặc `*`; người khác bị từ chối (403). Khi vào lớp, `loadTeacher` gọi `classTeacher` và chọn: tên của khóa mình → tên
+chung → tên đặt gần nhất; "Thầy" thì nhân vật đổi sang dáng nam, sơ mi.
+
 ### 5.7 Phong cách
 
 | Token | Giá trị | Dùng cho |
@@ -494,6 +512,7 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `roster` | `phòng\|uid` | `{id, name, khoa, at}` – danh sách cả lớp theo khóa |
 | `clog` | `lớp\|ngày\|loại\|id` | Sổ đầu bài: `p` có mặt `{name, label, at}`, `n` ghi chú `{name, text, at}`, `o` điểm miệng `{name, label, grade, at}`, `s` nộp sổ (id `0`) `{name, at}`, `w` vi phạm `{uid, name, label, reason, by, at}` |
 | `clogday` | `lớp\|ngày` | `{day}` – các ngày có ghi chép, để chọn ngày xem lại |
+| `gvcn` | `lớp\|khóa` (`*` = mọi khóa) | `{lop, khoa, title, name, by, at}` – tên thầy cô chủ nhiệm |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
 | `score` | `trò chơi\|uid` | `{id, name, khoa, lop, score, at}` |
 | `buy` | `thời gian-id` | `{id, uid, name, item, emoji, price, forName, at}` |
@@ -520,6 +539,8 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `attend` | ✔ | `room` (`lop:*`) | `{ok}` |
 | `checkin` | ✔ | `transport` (xedap/xemay/oto/bus/dibo) | `{already, gained, punished, bonus, streak, transport, user}` |
 | `classlog` | – (có token thì đánh dấu dòng của mình) | `lop, day?` | `{lop, day, today, days[], present[], notes[], orals[], submit, writeups[], canWrite, isTeacher}` |
+| `classTeacher` | – | `lop` | `{items[]}` (mới nhất trước) |
+| `setClassTeacher` | ✔ | `lop, title` (Thầy/Cô), `name` (≤ 30), `khoa?` (thầy cô) | `{item}`; 403 nếu không phải lớp mình |
 | `classlogAct` | ✔ | `lop, kind` (note/submit/notebook/writeup), `text?`, `target?`, `reason?` | note → `{ok, user}`; submit → `{fresh, by?, at?, user}`; notebook → `{today, fresh, notes[], user}`; writeup (chỉ thầy cô) → `{ok}` |
 | `menu` | – | – | `{sale, items[]}` |
 | `buy` | ✔ | `item, forUid?` (đãi bạn) | `{item, user}` |
