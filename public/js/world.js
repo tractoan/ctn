@@ -705,7 +705,7 @@ export class World {
     const r = this.canvas.getBoundingClientRect();
     this.vw = r.width; this.vh = r.height; this.dpr = dpr;
     this.canvas.width = Math.round(r.width * dpr); this.canvas.height = Math.round(r.height * dpr);
-    this.baseZoom = r.width < 640 ? 0.95 : 1.2;
+    this.baseZoom = r.width < 640 ? 0.8 : 1.2; // điện thoại: nhìn rộng hơn một chút
   }
 
   // Đổi cảnh (sân trường ↔ lớp học). Vẽ sẵn nền tĩnh vào canvas ngoài màn hình.

@@ -277,23 +277,25 @@ const music = {
   pause() { this.audio?.pause(); },
   next() { this.load(this.i + 1); this.play(); },
   prev() { this.load(this.i - 1); this.play(); },
-  pick(i) { this.load(i); this.play(); soundSettings.musicOn = true; saveSettings(); },
+  pick(i) { this.load(i); this.play(); sessionSet('ctn.musicOff', ''); },
+  // tạm dừng chỉ áp dụng cho lần truy cập này; lần sau mở trang nhạc lại tự phát
   toggle() {
-    if (this.playing) { this.pause(); soundSettings.musicOn = false; } else { this.play(); soundSettings.musicOn = true; }
-    saveSettings();
+    if (this.playing) { this.pause(); sessionSet('ctn.musicOff', '1'); } else { this.play(); sessionSet('ctn.musicOff', ''); }
   },
   volume(v) { if (this.audio) this.audio.volume = v / 100; },
   // Tự phát khi vào trường (trừ khi người dùng đã tắt nhạc lần trước)
+  // Điện thoại (iOS Safari, Chrome Android) chỉ cho phát tiếng sau một thao tác thật của người dùng. Chạm màn hình bắt đầu
+  // bằng pointerdown/touchstart nhưng trình duyệt chỉ coi touchend/pointerup/click là "thao tác", nên phải nghe các sự kiện
+  // đó và gọi play() ngay trong lúc xử lý; chưa phát được thì giữ nghe tiếp ở lần chạm sau.
   autostart() {
-    if (soundSettings.musicOn === false) return;
-    this.play().then((ok) => {
-      if (ok) return;
-      const go = () => {
-        window.removeEventListener('pointerdown', go, true); window.removeEventListener('keydown', go, true);
-        if (!this.playing && soundSettings.musicOn !== false) this.play();
-      };
-      window.addEventListener('pointerdown', go, true); window.addEventListener('keydown', go, true);
-    });
+    if (sessionGet('ctn.musicOff')) return;
+    const evs = ['pointerup', 'touchend', 'click', 'keydown'];
+    const off = () => evs.forEach((e) => window.removeEventListener(e, go, true));
+    const go = () => {
+      if (this.playing || sessionGet('ctn.musicOff')) { off(); return; }
+      this.play().then((ok) => { if (ok) off(); });
+    };
+    this.play().then((ok) => { if (!ok) evs.forEach((e) => window.addEventListener(e, go, true)); });
   },
   title() { return PLAYLIST[this.i].title; },
   sync() {
@@ -1894,12 +1896,9 @@ function soundSheet() {
     };
     const now = h('p', { class: 'now-playing' });
     const playBtn = h('button', { class: 'mp-btn main', 'aria-label': 'Phát / tạm dừng', onclick: () => music.toggle() });
-    const list = h('ol', { class: 'playlist' });
     const render = () => {
       now.replaceChildren(music.playing ? '▶️ Đang phát: ' : '⏸ Tạm dừng: ', h('b', {}, music.title()));
       playBtn.textContent = music.playing ? '⏸' : '▶️';
-      list.replaceChildren(...PLAYLIST.map((t, i) => h('li', {}, h('button', { class: 'pl-item' + (i === music.i ? ' on' : ''), onclick: () => music.pick(i) },
-        h('span', { class: 'pl-no' }, i === music.i && music.playing ? '🔊' : String(i + 1)), t.title))));
     };
     music.onChange = render;
     onCleanup(() => { if (music.onChange === render) music.onChange = null; });
@@ -1907,12 +1906,11 @@ function soundSheet() {
     b.append(
       h('div', { class: 'card' },
         h('h3', {}, '🎶 Nhạc nền'),
-        h('p', { class: 'muted' }, 'Ba bài phát lần lượt, hết bài cuối tự quay lại bài đầu. Chạm tên bài để nghe ngay.'),
+        h('p', { class: 'muted' }, 'Nhạc phát lần lượt, hết bài cuối tự quay lại bài đầu.'),
         now,
         h('div', { class: 'mp-row' },
           h('button', { class: 'mp-btn', 'aria-label': 'Bài trước', onclick: () => music.prev() }, '⏮'), playBtn,
           h('button', { class: 'mp-btn', 'aria-label': 'Bài sau', onclick: () => music.next() }, '⏭')),
-        list,
         slider('Âm lượng nhạc nền', 'music', () => music.volume(soundSettings.music))),
       h('div', { class: 'card' }, h('h3', {}, '🔔 Hiệu ứng'), slider('Âm lượng hiệu ứng', 'sfx', () => sfx.click()),
         h('button', { class: 'btn ghost', onclick: () => sfx.bell() }, 'Nghe thử tiếng chuông')));

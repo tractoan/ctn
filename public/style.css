@@ -470,10 +470,6 @@ body.page { overflow: auto; background: var(--bg); }
 .mp-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin: 6px 0 10px; }
 .mp-btn { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--line); background: #fff; font-size: 18px; }
 .mp-btn.main { width: 56px; height: 56px; background: var(--red); border-color: var(--red); color: #fff; font-size: 22px; }
-.playlist { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 6px; }
-.pl-item { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; border: 1.5px solid var(--line); background: #fff; border-radius: 12px; padding: 9px 12px; font-size: 14px; font-weight: 600; color: var(--ink); }
-.pl-item.on { border-color: var(--blue); background: #EAF2FC; color: var(--navy); }
-.pl-no { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--bg); font-size: 12px; font-weight: 800; }
 
 /* ---------- Quản trị: bảng tên thầy cô ---------- */
 .admin-table { display: grid; gap: 6px; margin: 8px 0 4px; }

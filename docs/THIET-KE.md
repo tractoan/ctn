@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.5 – ban đêm đẹp hơn: tối hơn, 18 cột đèn, cửa sổ sáng, đèn chiếu sân khấu, biển trường sáng, trăng, sao, đom đóm |
+| Phiên bản | 2.6 – nhạc tự phát ở lần chạm đầu trên điện thoại; bỏ danh sách bài; điện thoại thu nhỏ 0,8 |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -282,7 +282,7 @@ Ngoại hình lưu dạng `{v: 2, gender, skin, hair, hairColor, bottom, outfit,
 
 | Thành phần | Thiết kế | Yêu cầu |
 |---|---|---|
-| Nhạc nền 🎵 | `music` trong `main.js`: một phần tử `Audio`, danh sách `PLAYLIST` (3 file trong `public/music/`). Sự kiện `ended` → bài kế tiếp, sau bài cuối quay về bài đầu; `error` → bỏ qua bài lỗi. `autostart()` gọi khi vào trường; nếu trình duyệt chặn tự phát thì gắn `pointerdown`/`keydown` để phát ở lần tương tác đầu. Tạm dừng thì lưu `musicOn = false` (khoá `ctn.sound`), lần sau không tự phát. Âm lượng = `settings.music / 100`. Đổi bài: sửa `PLAYLIST` | YC-AT-02, YC-AT-03 |
+| Nhạc nền 🎵 | `music` trong `main.js`: một phần tử `Audio`, danh sách `PLAYLIST` (3 file trong `public/music/`). Sự kiện `ended` → bài kế tiếp, sau bài cuối quay về bài đầu; `error` → bỏ qua bài lỗi. `autostart()` gọi khi vào trường; nếu trình duyệt chặn tự phát thì nghe `pointerup`, `touchend`, `click`, `keydown` (các sự kiện được tính là thao tác người dùng – iOS Safari không tính `pointerdown`/`touchstart` của cảm ứng) và gọi `play()` ngay trong lúc xử lý, chưa được thì thử tiếp ở lần sau. Tạm dừng lưu `ctn.musicOff` trong `sessionStorage` (chỉ lần truy cập đó). Bảng 🎵 không hiện danh sách bài. Âm lượng = `settings.music / 100`. Đổi bài: sửa `PLAYLIST` | YC-AT-02, YC-AT-03 |
 | Trống trường 🥁 | `beatDrum()`: 3 nhịp, mỗi nhịp một `OscillatorNode` sóng sine trượt 110 → 45 Hz trong 0,4 s, âm lượng tắt dần theo hàm mũ. `AudioContext` chỉ tạo khi người dùng bấm | YC-HD-09 |
 | Bóng nước 🎈 | `World.throwBalloon`: quỹ đạo nội suy tuyến tính + cung `sin(πk)`, thời gian bay `450 + khoảng cách × 1,3` ms, bám theo vị trí hiện tại của mục tiêu; khi chạm: vòng nước + 10 giọt bắn trong 0,7 s; đặt `wet[id]` 4 s → `_wetFx` vẽ giọt nước rơi quanh người | YC-OL-07 |
 | Bong bóng lời nói | `World.say(id, text)`: hiện 5 s trên đầu, cắt bớt chữ quá dài | YC-OL-05 |
@@ -547,7 +547,7 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 | `sound.js` | Hiệu ứng âm thanh Web Audio, cài đặt âm lượng |
 | `classroom.js` | Cảnh lớp học (640 × 980): bố cục, vật cản, 36 chỗ ngồi, điểm tương tác, vẽ bảng lớp, áp phích, bàn ghế, hành lang |
 | `rooms.js` | 6 phòng bên trong (`ROOMS`): thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin, nhà đa năng; danh sách `CLUBS` |
-| `world.js` | `Grid` (lưới va chạm 20 px, A* 8 hướng + làm mượt) theo từng cảnh, `CAMPUS_SCENE`, camera (căn giữa cảnh nhỏ), vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, ngồi ghế, chụp ảnh (`capture`), bản đồ toàn cảnh |
+| `world.js` | `Grid` (lưới va chạm 20 px, A* 8 hướng + làm mượt) theo từng cảnh, `CAMPUS_SCENE`, camera (căn giữa cảnh nhỏ; mức phóng gốc 0,8 trên điện thoại, 1,2 trên máy tính), vẽ theo thứ tự y, nhãn, bong bóng lời nói, bóng nước, ngồi ghế, chụp ảnh (`capture`), bản đồ toàn cảnh |
 | `campus.js` | Dữ liệu sơ đồ (mục 3) |
 | `avatar.js` | Vẽ nhân vật (đứng, đi, quay lưng, ngồi), ảnh đại diện nhỏ |
 | `games.js` | Đá cầu (canvas, trọng lực), câu hỏi đố vui theo môn |
