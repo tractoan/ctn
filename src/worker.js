@@ -34,14 +34,16 @@ export default {
       let body = {};
       try {
         const raw = await request.text();
-        if (raw.length > (action === 'albumPost' ? 400000 : 8000)) return new Response(JSON.stringify({ error: 'Dữ liệu quá lớn' }), { status: 413, headers: JSON_HEADERS });
+        if (raw.length > (action === 'albumPost' ? 400000 : action === 'adminTeachers' ? 20000 : 8000)) return new Response(JSON.stringify({ error: 'Dữ liệu quá lớn' }), { status: 413, headers: JSON_HEADERS });
         body = raw ? JSON.parse(raw) : {};
       } catch {
         return new Response(JSON.stringify({ error: 'JSON không hợp lệ' }), { status: 400, headers: JSON_HEADERS });
       }
       const auth = request.headers.get('authorization') || '';
       const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-      const res = await handle(action, { store: d1Store(env.DB), token, now: Date.now() }, body);
+      // mã quản trị: `npx wrangler secret put ADMIN_CODE` (chạy thử trên máy: file .dev.vars)
+      const ip = request.headers.get('cf-connecting-ip') || '';
+      const res = await handle(action, { store: d1Store(env.DB), token, now: Date.now(), adminCode: env.ADMIN_CODE || '', ip }, body);
       return new Response(JSON.stringify(res.body), { status: res.status, headers: JSON_HEADERS });
     }
     return env.ASSETS.fetch(request);

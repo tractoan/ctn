@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.7 – sửa tên thầy cô ở phòng chức năng; cửa nhà đa năng ở mặt trái (phía sân trường) |
+| Phiên bản | 1.8 – quản trị sửa tên thầy cô hàng loạt bằng mã quản trị |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -150,6 +150,8 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-LH-13 | Hotspot chạm được ở **cả nhãn lẫn đồ vật** (cửa lớp, bảng, áp phích, bàn giáo viên, giá sách) | P1 | ✅ |
 | YC-LH-14 | **Sửa tên thầy cô chủ nhiệm**: chạm cô chủ nhiệm hoặc mục "Thầy cô chủ nhiệm" trên bảng lớp → chọn Thầy/Cô, nhập họ tên. Học sinh/cựu học sinh lớp đó sửa cho **khóa mình**; thầy cô sửa cho khóa bất kỳ hoặc "tất cả các khóa"; lớp khác không sửa được. Vào lớp thấy tên của khóa mình, chưa có thì tên chung, rồi tên được đặt gần nhất; xem được danh sách tên theo khóa và ai sửa | P1 | ✅ |
 | YC-LH-15 | **Sửa tên thầy cô ở phòng chức năng**: cô thủ thư (thư viện), thầy dạy Tin (phòng máy), thầy dạy Hóa (phòng thí nghiệm), cô văn phòng (nhà hiệu bộ). Chạm nhân vật → "✏️ Sửa tên thầy cô": chọn Thầy/Cô (nhân vật đổi dáng theo), nhập họ tên. Học sinh/cựu học sinh lớp bất kỳ sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ hoặc mọi khóa; khách không sửa được | P2 | ✅ |
+| YC-LH-16 | **Quản trị sửa tên thầy cô hàng loạt**: người có **mã quản trị** mở bảng (từ Nhân vật của tôi, bảng sửa tên thầy cô, hoặc `/?quantri`, không cần nhân vật), chọn khóa áp dụng (tất cả các khóa hoặc một khóa), sửa cùng lúc 12 lớp + 4 phòng trong một bảng, hoặc **dán danh sách** từ Excel/Google Sheets (`Lớp | Thầy/Cô | Họ tên | Khóa`); xoá trắng tên để bỏ tên đã đặt; báo số tên đã lưu và từng dòng lỗi | P1 | ✅ |
+| YC-LH-17 | **Mã quản trị** đặt trong biến bí mật của Cloudflare (`ADMIN_CODE`), không nằm trong mã nguồn; chưa đặt mã thì không ai dùng được bảng quản trị; nhập sai 10 lần trong 1 giờ thì bị khoá 1 giờ; trên bản chạy thử ngoại tuyến mã là `DEMO` | P1 | ✅ |
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
 
 ### 4.6 Hoạt động trong trường

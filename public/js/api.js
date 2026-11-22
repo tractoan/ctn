@@ -3,6 +3,7 @@
 import { handle } from './logic.js';
 
 const TOKEN_KEY = 'ctn.token';
+export const OFFLINE_ADMIN_CODE = 'DEMO';
 let mode = null; // 'online' | 'offline'
 let detecting = null;
 
@@ -58,7 +59,8 @@ export function getMode() { return mode; }
 export async function api(action, body = {}) {
   await detect();
   if (mode === 'offline') {
-    const res = await handle(action, { store: localStore, token: getToken(), now: Date.now() }, JSON.parse(JSON.stringify(body)));
+    // chế độ ngoại tuyến (dữ liệu chỉ trên trình duyệt này): mã quản trị chạy thử là DEMO
+    const res = await handle(action, { store: localStore, token: getToken(), now: Date.now(), adminCode: OFFLINE_ADMIN_CODE, ip: 'local' }, JSON.parse(JSON.stringify(body)));
     if (res.status !== 200) throw Object.assign(new Error(res.body.error), { status: res.status });
     return res.body;
   }

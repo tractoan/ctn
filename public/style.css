@@ -465,3 +465,11 @@ body.page { overflow: auto; background: var(--bg); }
 .pl-item { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; border: 1.5px solid var(--line); background: #fff; border-radius: 12px; padding: 9px 12px; font-size: 14px; font-weight: 600; color: var(--ink); }
 .pl-item.on { border-color: var(--blue); background: #EAF2FC; color: var(--navy); }
 .pl-no { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--bg); font-size: 12px; font-weight: 800; }
+
+/* ---------- Quản trị: bảng tên thầy cô ---------- */
+.admin-table { display: grid; gap: 6px; margin: 8px 0 4px; }
+.admin-row { display: grid; grid-template-columns: minmax(110px, 1fr) 92px 2fr; gap: 6px; align-items: center; }
+.admin-row .input { margin: 0; padding: 8px 10px; font-size: 14px; }
+.admin-row .input.sm { width: 100%; }
+.admin-slot { font-size: 13px; font-weight: 700; color: var(--navy); }
+@media (max-width: 420px) { .admin-row { grid-template-columns: 1fr 92px; } .admin-row .input:not(.sm) { grid-column: 1 / -1; } }

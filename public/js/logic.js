@@ -303,6 +303,25 @@ function lopParam(b) {
   if (!LOPS.includes(lop)) throw new ApiError(400, 'Lớp không hợp lệ');
   return lop;
 }
+// ---------- Quản trị: mã đặt trong biến bí mật ADMIN_CODE của Cloudflare (ctx.adminCode) ----------
+const ADMIN_MAX_FAILS = 10; // số lần nhập sai mỗi giờ cho một địa chỉ IP
+export const ADMIN_BATCH = 40; // số tên tối đa mỗi lần lưu (D1 gói miễn phí giới hạn 50 truy vấn mỗi yêu cầu)
+function sameText(a, b) {
+  let d = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return d === 0;
+}
+async function checkAdmin(ctx, code) {
+  if (!ctx.adminCode) throw new ApiError(503, 'Trang này chưa đặt mã quản trị (biến bí mật ADMIN_CODE)');
+  const key = `${ctx.ip || 'local'}|${Math.floor(ctx.now / 3600e3)}`;
+  const fails = (await ctx.store.get('adminfail', key))?.n || 0;
+  if (fails >= ADMIN_MAX_FAILS) throw new ApiError(429, 'Nhập sai mã quá nhiều lần. Thử lại sau 1 giờ.');
+  if (!sameText(typeof code === 'string' ? code.trim() : '', String(ctx.adminCode))) {
+    await ctx.store.put('adminfail', key, { n: fails + 1 });
+    throw new ApiError(403, 'Mã quản trị không đúng');
+  }
+}
+
 // Phòng chức năng có thầy cô đặt được tên (ngoài 12 lớp chuyên)
 export const ROOM_TEACHERS = ['thuvien', 'phongmay', 'phongtn', 'hieubo'];
 function teacherSlot(b) {
@@ -449,6 +468,38 @@ const handlers = {
     const item = { lop, khoa, title, name, by: u.name, at: ctx.now };
     await ctx.store.put('gvcn', `${lop}|${khoa}`, item);
     return { item };
+  },
+
+  // Tất cả tên thầy cô đã đặt (công khai như classTeacher) – cho bảng sửa hàng loạt
+  async teachersAll(ctx) {
+    const rows = await ctx.store.list('gvcn', '', 2000);
+    return { items: rows.map((r) => r.v) };
+  },
+
+  async adminCheck(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    return { ok: true, batch: ADMIN_BATCH };
+  },
+
+  // Quản trị sửa hàng loạt: items = [{ lop, khoa ('*' hoặc K20), title, name }]; tên rỗng = xoá tên đã đặt
+  async adminTeachers(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const items = Array.isArray(b.items) ? b.items : [];
+    if (!items.length) throw new ApiError(400, 'Chưa có tên nào để lưu');
+    if (items.length > ADMIN_BATCH) throw new ApiError(400, `Mỗi lần lưu tối đa ${ADMIN_BATCH} tên`);
+    let saved = 0, deleted = 0;
+    const errors = [];
+    for (const [i, it] of items.entries()) {
+      try {
+        const lop = teacherSlot(it || {});
+        const khoa = it.khoa && it.khoa !== '*' ? normKhoa(it.khoa, 'cuuhs') : '*';
+        const name = str(it.name, 30).replace(/^(thầy|cô)\s+/i, '');
+        if (!name) { await ctx.store.del('gvcn', `${lop}|${khoa}`); deleted++; continue; }
+        await ctx.store.put('gvcn', `${lop}|${khoa}`, { lop, khoa, title: it.title === 'Thầy' ? 'Thầy' : 'Cô', name, by: 'Quản trị', at: ctx.now });
+        saved++;
+      } catch (e) { errors.push(`Dòng ${i + 1}: ${e.message}`); }
+    }
+    return { saved, deleted, errors };
   },
 
   // Xem sổ đầu bài một ngày của một lớp

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.0 – sửa tên thầy cô ở phòng chức năng; cửa nhà đa năng ở mặt trái phía sân trường; nhãn không tràn mép màn hình |
+| Phiên bản | 2.1 – bảng quản trị sửa tên thầy cô hàng loạt, khoá bằng mã quản trị (ADMIN_CODE) |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -342,6 +342,23 @@ tên lớp) và `subject` (Thủ thư, Tin, Hóa, Văn phòng). Với phòng ch�
 cựu học sinh **lớp bất kỳ** sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ; khách bị từ chối. Vào phòng thì `loadTeacher(slot)`.
 `lookForTitle` đổi dáng theo danh xưng (Thầy → nam, sơ mi; Cô → nữ, áo dài nếu đang mặc vest).
 
+### 5.6d Quản trị: sửa tên thầy cô hàng loạt
+
+- **Mã quản trị**: biến bí mật `ADMIN_CODE` của Worker (`wrangler secret put ADMIN_CODE`; chạy thử trên máy: `.dev.vars`).
+  Worker truyền `adminCode` và `ip` (`cf-connecting-ip`) vào `ctx`. Chế độ ngoại tuyến dùng mã `DEMO`
+  (`OFFLINE_ADMIN_CODE` trong `api.js`). Chưa đặt mã thì mọi yêu cầu quản trị trả 503.
+- `checkAdmin`: so sánh mã không phụ thuộc thời gian (`sameText`), đếm lần sai trong bảng `adminfail` (khóa `ip|giờ`);
+  sai 10 lần trong một giờ thì trả 429 cho IP đó, kể cả mã đúng.
+- `adminTeachers`: mỗi lần tối đa 40 tên (`ADMIN_BATCH`, vì D1 gói miễn phí giới hạn 50 truy vấn mỗi yêu cầu; trình duyệt
+  tự chia đợt); mỗi mục `{lop, khoa, title, name}`, tên rỗng = xoá; dòng lỗi được báo lại, dòng đúng vẫn lưu; `by` = "Quản trị".
+- Giao diện `adminTeachersSheet` (từ "Nhân vật của tôi", bảng sửa tên thầy cô, hoặc `/?quantri`): nhập mã (giữ trong
+  `sessionStorage` của phiên), chọn **khóa áp dụng** (tất cả các khóa hoặc K1–K40), rồi
+  - **📋 Bảng**: 16 dòng (12 lớp chuyên + thư viện, phòng máy, phòng thí nghiệm, văn phòng), mỗi dòng Thầy/Cô + họ tên,
+    điền sẵn tên đang có; "Lưu tất cả" chỉ gửi dòng thay đổi;
+  - **📝 Dán danh sách**: mỗi dòng `Lớp | Thầy/Cô | Họ tên | Khóa` (cột cách nhau bằng `|`, tab hoặc `;` – dán thẳng từ
+    Excel/Google Sheets); lớp viết như trong game hoặc tên phòng (Thư viện, Phòng máy, Phòng thí nghiệm, Văn phòng);
+    xem trước số dòng hợp lệ và dòng lỗi trước khi lưu.
+
 ### 5.7 Phong cách
 
 | Token | Giá trị | Dùng cho |
@@ -517,6 +534,7 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `roster` | `phòng\|uid` | `{id, name, khoa, at}` – danh sách cả lớp theo khóa |
 | `clog` | `lớp\|ngày\|loại\|id` | Sổ đầu bài: `p` có mặt `{name, label, at}`, `n` ghi chú `{name, text, at}`, `o` điểm miệng `{name, label, grade, at}`, `s` nộp sổ (id `0`) `{name, at}`, `w` vi phạm `{uid, name, label, reason, by, at}` |
 | `clogday` | `lớp\|ngày` | `{day}` – các ngày có ghi chép, để chọn ngày xem lại |
+| `adminfail` | `ip\|giờ` | `{n}` – số lần nhập sai mã quản trị |
 | `gvcn` | `lớp\|khóa` (`*` = mọi khóa) | `{lop, khoa, title, name, by, at}` – tên thầy cô chủ nhiệm |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
 | `score` | `trò chơi\|uid` | `{id, name, khoa, lop, score, at}` |
@@ -546,6 +564,9 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `classlog` | – (có token thì đánh dấu dòng của mình) | `lop, day?` | `{lop, day, today, days[], present[], notes[], orals[], submit, writeups[], canWrite, isTeacher}` |
 | `classTeacher` | – | `lop` (lớp chuyên hoặc `thuvien`/`phongmay`/`phongtn`/`hieubo`) | `{items[]}` (mới nhất trước) |
 | `setClassTeacher` | ✔ | `lop, title` (Thầy/Cô), `name` (≤ 30), `khoa?` (thầy cô) | `{item}`; 403 nếu không phải lớp mình |
+| `teachersAll` | – | – | `{items[]}` – mọi tên thầy cô đã đặt |
+| `adminCheck` | mã | `code` | `{ok, batch}`; 403 sai mã, 429 sai quá nhiều, 503 chưa đặt mã |
+| `adminTeachers` | mã | `code, items[{lop, khoa, title, name}]` (≤ 40) | `{saved, deleted, errors[]}` |
 | `classlogAct` | ✔ | `lop, kind` (note/submit/notebook/writeup), `text?`, `target?`, `reason?` | note → `{ok, user}`; submit → `{fresh, by?, at?, user}`; notebook → `{today, fresh, notes[], user}`; writeup (chỉ thầy cô) → `{ok}` |
 | `menu` | – | – | `{sale, items[]}` |
 | `buy` | ✔ | `item, forUid?` (đãi bạn) | `{item, user}` |

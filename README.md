@@ -103,7 +103,14 @@ npx wrangler d1 create ctn          # dán database_id vào wrangler.toml
 npm run db:init:remote
 npm run deploy                      # https://thpt.<subdomain>.workers.dev
 # Đặt subdomain workers.dev là "chuyenthainguyen" (Workers & Pages → Settings) để có thpt.chuyenthainguyen.workers.dev
+npx wrangler secret put ADMIN_CODE  # nhập mã quản trị (dài, khó đoán) khi được hỏi
 ```
+
+**Mã quản trị** dùng cho bảng *🔑 Quản trị: sửa tên thầy cô hàng loạt* (mở từ ảnh đại diện → Nhân vật của tôi, từ bảng sửa
+tên thầy cô, hoặc vào thẳng `https://<địa chỉ trang>/?quantri`). Mã lưu trong biến bí mật `ADMIN_CODE` của Cloudflare,
+không nằm trong mã nguồn. Đổi mã: chạy lại `npx wrangler secret put ADMIN_CODE`. Chạy thử trên máy với `npm run dev`:
+tạo file `.dev.vars` có dòng `ADMIN_CODE=...` (file này đã được `.gitignore`). Ở chế độ chỉ giao diện (`npm run static`)
+và trên link chạy thử, mã là `DEMO` (dữ liệu chỉ nằm trên trình duyệt đó). Nhập sai 10 lần trong 1 giờ thì bị khoá 1 giờ.
 
 Ghi chú: vị trí người chơi được đồng bộ bằng cách hỏi máy chủ mỗi 2,5 giây (không dùng WebSocket),
 bảng thi đua tính trên toàn bộ người dùng – phù hợp cộng đồng vài trăm đến vài nghìn người.

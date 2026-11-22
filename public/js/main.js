@@ -1,4 +1,4 @@
-import { api, getToken, setToken, getMode } from './api.js';
+import { api, getToken, setToken, getMode, OFFLINE_ADMIN_CODE } from './api.js';
 import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS, CLASS_RULES, BAC_HO, ROOM_TEACHERS } from './logic.js';
 import { World, CAMPUS_SCENE } from './world.js';
 import { classroomScene } from './classroom.js';
@@ -62,7 +62,9 @@ async function boot() {
     try { me = (await api('me')).user; } catch (e) { if (e.status === 401) setToken(''); }
   }
   enterSchool();
-  if (me.guest && !sessionGet('ctn.skipWelcome')) createFlow();
+  // /?quantri: mở thẳng bảng quản trị (không cần nhân vật)
+  if (new URLSearchParams(location.search).has('quantri')) adminTeachersSheet();
+  else if (me.guest && !sessionGet('ctn.skipWelcome')) createFlow();
 }
 
 // ======================= Ghi danh / tạo nhân vật =======================
@@ -395,7 +397,7 @@ function enterSchool() {
   world.onWet = (fromName) => { sfx.splash(); toast(`💦 ${fromName || 'Ai đó'} vừa ném bóng nước trúng bạn!`); world.say('me', 'Ướt hết rồi! 💦'); };
   world.start();
   music.autostart();
-  if (new URLSearchParams(location.search).has('debug')) { window.ctnWorld = world; window.ctnDebug = { panels, gameSheet, questSheet, walletSheet, onlineSheet, npcSheet, music }; } // dùng cho kiểm thử tự động
+  if (new URLSearchParams(location.search).has('debug')) { window.ctnWorld = world; window.ctnDebug = { panels, gameSheet, questSheet, walletSheet, onlineSheet, npcSheet, music, adminTeachersSheet }; } // dùng cho kiểm thử tự động
   hud.update();
   updateClock();
   setInterval(updateClock, 15000);
@@ -499,6 +501,7 @@ function moreSheet() {
         h('button', { class: 'btn primary', onclick: () => panels.mirror() }, '👕 Đổi kiểu tóc, đồng phục'),
         h('button', { class: 'btn ghost', onclick: () => bookSheet({ id: me.id, name: me.name }) }, '📖 Sổ lưu bút của tôi'),
         h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Album kỷ yếu'),
+        h('button', { class: 'btn ghost', onclick: () => adminTeachersSheet() }, '🔑 Quản trị: sửa tên thầy cô hàng loạt'),
         h('a', { class: 'btn ghost', href: 'pages/gioi-thieu.html' }, 'Giới thiệu trang'),
         h('button', { class: 'btn ghost', onclick: () => { backToCampus(); world.teleport(SPAWN.x, SPAWN.y); closeSheet(); } }, 'Về cổng trường'),
         h('button', { class: 'btn danger', onclick: () => { if (confirm('Thoát nhân vật trên máy này? Hãy chắc chắn bạn đã lưu mã khôi phục.')) { setToken(''); location.reload(); } } }, 'Thoát nhân vật'))));
@@ -1035,6 +1038,7 @@ function teacherEditSheet(slot) {
       : h('p', { class: 'muted' }, `Chưa khóa nào đặt tên. Đang hiện tên mặc định${npc ? ': ' + npc.name : ''}.`));
     b.append(listEl);
     render(await loadTeacher(slot));
+    b.append(h('button', { class: 'btn link muted', onclick: () => adminTeachersSheet() }, '🔑 Sửa tên thầy cô hàng loạt (quản trị)'));
     if (!canEdit) {
       b.append(h('p', { class: 'muted small' }, room ? 'Chỉ học sinh, cựu học sinh (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.' : `Chỉ học sinh lớp chuyên ${slot} (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.`));
       return;
@@ -1062,6 +1066,123 @@ function teacherEditSheet(slot) {
         } catch (e) { err.textContent = e.message; }
       } }, 'Lưu tên'));
   });
+}
+
+// ======================= Quản trị: sửa tên thầy cô hàng loạt =======================
+// Cần mã quản trị (biến bí mật ADMIN_CODE trên Cloudflare). Mã chỉ giữ trong phiên trình duyệt hiện tại.
+const ADMIN_KEY = 'ctn.admin';
+const TEACHER_SLOTS = [...LOPS.map((l) => [l, 'Lớp chuyên ' + l]), ['thuvien', '📚 Thư viện'], ['phongmay', '💻 Phòng máy'], ['phongtn', '🧪 Phòng thí nghiệm'], ['hieubo', '🏛️ Văn phòng nhà hiệu bộ']];
+const SLOT_ALIASES = { 'thư viện': 'thuvien', 'phòng máy': 'phongmay', 'phòng thí nghiệm': 'phongtn', 'văn phòng': 'hieubo', 'nhà hiệu bộ': 'hieubo' };
+function slotOf(text) {
+  const t = text.trim().toLowerCase().replace(/^(lớp\s+)?(chuyên\s+)?/, '');
+  const lop = LOPS.find((l) => l.toLowerCase() === t);
+  return lop || SLOT_ALIASES[t] || (ROOM_TEACHERS.includes(t) ? t : '');
+}
+// Lưu theo từng đợt (mỗi đợt ≤ batch tên)
+async function adminSave(code, items, batch = 40) {
+  const sum = { saved: 0, deleted: 0, errors: [] };
+  for (let i = 0; i < items.length; i += batch) {
+    const r = await call('adminTeachers', { code, items: items.slice(i, i + batch) });
+    sum.saved += r.saved; sum.deleted += r.deleted; sum.errors.push(...r.errors.map((e) => e.replace(/Dòng (\d+)/, (_, n) => 'Dòng ' + (i + Number(n)))));
+  }
+  const slot = world.npcs.find((n) => n.slot && n.scene === world.scene.id)?.slot;
+  if (slot) loadTeacher(slot);
+  return sum;
+}
+function adminTeachersSheet() {
+  openSheet('🔑 Quản trị · Tên thầy cô', (b) => {
+    const unlock = () => {
+      const inp = h('input', { class: 'input', type: 'password', autocomplete: 'off', 'aria-label': 'Mã quản trị', placeholder: 'Mã quản trị' });
+      const err = h('p', { class: 'err', role: 'alert' });
+      const go = async () => {
+        try { await call('adminCheck', { code: inp.value }); sessionSet(ADMIN_KEY, inp.value.trim()); editor(); }
+        catch (e) { err.textContent = e.message; }
+      };
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+      b.replaceChildren(
+        h('p', { class: 'muted' }, 'Sửa tên thầy cô chủ nhiệm của 12 lớp và thầy cô các phòng chức năng cùng lúc. Chỉ người có mã quản trị mới dùng được.'),
+        getMode() === 'offline' ? h('p', { class: 'note' }, `Bản chạy thử ngoại tuyến (dữ liệu chỉ trên trình duyệt này): mã quản trị là ${OFFLINE_ADMIN_CODE}.`) : null,
+        inp, err, h('button', { class: 'btn primary', onclick: go }, 'Mở khoá'));
+      setTimeout(() => inp.focus(), 50);
+    };
+    const editor = async () => {
+      const code = sessionGet(ADMIN_KEY) || '';
+      b.replaceChildren(h('p', { class: 'muted' }, 'Đang tải…'));
+      let all = [];
+      try { all = (await call('teachersAll')).items; } catch (e) { b.replaceChildren(h('p', { class: 'err' }, e.message)); return; }
+      const cur = new Map(all.map((x) => [`${x.lop}|${x.khoa}`, x]));
+      let khoa = '*';
+      const khoaSel = h('select', { class: 'input', 'aria-label': 'Áp dụng cho khóa', onchange: () => { khoa = khoaSel.value; renderTable(); } },
+        h('option', { value: '*' }, 'Tất cả các khóa (tên mặc định)'),
+        ...Array.from({ length: 40 }, (_, i) => 40 - i).map((n) => h('option', { value: 'K' + n }, `Khóa ${n} (K${n})`)));
+      const result = h('div', {});
+      const showResult = (sum) => {
+        result.replaceChildren(h('div', { class: sum.errors.length ? 'warn-box' : 'ok-box' },
+          `Đã lưu ${sum.saved} tên${sum.deleted ? `, xoá ${sum.deleted} tên` : ''}.`,
+          ...sum.errors.map((e) => h('div', { class: 'small' }, '⚠️ ' + e))));
+      };
+      // Bảng: mỗi lớp/phòng một dòng
+      const table = h('div', { class: 'admin-table' });
+      let rows = [];
+      const renderTable = () => {
+        rows = TEACHER_SLOTS.map(([slot, label]) => {
+          const old = cur.get(`${slot}|${khoa}`);
+          const title = h('select', { class: 'input sm', 'aria-label': 'Danh xưng ' + label }, ...['Cô', 'Thầy'].map((t) => h('option', { value: t, selected: old?.title === t }, t)));
+          const name = h('input', { class: 'input', maxlength: 30, value: old?.name || '', placeholder: 'Họ tên', 'aria-label': 'Họ tên thầy cô ' + label });
+          return { slot, label, old, title, name };
+        });
+        table.replaceChildren(...rows.map((r) => h('div', { class: 'admin-row' }, h('span', { class: 'admin-slot' }, r.label), r.title, r.name)));
+      };
+      renderTable();
+      // tải lại tên đã lưu rồi vẽ lại bảng (giữ thông báo kết quả)
+      const refresh = async () => { const fresh = (await call('teachersAll')).items; cur.clear(); fresh.forEach((x) => cur.set(`${x.lop}|${x.khoa}`, x)); renderTable(); };
+      const saveTable = h('button', { class: 'btn primary', onclick: async () => {
+        const items = rows.filter((r) => r.name.value.trim() !== (r.old?.name || '') || (r.old && r.title.value !== r.old.title && r.name.value.trim()))
+          .map((r) => ({ lop: r.slot, khoa, title: r.title.value, name: r.name.value.trim() }));
+        if (!items.length) { toast('Chưa có thay đổi nào'); return; }
+        saveTable.disabled = true;
+        try { const sum = await adminSave(code, items); showResult(sum); sfx.coin(); await refresh(); toast(`Đã lưu ${sum.saved} tên`); }
+        catch (e) { result.replaceChildren(h('div', { class: 'warn-box' }, e.message)); if (/mã/i.test(e.message)) sessionSet(ADMIN_KEY, ''); }
+        saveTable.disabled = false;
+      } }, 'Lưu tất cả');
+      // Dán danh sách: "Toán | Cô | Nguyễn Thị Hoa | K20"
+      const paste = h('textarea', { class: 'input', rows: 8, 'aria-label': 'Danh sách tên thầy cô',
+        placeholder: 'Mỗi dòng: Lớp | Thầy/Cô | Họ tên | Khóa (không bắt buộc)\nToán | Cô | Nguyễn Thị Hoa | K20\nLý | Thầy | Trần Văn Nam\nPhòng thí nghiệm | Thầy | Phạm Văn Hòa' });
+      const parse = () => {
+        const items = [], errors = [];
+        paste.value.split('\n').map((l) => l.trim()).filter(Boolean).forEach((line, i) => {
+          const parts = line.split(/\s*[|\t;]\s*/);
+          if (parts.length < 3) { errors.push(`Dòng ${i + 1}: cần ít nhất "Lớp | Thầy/Cô | Họ tên"`); return; }
+          const slot = slotOf(parts[0]);
+          if (!slot) { errors.push(`Dòng ${i + 1}: không nhận ra lớp/phòng "${parts[0]}"`); return; }
+          const title = /^th/i.test(parts[1]) ? 'Thầy' : 'Cô';
+          const k = (parts[3] || '').trim();
+          items.push({ lop: slot, title, name: parts[2], khoa: !k ? khoa : k === '*' ? '*' : k.toUpperCase().replace(/^K?/, 'K') });
+        });
+        return { items, errors };
+      };
+      const preview = h('p', { class: 'muted small' });
+      paste.addEventListener('input', () => { const { items, errors } = parse(); preview.textContent = `Sẽ lưu ${items.length} tên${errors.length ? ` · ${errors.length} dòng lỗi: ${errors.join('; ')}` : ''}.`; });
+      const savePaste = h('button', { class: 'btn primary', onclick: async () => {
+        const { items, errors } = parse();
+        if (!items.length) { toast(errors[0] || 'Chưa có dòng nào', 'bad'); return; }
+        savePaste.disabled = true;
+        try { const sum = await adminSave(code, items); sum.errors.unshift(...errors); showResult(sum); sfx.coin(); paste.value = ''; preview.textContent = ''; await refresh(); }
+        catch (e) { result.replaceChildren(h('div', { class: 'warn-box' }, e.message)); }
+        savePaste.disabled = false;
+      } }, 'Lưu danh sách');
+      b.replaceChildren(
+        h('label', { class: 'ob-lbl' }, 'Áp dụng cho'), khoaSel,
+        h('p', { class: 'muted small' }, '"Tất cả các khóa" là tên hiện cho mọi khóa chưa tự đặt tên. Xoá trắng ô tên rồi lưu để bỏ tên đã đặt.'),
+        tabs([
+          { label: '📋 Bảng', render: (c) => c.append(table, saveTable) },
+          { label: '📝 Dán danh sách', render: (c) => c.append(h('p', { class: 'muted small' }, 'Dán từ Excel/Google Sheets (các cột cách nhau bằng tab) hoặc gõ, mỗi dòng một thầy cô. Lớp viết như trong game (Toán, Lý…) hoặc tên phòng (Thư viện, Phòng máy, Phòng thí nghiệm, Văn phòng). Bỏ trống khóa thì dùng khóa đang chọn ở trên.'), paste, preview, savePaste) },
+        ]),
+        result,
+        h('button', { class: 'btn link muted', onclick: () => { sessionSet(ADMIN_KEY, ''); unlock(); } }, '🔒 Khoá lại'));
+    };
+    if (sessionGet(ADMIN_KEY)) editor(); else unlock();
+  }, { wide: true });
 }
 
 // ======================= Sổ đầu bài, nội quy =======================

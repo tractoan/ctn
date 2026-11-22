@@ -346,3 +346,31 @@ test('tên thầy cô phòng chức năng: học sinh lớp bất kỳ sửa cho
   assert.equal((await call(s, 'setClassTeacher', { lop: 'canteen', name: 'X' }, v.token)).status, 400);
   assert.equal((await call(s, 'classTeacher', { lop: 'phongtn' })).body.items[0].name, 'Phạm Văn Hòa');
 });
+
+test('quản trị sửa tên thầy cô hàng loạt: cần mã, sai quá 10 lần bị khoá, tên rỗng thì xoá', async () => {
+  const s = memStore();
+  const now = Date.UTC(2026, 10, 22, 3);
+  const adm = (body, extra = {}) => handle('adminTeachers', { store: s, token: '', now, adminCode: 'bi-mat-123', ip: '1.2.3.4', ...extra }, body);
+  assert.equal((await handle('adminCheck', { store: s, token: '', now }, { code: 'x' })).status, 503);
+  assert.equal((await adm({ code: 'sai', items: [{ lop: 'Toán', name: 'A' }] })).status, 403);
+  const r = (await adm({ code: 'bi-mat-123', items: [
+    { lop: 'Toán', khoa: '*', title: 'Cô', name: 'Cô Nguyễn Thị Hoa' },
+    { lop: 'Lý', khoa: '20', title: 'Thầy', name: 'Trần Văn Nam' },
+    { lop: 'phongmay', title: 'Thầy', name: 'Lê Quang' },
+    { lop: 'Lớp lạ', name: 'X' },
+  ] })).body;
+  assert.equal(r.saved, 3); assert.equal(r.errors.length, 1); assert.match(r.errors[0], /Dòng 4/);
+  let all = (await handle('teachersAll', { store: s, token: '', now }, {})).body.items;
+  assert.deepEqual(all.map((x) => `${x.lop}|${x.khoa}|${x.title} ${x.name}|${x.by}`).sort(),
+    ['Lý|K20|Thầy Trần Văn Nam|Quản trị', 'Toán|*|Cô Nguyễn Thị Hoa|Quản trị', 'phongmay|*|Thầy Lê Quang|Quản trị']);
+  const d = (await adm({ code: 'bi-mat-123', items: [{ lop: 'Lý', khoa: 'K20', name: '' }] })).body;
+  assert.equal(d.deleted, 1);
+  all = (await handle('teachersAll', { store: s, token: '', now }, {})).body.items;
+  assert.equal(all.length, 2);
+  assert.equal((await adm({ code: 'bi-mat-123', items: Array.from({ length: 41 }, () => ({ lop: 'Toán', name: 'A' })) })).status, 400);
+  // 10 lần sai trong một giờ thì khoá, kể cả mã đúng
+  for (let i = 0; i < 9; i++) await adm({ code: 'sai' + i, items: [] });
+  assert.equal((await adm({ code: 'bi-mat-123', items: [{ lop: 'Toán', name: 'A' }] })).status, 429);
+  // địa chỉ khác vẫn dùng được
+  assert.equal((await adm({ code: 'bi-mat-123', items: [{ lop: 'Toán', name: 'A' }] }, { ip: '5.6.7.8' })).status, 200);
+});
