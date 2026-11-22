@@ -414,3 +414,42 @@ test('nhân vật phụ đặt được tên: danh xưng tuỳ chọn, dòng ph�
   const all = (await handle('teachersAll', { store: s, token: '', now: Date.now() }, {})).body.items;
   assert.ok(all.some((x) => x.lop === 'hung' && x.name === 'Nguyễn Văn Hùng' && x.sub === 'K1 · Toán'));
 });
+
+test('quản trị xoá tin nhắn, khoá và mở khoá thành viên', async () => {
+  const s = memStore();
+  const t = Date.UTC(2026, 10, 22, 3);
+  const adm = (action, body) => handle(action, { store: s, token: '', now: t + 50000, adminCode: 'm', ip: '1' }, { code: 'm', ...body });
+  const a = (await call(s, 'register', { name: 'Nguyễn Văn Ác', role: 'cuuhs', khoa: 'K20', lop: 'Toán' }, '', t)).body;
+  const b = (await call(s, 'register', { name: 'Bình', role: 'cuuhs', khoa: 'K21', lop: 'Văn' }, '', t)).body;
+  for (let i = 0; i < 35; i++) await call(s, 'presence', { x: 1, y: 1, say: 'tin xấu ' + i }, a.token, t + 1000 + i);
+  await call(s, 'presence', { x: 1, y: 1, say: 'Chào mọi người' }, b.token, t + 2000);
+  // xoá một tin: máy đang mở nhận danh sách tin đã xoá
+  const list = (await adm('adminChat', {})).body.items;
+  assert.equal(list.length, 36);
+  const bad = list.find((m) => m.text === 'tin xấu 34');
+  assert.equal((await adm('adminDeleteChat', { ids: [bad.id] })).body.deleted, 1);
+  const feed = (await call(s, 'online', { chatAfter: t + 3000, chatDelAfter: 0 }, '', t + 60000)).body;
+  assert.deepEqual(feed.chatDel, [bad.id]);
+  assert.equal((await call(s, 'online', { chatAfter: t + 3000, chatDelAfter: feed.chatDelAt }, '', t + 60000)).body.chatDel, undefined);
+  // tìm theo tên không dấu
+  const found = (await adm('adminUsers', { q: 'van ac' })).body.items;
+  assert.deepEqual(found.map((u) => u.name), ['Nguyễn Văn Ác']);
+  // khoá: mọi thao tác cần đăng nhập bị từ chối, không hiện trên sân, mã khôi phục cũng bị chặn
+  await adm('adminBan', { uid: a.user.id, reason: 'Nói tục trong khung chat' });
+  const r = await call(s, 'presence', { x: 1, y: 1, say: 'còn nhắn được không?' }, a.token, t + 61000);
+  assert.equal(r.status, 403); assert.equal(r.body.banned, true); assert.match(r.body.error, /Nói tục/);
+  assert.equal((await call(s, 'recover', { code: a.user.code })).status, 403);
+  await call(s, 'presence', { x: 1, y: 1 }, b.token, t + 61500);
+  assert.deepEqual((await call(s, 'online', {}, '', t + 62000)).body.others.map((o) => o.name), ['Bình']);
+  // xoá hết tin của người bị khoá (nhiều lần nếu còn)
+  let p = (await adm('adminPurgeChat', { uid: a.user.id })).body;
+  assert.deepEqual([p.deleted, p.remaining], [30, 4]);
+  p = (await adm('adminPurgeChat', { uid: a.user.id })).body;
+  assert.deepEqual([p.deleted, p.remaining], [4, 0]);
+  assert.deepEqual((await adm('adminChat', {})).body.items.map((m) => m.text), ['Chào mọi người']);
+  assert.deepEqual((await adm('adminUsers', { banned: true })).body.items.map((u) => u.name), ['Nguyễn Văn Ác']);
+  // mở khoá
+  await adm('adminUnban', { uid: a.user.id });
+  assert.equal((await call(s, 'me', {}, a.token, t + 63000)).status, 200);
+  assert.equal((await adm('adminBan', { uid: 'khong-co' })).status, 404);
+});

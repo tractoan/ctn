@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.9 – khung chat chung, cấu hình tên mọi nhân vật phụ, lối đi xuống căng tin, bỏ vạch kẻ đường |
+| Phiên bản | 2.0 – quản trị xoá tin nhắn, khoá thành viên thô lỗ |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -154,6 +154,11 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-LH-16 | **Quản trị sửa tên thầy cô hàng loạt**: người có **mã quản trị** mở bảng (từ Nhân vật của tôi, bảng sửa tên thầy cô, hoặc `/?quantri`, không cần nhân vật), chọn khóa áp dụng (tất cả các khóa hoặc một khóa), sửa cùng lúc 12 lớp + 4 phòng trong một bảng, hoặc **dán danh sách** từ Excel/Google Sheets (`Lớp | Thầy/Cô | Họ tên | Khóa`); xoá trắng tên để bỏ tên đã đặt; báo số tên đã lưu và từng dòng lỗi | P1 | ✅ |
 | YC-LH-17 | **Mã quản trị** đặt trong biến bí mật của Cloudflare (`ADMIN_CODE`), không nằm trong mã nguồn; chưa đặt mã thì không ai dùng được bảng quản trị; nhập sai 10 lần trong 1 giờ thì bị khoá 1 giờ; trên bản chạy thử ngoại tuyến mã là `DEMO` | P1 | ✅ |
 | YC-LH-18 | **Cấu hình nhân vật phụ** giống thầy cô: bác bảo vệ, đội cờ đỏ, bác Hùng, chị Mai, anh Tuấn, bạn Linh, cô căng tin, anh Dũng, bạn Nam. Chạm nhân vật → "✏️ Sửa tên nhân vật": danh xưng (Bác, Chú, Anh, Chị, Bạn, Em, Ông, Bà, Cô hoặc không), tên, dòng phụ dưới tên (vd "K1 · Toán"); học sinh/cựu học sinh sửa cho khóa mình, thầy cô và quản trị sửa cho mọi khóa; có trong bảng quản trị sửa hàng loạt và dán danh sách | P2 | ✅ |
+| YC-QT-01 | **Quản trị xoá tin nhắn**: mục "💬 Tin nhắn" trong bảng quản trị liệt kê ~100 tin gần nhất (tên, khóa · lớp, khu, thời gian) với nút 🗑️ Xoá tin; khi đang mở quyền quản trị, mỗi dòng trong khung chat có nút ⋯ để xoá ngay. Tin bị xoá biến mất khỏi khung chat của mọi người (kể cả người gửi) trong vài giây | P1 | ✅ |
+| YC-QT-02 | **Khoá thành viên thô lỗ**: từ một tin nhắn hoặc mục "🚫 Thành viên" (tìm theo tên, không cần dấu; lọc người đang bị khoá), nhập lý do, tuỳ chọn xoá luôn mọi tin nhắn của người đó. Người bị khoá biến khỏi sân ngay, nhận thông báo kèm lý do, chỉ còn xem như khách; không nhắn tin, viết lưu bút, tham gia hoạt động được; tải lại trang hay nhập mã khôi phục vẫn bị khoá. Mở khoá lại được | P1 | ✅ |
+
+> YC-QT-02: người bị khoá vẫn có thể tạo nhân vật mới (trang không dùng mật khẩu, email); khi đó quản trị khoá tiếp nhân vật mới.
+> Lưu bút và ảnh người đó đã đăng chưa bị xoá kèm.
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
 
 ### 4.6 Hoạt động trong trường

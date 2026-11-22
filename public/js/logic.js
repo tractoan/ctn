@@ -182,7 +182,7 @@ async function sendInbox(ctx, toId, item) {
 }
 
 class ApiError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
+  constructor(status, message, extra = null) { super(message); this.status = status; this.extra = extra; }
 }
 
 function str(v, max, required = false, field = 'dữ liệu') {
@@ -269,8 +269,16 @@ async function auth(ctx) {
   if (!id) throw new ApiError(401, 'Phiên không hợp lệ');
   const u = await ctx.store.get('user', id);
   if (!u) throw new ApiError(401, 'Không tìm thấy nhân vật');
+  if (u.banned) throw bannedError(u);
   ensure(u, ctx.now);
   return u;
+}
+function bannedError(u) {
+  return new ApiError(403, `Nhân vật "${u.name}" đã bị quản trị khoá${u.banned.reason ? ': ' + u.banned.reason : ''}.`, { banned: true, reason: u.banned.reason || '' });
+}
+// Chỉ mục thành viên gọn nhẹ (tên, vai, khóa, lớp) để quản trị tìm theo tên mà không phải đọc toàn bộ hồ sơ
+async function indexUser(ctx, u) {
+  await ctx.store.put('uidx', u.id, { id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', at: u.createdAt || 0, banned: u.banned || null });
 }
 async function addPoints(ctx, u, kind, mult = 1) {
   u.points = (u.points || 0) + (POINTS[kind] || 0) * mult;
@@ -317,14 +325,32 @@ async function postChat(ctx, u, text, scene) {
     const rows = await ctx.store.list('chat', '', CHAT_KEEP + 40);
     for (const r of rows.slice(CHAT_KEEP)) await ctx.store.del('chat', r.k);
   }
-  await ctx.store.put('chatlast', 'all', { at: ctx.now, n: n > CHAT_KEEP + 20 ? CHAT_KEEP : n });
+  await ctx.store.put('chatlast', 'all', { ...last, at: ctx.now, n: n > CHAT_KEEP + 20 ? CHAT_KEEP : n });
 }
-async function chatSince(ctx, after) {
-  const since = Number(after) || 0;
+// Tin mới hơn `chatAfter`, và danh sách tin đã bị quản trị xoá nếu có xoá mới hơn `chatDelAfter`
+async function chatFeed(ctx, b) {
+  const since = Number(b.chatAfter) || 0, delSince = Number(b.chatDelAfter) || 0;
   const last = await ctx.store.get('chatlast', 'all');
-  if (!last || last.at <= since) return [];
-  const rows = await ctx.store.list('chat', '', CHAT_SEND);
-  return rows.map((r) => r.v).filter((m) => m.at > since).sort((a, c) => a.at - c.at);
+  const out = { chat: [] };
+  if (!last) return out;
+  if (last.at > since) {
+    const rows = await ctx.store.list('chat', '', CHAT_SEND);
+    out.chat = rows.map((r) => r.v).filter((m) => m.at > since).sort((a, c) => a.at - c.at);
+  }
+  if (last.delAt && last.delAt > delSince) { out.chatDel = last.del || []; out.chatDelAt = last.delAt; }
+  return out;
+}
+// Xoá tin theo điều kiện (tối đa `max` tin mỗi lần), ghi lại id đã xoá để các máy đang mở xoá theo
+async function deleteChat(ctx, match, max = 30) {
+  const rows = (await ctx.store.list('chat', '', CHAT_KEEP + 40)).filter((r) => match(r.v));
+  const now = rows.slice(0, max);
+  for (const r of now) await ctx.store.del('chat', r.k);
+  if (now.length) {
+    const last = (await ctx.store.get('chatlast', 'all')) || { at: 0, n: 0 };
+    const del = [...now.map((r) => r.v.id), ...(last.del || [])].slice(0, 200);
+    await ctx.store.put('chatlast', 'all', { ...last, n: Math.max(0, last.n - now.length), del, delAt: ctx.now });
+  }
+  return { deleted: now.length, remaining: rows.length - now.length };
 }
 
 // ---------- Quản trị: mã đặt trong biến bí mật ADMIN_CODE của Cloudflare (ctx.adminCode) ----------
@@ -391,16 +417,23 @@ const handlers = {
     await ctx.store.put('user', id, u);
     await ctx.store.put('tok', token, id);
     await ctx.store.put('code', code, id);
+    await indexUser(ctx, u);
     return { token, user: privateUser(u) };
   },
 
-  async me(ctx) { return { user: privateUser(await auth(ctx)) }; },
+  async me(ctx) {
+    const u = await auth(ctx);
+    // nhân vật tạo trước khi có chỉ mục thành viên: thêm vào chỉ mục một lần
+    if (!u.ix) { u.ix = 1; await indexUser(ctx, u); await ctx.store.put('user', u.id, u); }
+    return { user: privateUser(u) };
+  },
 
   async look(ctx, b) {
     const u = await auth(ctx);
     u.look = sanitizeLook(b.look);
     if (b.name) u.name = str(b.name, 40, true, 'tên');
     await ctx.store.put('user', u.id, u);
+    await indexUser(ctx, u);
     return { user: privateUser(u) };
   },
 
@@ -410,6 +443,7 @@ const handlers = {
     if (!id) throw new ApiError(404, 'Mã khôi phục không đúng');
     const u = await ctx.store.get('user', id);
     if (!u) throw new ApiError(404, 'Mã khôi phục không đúng');
+    if (u.banned) throw bannedError(u);
     return { token: u.token, user: privateUser(u) };
   },
 
@@ -442,13 +476,13 @@ const handlers = {
     // hộp thư: quà được đãi, lời tỏ tình, câu trả lời – lấy ra là xoá
     const inbox = [];
     for (const { k, v } of await ctx.store.list('inbox', u.id + '|', 20)) { inbox.push(v); await ctx.store.del('inbox', k); }
-    return { others, inbox: inbox.reverse(), chat: await chatSince(ctx, b.chatAfter), now: ctx.now };
+    return { others, inbox: inbox.reverse(), ...(await chatFeed(ctx, b)), now: ctx.now };
   },
 
   // Khách chưa ghi danh: chỉ xem ai đang online và khung chat chung, không hiện mình
   async online(ctx, b) {
     const all = await ctx.store.list('presence', '', 500);
-    return { others: all.map((r) => r.v).filter((v) => ctx.now - v.at <= PRESENCE_TTL), chat: await chatSince(ctx, b.chatAfter), now: ctx.now };
+    return { others: all.map((r) => r.v).filter((v) => ctx.now - v.at <= PRESENCE_TTL), ...(await chatFeed(ctx, b)), now: ctx.now };
   },
 
   async guestbook(ctx, b) {
@@ -519,6 +553,60 @@ const handlers = {
   async adminCheck(ctx, b) {
     await checkAdmin(ctx, b.code);
     return { ok: true, batch: ADMIN_BATCH };
+  },
+
+  // ----- Quản trị: tin nhắn và thành viên -----
+  async adminChat(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const rows = await ctx.store.list('chat', '', CHAT_KEEP + 40);
+    return { items: rows.map((r) => r.v) };
+  },
+
+  async adminDeleteChat(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const ids = new Set((Array.isArray(b.ids) ? b.ids : []).slice(0, 30).map((x) => str(String(x), 12)));
+    if (!ids.size) throw new ApiError(400, 'Chưa chọn tin nhắn');
+    return deleteChat(ctx, (m) => ids.has(m.id));
+  },
+
+  // Xoá mọi tin nhắn của một thành viên (mỗi lần tối đa 30 tin; còn thì gọi tiếp)
+  async adminPurgeChat(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const uid = str(b.uid, 20, true, 'thành viên');
+    return deleteChat(ctx, (m) => m.uid === uid);
+  },
+
+  // Tìm thành viên theo tên (không phân biệt dấu, hoa thường); banned = chỉ người bị khoá
+  async adminUsers(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const fold = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    const q = fold(str(b.q, 40));
+    const rows = (await ctx.store.list('uidx', '', 5000)).map((r) => r.v)
+      .filter((u) => (!b.banned || u.banned) && (!q || fold(u.name).includes(q)))
+      .sort((a, c) => (c.banned?.at || 0) - (a.banned?.at || 0) || c.at - a.at);
+    return { items: rows.slice(0, 50), total: rows.length };
+  },
+
+  // Khoá thành viên: không đăng nhập, không nhắn, không hiện trên sân nữa (mở khoá được)
+  async adminBan(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const u = await ctx.store.get('user', str(b.uid, 20, true, 'thành viên'));
+    if (!u) throw new ApiError(404, 'Không tìm thấy thành viên');
+    u.banned = { at: ctx.now, reason: str(b.reason, 120) };
+    await ctx.store.put('user', u.id, u);
+    await indexUser(ctx, u);
+    await ctx.store.del('presence', u.id);
+    return { ok: true, name: u.name };
+  },
+
+  async adminUnban(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const u = await ctx.store.get('user', str(b.uid, 20, true, 'thành viên'));
+    if (!u) throw new ApiError(404, 'Không tìm thấy thành viên');
+    delete u.banned;
+    await ctx.store.put('user', u.id, u);
+    await indexUser(ctx, u);
+    return { ok: true, name: u.name };
   },
 
   // Quản trị sửa hàng loạt: items = [{ lop, khoa ('*' hoặc K20), title, name }]; tên rỗng = xoá tên đã đặt
@@ -955,7 +1043,7 @@ export async function handle(action, ctx, body) {
   try {
     return { status: 200, body: await h(ctx, body || {}) };
   } catch (e) {
-    if (e instanceof ApiError) return { status: e.status, body: { error: e.message } };
+    if (e instanceof ApiError) return { status: e.status, body: { error: e.message, ...(e.extra || {}) } };
     console.error(e);
     return { status: 500, body: { error: 'Lỗi máy chủ' } };
   }

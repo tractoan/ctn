@@ -47,6 +47,7 @@ async function call(action, body) {
   try { return await api(action, body); }
   catch (e) {
     if (e.status === 401) { closeSheet(); toast('Ghi danh để dùng chức năng này nhé!'); setTimeout(() => createFlow(), 350); }
+    if (e.banned && !me.guest) bannedNotice(e.message);
     throw e;
   }
 }
@@ -57,13 +58,15 @@ function needMe() {
 }
 
 // ======================= Khởi động =======================
+let bootBanned = '';
 async function boot() {
   if (getToken()) {
-    try { me = (await api('me')).user; } catch (e) { if (e.status === 401) setToken(''); }
+    try { me = (await api('me')).user; } catch (e) { if (e.status === 401) setToken(''); if (e.banned) bootBanned = e.message; }
   }
   enterSchool();
+  if (bootBanned) { bannedNotice(bootBanned); return; }
   // /?quantri: mở thẳng bảng quản trị (không cần nhân vật)
-  if (new URLSearchParams(location.search).has('quantri')) adminTeachersSheet();
+  if (new URLSearchParams(location.search).has('quantri')) adminSheet();
   else if (me.guest && !sessionGet('ctn.skipWelcome')) createFlow();
 }
 
@@ -322,9 +325,20 @@ function enterSchool() {
   };
   const feedHead = h('button', { class: 'chat-head', onclick: () => setMin(!feed.classList.contains('min')) }, '💬 Trò chuyện chung', feedBadge, feedToggle);
   feed.append(feedHead, feedList);
-  addFeed = ({ name, sub, text, mine = false }) => {
+  const ownPending = [];
+  feedEl = feed;
+  refreshAdminUi();
+  // tin bị quản trị xoá: gỡ khỏi khung chat
+  removeChatRows = (ids) => { for (const id of ids) feedList.querySelectorAll(`[data-id="${CSS.escape(id)}"]`).forEach((r) => r.remove()); };
+  // tin của mình quay về từ máy chủ: gắn id cho dòng đã hiện lúc gửi
+  matchOwn = (m) => { const i = ownPending.findIndex((p) => p.text === m.text); if (i >= 0) { ownPending[i].row.dataset.id = m.id; ownPending.splice(i, 1); } };
+  addFeed = ({ id, uid, name, sub, text, mine = false }) => {
     const atBottom = feedList.scrollHeight - feedList.scrollTop - feedList.clientHeight < 30;
-    feedList.append(h('div', { class: 'feed-row' + (mine ? ' own' : '') }, h('b', {}, name), sub ? h('small', {}, ' ' + sub) : null, ': ', text));
+    const row = h('div', { class: 'feed-row' + (mine ? ' own' : ''), 'data-id': id || '' }, h('b', {}, name), sub ? h('small', {}, ' ' + sub) : null, ': ', text);
+    // quản trị: nút xoá tin / khoá người nhắn ngay trên dòng tin
+    if (uid) row.append(h('button', { class: 'feed-x', 'aria-label': 'Quản trị tin nhắn của ' + name, onclick: () => adminMsgSheet({ id: row.dataset.id, uid, name, text }) }, '⋯'));
+    feedList.append(row);
+    if (mine && !id) ownPending.push({ row, text });
     while (feedList.children.length > 50) feedList.firstChild.remove();
     if (atBottom || mine) feedList.scrollTop = feedList.scrollHeight;
     if (feed.classList.contains('min') && !mine) { unread++; feedBadge.textContent = String(unread); feedBadge.hidden = false; }
@@ -413,20 +427,21 @@ function enterSchool() {
   world.onWet = (fromName) => { sfx.splash(); toast(`💦 ${fromName || 'Ai đó'} vừa ném bóng nước trúng bạn!`); world.say('me', 'Ướt hết rồi! 💦'); };
   world.start();
   music.autostart();
-  if (new URLSearchParams(location.search).has('debug')) { window.ctnWorld = world; window.ctnDebug = { panels, gameSheet, questSheet, walletSheet, onlineSheet, npcSheet, music, adminTeachersSheet }; } // dùng cho kiểm thử tự động
+  if (new URLSearchParams(location.search).has('debug')) { window.ctnWorld = world; window.ctnDebug = { panels, gameSheet, questSheet, walletSheet, onlineSheet, npcSheet, music, adminTeachersSheet, adminSheet }; } // dùng cho kiểm thử tự động
   hud.update();
   updateClock();
   setInterval(updateClock, 15000);
 
   let lastZone = '';
   let pendingSay = null;
-  sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); addFeed({ name: me.name, sub: world.subOf(me), text: t, mine: true }); };
-  let chatAfter = 0;
+  sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); if (!me.guest) addFeed({ uid: me.id, name: me.name, sub: world.subOf(me), text: t, mine: true }); };
+  let chatAfter = 0, chatDelAfter = 0;
   // tin mới từ máy chủ; tin của chính mình đã hiện ngay lúc gửi nên chỉ lấy ở lần tải lịch sử đầu tiên
   const takeChat = (list) => {
     const first = chatAfter === 0;
     for (const m of list || []) {
-      if (m.uid !== me.id || first) addFeed({ name: m.name, sub: world.subOf(m), text: m.text, mine: m.uid === me.id });
+      if (m.uid !== me.id || first) addFeed({ id: m.id, uid: m.uid, name: m.name, sub: world.subOf(m), text: m.text, mine: m.uid === me.id });
+      else matchOwn(m);
       chatAfter = Math.max(chatAfter, m.at);
     }
     if (chatAfter === 0) chatAfter = 1;
@@ -456,10 +471,10 @@ function enterSchool() {
     visitZone(zone.startsWith('lop:') ? 'lop' : zone);
     try {
       let r;
-      if (me.guest) r = await api('online', { chatAfter });
+      if (me.guest) r = await api('online', { chatAfter, chatDelAfter });
       else {
         const sit = world.me.sit;
-        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1, noBalloon: world.shield, chatAfter };
+        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1, noBalloon: world.shield, chatAfter, chatDelAfter };
         if (pendingSay) { body.say = pendingSay; pendingSay = null; }
         if (pendingThrow) { body.throw = pendingThrow; pendingThrow = null; }
         r = await api('presence', body);
@@ -472,8 +487,9 @@ function enterSchool() {
       online.title = `${here} người ở khu này · ${r.others.length + (me.guest ? 0 : 1)} người cả trường. Bấm để xem`;
       for (const it of r.inbox || []) handleInbox(it);
       takeChat(r.chat);
+      if (r.chatDel) { removeChatRows(r.chatDel); chatDelAfter = r.chatDelAt; }
       if (!tick.done) { tick.done = true; hud.update(); }
-    } catch { /* thử lại lượt sau */ }
+    } catch (e) { if (e.banned) bannedNotice(e.message); /* lỗi khác: thử lại lượt sau */ }
     if (world.scene.id === 'campus') savePos();
   };
   tick();
@@ -528,7 +544,7 @@ function moreSheet() {
         h('button', { class: 'btn primary', onclick: () => panels.mirror() }, '👕 Đổi kiểu tóc, đồng phục'),
         h('button', { class: 'btn ghost', onclick: () => bookSheet({ id: me.id, name: me.name }) }, '📖 Sổ lưu bút của tôi'),
         h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Album kỷ yếu'),
-        h('button', { class: 'btn ghost', onclick: () => adminTeachersSheet() }, '🔑 Quản trị: sửa tên thầy cô, nhân vật hàng loạt'),
+        h('button', { class: 'btn ghost', onclick: () => adminTeachersSheet() }, '🔑 Quản trị (tên thầy cô, tin nhắn, thành viên)'),
         h('a', { class: 'btn ghost', href: 'pages/gioi-thieu.html' }, 'Giới thiệu trang'),
         h('button', { class: 'btn ghost', onclick: () => { backToCampus(); world.teleport(SPAWN.x, SPAWN.y); closeSheet(); } }, 'Về cổng trường'),
         h('button', { class: 'btn danger', onclick: () => { if (confirm('Thoát nhân vật trên máy này? Hãy chắc chắn bạn đã lưu mã khôi phục.')) { setToken(''); location.reload(); } } }, 'Thoát nhân vật'))));
@@ -1137,27 +1153,29 @@ async function adminSave(code, items, batch = 40) {
   loadNpcNames();
   return sum;
 }
-function adminTeachersSheet() {
-  openSheet('🔑 Quản trị · Tên thầy cô, nhân vật', (b) => {
+function adminTeachersSheet() { adminSheet(0); }
+// Bảng quản trị: tên thầy cô/nhân vật, tin nhắn, thành viên. Cần mã quản trị.
+function adminSheet(initialTab = 0) {
+  openSheet('🔑 Quản trị', (b) => {
     const unlock = () => {
       const inp = h('input', { class: 'input', type: 'password', autocomplete: 'off', 'aria-label': 'Mã quản trị', placeholder: 'Mã quản trị' });
       const err = h('p', { class: 'err', role: 'alert' });
       const go = async () => {
-        try { await call('adminCheck', { code: inp.value }); sessionSet(ADMIN_KEY, inp.value.trim()); editor(); }
+        try { await call('adminCheck', { code: inp.value }); sessionSet(ADMIN_KEY, inp.value.trim()); refreshAdminUi(); main(); }
         catch (e) { err.textContent = e.message; }
       };
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
       b.replaceChildren(
-        h('p', { class: 'muted' }, 'Sửa cùng lúc tên thầy cô chủ nhiệm 12 lớp, thầy cô các phòng chức năng và các nhân vật khác (bác bảo vệ, cô căng tin…). Chỉ người có mã quản trị mới dùng được.'),
+        h('p', { class: 'muted' }, 'Sửa tên thầy cô và nhân vật hàng loạt, xoá tin nhắn trong khung chat chung, khoá thành viên thô lỗ. Chỉ người có mã quản trị mới dùng được.'),
         getMode() === 'offline' ? h('p', { class: 'note' }, `Bản chạy thử ngoại tuyến (dữ liệu chỉ trên trình duyệt này): mã quản trị là ${OFFLINE_ADMIN_CODE}.`) : null,
         inp, err, h('button', { class: 'btn primary', onclick: go }, 'Mở khoá'));
       setTimeout(() => inp.focus(), 50);
     };
-    const editor = async () => {
+    const editor = async (c) => {
       const code = sessionGet(ADMIN_KEY) || '';
-      b.replaceChildren(h('p', { class: 'muted' }, 'Đang tải…'));
+      c.replaceChildren(h('p', { class: 'muted' }, 'Đang tải…'));
       let all = [];
-      try { all = (await call('teachersAll')).items; } catch (e) { b.replaceChildren(h('p', { class: 'err' }, e.message)); return; }
+      try { all = (await call('teachersAll')).items; } catch (e) { c.replaceChildren(h('p', { class: 'err' }, e.message)); return; }
       const cur = new Map(all.map((x) => [`${x.lop}|${x.khoa}`, x]));
       let khoa = '*';
       const khoaSel = h('select', { class: 'input', 'aria-label': 'Áp dụng cho khóa', onchange: () => { khoa = khoaSel.value; renderTable(); } },
@@ -1227,18 +1245,106 @@ function adminTeachersSheet() {
         catch (e) { result.replaceChildren(h('div', { class: 'warn-box' }, e.message)); }
         savePaste.disabled = false;
       } }, 'Lưu danh sách');
-      b.replaceChildren(
+      c.replaceChildren(
         h('label', { class: 'ob-lbl' }, 'Áp dụng cho'), khoaSel,
         h('p', { class: 'muted small' }, '"Tất cả các khóa" là tên hiện cho mọi khóa chưa tự đặt tên. Xoá trắng ô tên rồi lưu để bỏ tên đã đặt.'),
         tabs([
           { label: '📋 Bảng', render: (c) => c.append(table, saveTable) },
           { label: '📝 Dán danh sách', render: (c) => c.append(h('p', { class: 'muted small' }, 'Dán từ Excel/Google Sheets (các cột cách nhau bằng tab) hoặc gõ, mỗi dòng một người. Cột đầu: lớp như trong game (Toán, Lý…), tên phòng (Thư viện, Phòng máy, Phòng thí nghiệm, Văn phòng) hoặc nhân vật (Bảo vệ, Cờ đỏ, Bác Hùng, Chị Mai, Anh Tuấn, Bạn Linh, Căng tin, Anh Dũng, Bạn Nam). Thầy cô chỉ Thầy/Cô; nhân vật khác có thể Bác, Chú, Anh, Chị, Bạn… hoặc để trống. Bỏ trống khóa thì dùng khóa đang chọn ở trên.'), paste, preview, savePaste) },
         ]),
-        result,
-        h('button', { class: 'btn link muted', onclick: () => { sessionSet(ADMIN_KEY, ''); unlock(); } }, '🔒 Khoá lại'));
+        result);
     };
-    if (sessionGet(ADMIN_KEY)) editor(); else unlock();
+    const main = () => {
+      b.replaceChildren(tabs([
+        { label: '👩‍🏫 Tên thầy cô', render: (c) => editor(c) },
+        { label: '💬 Tin nhắn', render: (c) => adminChatView(c) },
+        { label: '🚫 Thành viên', render: (c) => adminUsersView(c) },
+      ], initialTab), h('button', { class: 'btn link muted', onclick: () => { sessionSet(ADMIN_KEY, ''); refreshAdminUi(); unlock(); } }, '🔒 Khoá lại quyền quản trị'));
+    };
+    if (sessionGet(ADMIN_KEY)) main(); else unlock();
   }, { wide: true });
+}
+
+// Lỗi mã quản trị (đổi mã, hết phiên) → khoá lại để nhập lại
+function adminFail(e, box) {
+  if (e.status === 403 || e.status === 429 || e.status === 503) { sessionSet(ADMIN_KEY, ''); refreshAdminUi(); }
+  box.replaceChildren(h('div', { class: 'warn-box' }, e.message));
+}
+const sceneName = (sc) => !sc || sc === 'campus' ? 'Sân trường' : sc.startsWith('lop:') ? 'Lớp ' + sc.slice(4) : ({ 'p:thuvien': 'Thư viện', 'p:phongmay': 'Phòng máy', 'p:phongtn': 'Phòng thí nghiệm', 'p:hieubo': 'Nhà hiệu bộ', 'p:cangtin': 'Căng tin', 'p:dana': 'Nhà đa năng' }[sc] || sc);
+
+// Khoá một thành viên: lý do + tuỳ chọn xoá hết tin nhắn của người đó
+function banForm(u, onDone) {
+  const reason = h('input', { class: 'input', maxlength: 120, placeholder: 'Lý do (vd: nói tục, xúc phạm người khác)', 'aria-label': 'Lý do khoá' });
+  const purge = h('input', { type: 'checkbox', checked: true });
+  const msg = h('div', {});
+  const go = h('button', { class: 'btn danger', onclick: async () => {
+    const code = sessionGet(ADMIN_KEY) || '';
+    go.disabled = true;
+    try {
+      await call('adminBan', { code, uid: u.id || u.uid, reason: reason.value });
+      let deleted = 0;
+      if (purge.checked) for (let i = 0; i < 10; i++) { const r = await call('adminPurgeChat', { code, uid: u.id || u.uid }); deleted += r.deleted; if (!r.remaining) break; }
+      sfx.coin(); toast(`🚫 Đã khoá ${u.name}${deleted ? `, xoá ${deleted} tin nhắn` : ''}`);
+      onDone?.();
+    } catch (e) { adminFail(e, msg); go.disabled = false; }
+  } }, '🚫 Khoá thành viên');
+  return h('div', { class: 'ban-form' },
+    h('p', { class: 'small' }, `Khoá ${u.name}: không vào được nhân vật, không nhắn tin, không hiện trên sân nữa. Mở khoá lại được ở mục Thành viên.`),
+    reason, h('label', { class: 'check small' }, purge, ' Xoá luôn mọi tin nhắn của người này trong khung chat'), msg, go);
+}
+
+function adminChatView(c) {
+  const code = sessionGet(ADMIN_KEY) || '';
+  const box = h('div', { class: 'admin-msgs' }, h('p', { class: 'muted' }, 'Đang tải…'));
+  const msg = h('div', {});
+  const load = async () => {
+    try {
+      const { items } = await call('adminChat', { code });
+      box.replaceChildren(...(items.length ? items.map((m) => {
+        const row = h('div', { class: 'admin-msg' },
+          h('div', {}, h('b', {}, m.name), h('small', { class: 'muted' }, ` ${world.subOf(m)} · ${sceneName(m.scene)} · ${ago(m.at)}`)),
+          h('div', { class: 'admin-msg-text' }, m.text),
+          h('div', { class: 'row-btns' },
+            h('button', { class: 'btn ghost sm', onclick: async () => {
+              try { await call('adminDeleteChat', { code, ids: [m.id] }); removeChatRows([m.id]); row.remove(); toast('Đã xoá tin nhắn'); } catch (e) { adminFail(e, msg); }
+            } }, '🗑️ Xoá tin'),
+            h('button', { class: 'btn ghost sm', onclick: () => { row.append(banForm({ id: m.uid, name: m.name }, load)); } }, '🚫 Khoá người này')));
+        return row;
+      }) : [h('p', { class: 'muted' }, 'Chưa có tin nhắn nào.')]));
+    } catch (e) { adminFail(e, msg); box.replaceChildren(); }
+  };
+  c.append(h('p', { class: 'muted small' }, 'Khoảng 100 tin gần nhất của khung chat chung, mới nhất ở trên. Tin bị xoá biến mất khỏi khung chat của mọi người trong vài giây.'), msg, box,
+    h('button', { class: 'btn ghost', onclick: load }, '🔄 Tải lại'));
+  load();
+}
+
+function adminUsersView(c) {
+  const code = sessionGet(ADMIN_KEY) || '';
+  const q = h('input', { class: 'input', maxlength: 40, placeholder: 'Tìm theo tên (không cần dấu)', 'aria-label': 'Tìm thành viên' });
+  const onlyBanned = h('input', { type: 'checkbox' });
+  const list = h('div', { class: 'admin-msgs' });
+  const msg = h('div', {});
+  const load = async () => {
+    list.replaceChildren(h('p', { class: 'muted' }, 'Đang tìm…'));
+    try {
+      const r = await call('adminUsers', { code, q: q.value, banned: onlyBanned.checked });
+      list.replaceChildren(h('p', { class: 'muted small' }, `${r.total} người${r.total > r.items.length ? `, hiện ${r.items.length} người đầu` : ''}.`),
+        ...r.items.map((u) => {
+          const row = h('div', { class: 'admin-msg' + (u.banned ? ' banned' : '') },
+            h('div', {}, h('b', {}, u.name), h('small', { class: 'muted' }, ` ${world.subOf(u) || ROLES[u.role]} · ${ROLES[u.role]}${u.at ? ' · tạo ' + ago(u.at) : ''}`)),
+            u.banned ? h('div', { class: 'small err' }, `🚫 Đã khoá ${ago(u.banned.at)}${u.banned.reason ? ': ' + u.banned.reason : ''}`) : null,
+            h('div', { class: 'row-btns' }, u.banned
+              ? h('button', { class: 'btn ghost sm', onclick: async () => { try { await call('adminUnban', { code, uid: u.id }); toast('Đã mở khoá ' + u.name); load(); } catch (e) { adminFail(e, msg); } } }, '🔓 Mở khoá')
+              : h('button', { class: 'btn ghost sm', onclick: () => row.append(banForm(u, load)) }, '🚫 Khoá')));
+          return row;
+        }));
+    } catch (e) { adminFail(e, msg); list.replaceChildren(); }
+  };
+  let t = 0;
+  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(load, 350); });
+  onlyBanned.addEventListener('change', load);
+  c.append(q, h('label', { class: 'check small' }, onlyBanned, ' Chỉ hiện người đang bị khoá'), msg, list);
+  load();
 }
 
 // ======================= Sổ đầu bài, nội quy =======================
@@ -1531,6 +1637,35 @@ function bookSheet(owner) {
 
 // ======================= Khung chat, online, âm thanh, chuông trống =======================
 let addFeed = () => {};
+let removeChatRows = () => {};
+let matchOwn = () => {};
+let feedEl = null;
+// bật/tắt nút quản trị trên các dòng chat theo phiên quản trị hiện tại
+function refreshAdminUi() { feedEl?.classList.toggle('admin', !!sessionGet(ADMIN_KEY)); }
+// Bảng nhỏ khi quản trị chạm "⋯" trên một dòng chat
+function adminMsgSheet(m) {
+  openSheet('🔑 Tin nhắn của ' + m.name, (b) => {
+    const msg = h('div', {});
+    b.append(h('p', { class: 'speech' }, m.text), msg,
+      h('div', { class: 'row-btns' },
+        h('button', { class: 'btn ghost', disabled: !m.id, onclick: async () => {
+          try { await call('adminDeleteChat', { code: sessionGet(ADMIN_KEY) || '', ids: [m.id] }); removeChatRows([m.id]); closeSheet(); toast('Đã xoá tin nhắn'); } catch (e) { adminFail(e, msg); }
+        } }, '🗑️ Xoá tin này'),
+        h('button', { class: 'btn ghost', onclick: (e) => { e.currentTarget.disabled = true; b.append(banForm({ id: m.uid, name: m.name }, () => closeSheet())); } }, '🚫 Khoá người này')),
+      m.id ? null : h('p', { class: 'muted small' }, 'Tin vừa gửi, chờ vài giây để máy chủ ghi nhận rồi mới xoá được.'));
+  });
+}
+// Bị quản trị khoá: báo cho người dùng, chuyển về chế độ khách
+let bannedShown = false;
+function bannedNotice(text) {
+  if (bannedShown) return;
+  bannedShown = true;
+  me = GUEST; world.me.name = 'Khách'; world.me.sub = ''; hud.update();
+  openSheet('🚫 Tài khoản đã bị khoá', (b) => {
+    b.append(h('p', {}, text), h('p', { class: 'muted' }, 'Bạn vẫn xem sân trường như khách nhưng không nhắn tin, viết lưu bút hay tham gia hoạt động được. Nếu nghĩ đây là nhầm lẫn, hãy liên hệ ban quản trị trang.'),
+      h('button', { class: 'btn primary', onclick: () => closeSheet() }, 'Đã hiểu'));
+  });
+}
 let lastOnline = [];
 const visited = new Set();
 function visitZone(z) {

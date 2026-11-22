@@ -61,7 +61,7 @@ export async function api(action, body = {}) {
   if (mode === 'offline') {
     // chế độ ngoại tuyến (dữ liệu chỉ trên trình duyệt này): mã quản trị chạy thử là DEMO
     const res = await handle(action, { store: localStore, token: getToken(), now: Date.now(), adminCode: OFFLINE_ADMIN_CODE, ip: 'local' }, JSON.parse(JSON.stringify(body)));
-    if (res.status !== 200) throw Object.assign(new Error(res.body.error), { status: res.status });
+    if (res.status !== 200) throw Object.assign(new Error(res.body.error), { status: res.status, banned: !!res.body.banned });
     return res.body;
   }
   const r = await fetch('/api/' + action, {
@@ -71,6 +71,6 @@ export async function api(action, body = {}) {
   });
   let j;
   try { j = await r.json(); } catch { j = { error: 'Mất kết nối máy chủ' }; }
-  if (!r.ok) throw Object.assign(new Error(j.error || 'Lỗi'), { status: r.status });
+  if (!r.ok) throw Object.assign(new Error(j.error || 'Lỗi'), { status: r.status, banned: !!j.banned });
   return j;
 }

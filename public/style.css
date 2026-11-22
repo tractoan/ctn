@@ -485,3 +485,15 @@ body.page { overflow: auto; background: var(--bg); }
 .admin-head { margin: 10px 0 2px; font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .admin-row .admin-sub { grid-column: 3; }
 @media (max-width: 420px) { .admin-row .admin-sub { grid-column: 1 / -1; } }
+
+/* ---------- Quản trị: tin nhắn, thành viên ---------- */
+.admin-msgs { display: grid; gap: 8px; margin: 8px 0; }
+.admin-msg { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 14px; }
+.admin-msg.banned { background: #FDF3F3; }
+.admin-msg-text { margin: 4px 0; word-break: break-word; }
+.admin-msg .row-btns .btn { flex: none; }
+.ban-form { margin-top: 8px; padding: 10px; border-radius: 10px; background: #FFF6E5; display: grid; gap: 6px; }
+.ban-form .input { margin: 0; }
+.check { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.feed-x { display: none; float: right; border: 0; background: transparent; color: var(--muted); font-weight: 800; padding: 0 4px; margin-left: 4px; }
+.chat-feed.admin .feed-x { display: inline-block; }

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.2 – khung chat chung (mọi khu, kèm khóa · lớp); cấu hình tên mọi nhân vật phụ; nhà đa năng, căng tin lùi xuống, lối đi giữa dãy 3 tầng và nhà đa năng; bỏ vạch kẻ đường |
+| Phiên bản | 2.3 – quản trị xoá tin nhắn, khoá / mở khoá thành viên |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -371,6 +371,22 @@ dán danh sách nhận cột thứ 5 là dòng phụ và tên nhân vật thư�
     Excel/Google Sheets); lớp viết như trong game hoặc tên phòng (Thư viện, Phòng máy, Phòng thí nghiệm, Văn phòng);
     xem trước số dòng hợp lệ và dòng lỗi trước khi lưu.
 
+### 5.6e Quản trị: tin nhắn và thành viên
+
+- **Xoá tin**: `adminDeleteChat {code, ids}` / `adminPurgeChat {code, uid}` (mọi tin của một người, mỗi lần ≤ 30, trả
+  `remaining` để gọi tiếp) → `deleteChat` xoá bản ghi `chat` và ghi id vào `chatlast.del` (200 id gần nhất) cùng `delAt`.
+  Mỗi lượt `presence`/`online` gửi `chatDelAfter`; nếu `delAt` mới hơn, máy chủ trả `chatDel` (danh sách id) và
+  `chatDelAt`, trình duyệt gỡ các dòng `[data-id]` tương ứng. Tin của chính mình hiện ngay lúc gửi (chưa có id) và được
+  gắn id khi máy chủ trả về (`matchOwn`), nên cũng bị gỡ khi quản trị xoá.
+- **Khoá**: `adminBan {code, uid, reason}` đặt `user.banned = {at, reason}`, xoá bản ghi `presence`. `auth()` và `recover`
+  trả 403 kèm `{banned: true, reason}` cho người bị khoá → trình duyệt (`bannedNotice`) báo lý do, chuyển về chế độ khách,
+  giữ token để tải lại vẫn bị khoá. `adminUnban` gỡ khoá.
+- **Tìm thành viên**: chỉ mục gọn `uidx` (`{id, name, role, khoa, lop, school, at, banned}`) ghi khi đăng ký, đổi tên,
+  khoá/mở khoá; nhân vật cũ được thêm vào chỉ mục ở lần `me` đầu tiên. `adminUsers {code, q, banned}` so tên không dấu
+  (bỏ dấu tiếng Việt, đ → d), trả tối đa 50 người, người bị khoá gần nhất lên đầu.
+- **Giao diện**: `adminSheet` có 3 mục (Tên thầy cô · Tin nhắn · Thành viên); `banForm` (lý do + "xoá luôn mọi tin nhắn"),
+  không dùng `confirm()`; khung chat có lớp `admin` khi phiên quản trị đang mở → hiện nút ⋯ trên mỗi dòng (`adminMsgSheet`).
+
 ### 5.7 Phong cách
 
 | Token | Giá trị | Dùng cho |
@@ -547,7 +563,8 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `clog` | `lớp\|ngày\|loại\|id` | Sổ đầu bài: `p` có mặt `{name, label, at}`, `n` ghi chú `{name, text, at}`, `o` điểm miệng `{name, label, grade, at}`, `s` nộp sổ (id `0`) `{name, at}`, `w` vi phạm `{uid, name, label, reason, by, at}` |
 | `clogday` | `lớp\|ngày` | `{day}` – các ngày có ghi chép, để chọn ngày xem lại |
 | `chat` | `thời gian-id` | `{id, uid, name, role, khoa, lop, school, scene, text, at}` – khung chat chung |
-| `chatlast` | `all` | `{at, n}` – thời điểm tin mới nhất, số tin |
+| `chatlast` | `all` | `{at, n, del[], delAt}` – thời điểm tin mới nhất, số tin, id tin bị xoá gần đây |
+| `uidx` | id người dùng | `{id, name, role, khoa, lop, school, at, banned}` – chỉ mục thành viên cho quản trị |
 | `adminfail` | `ip\|giờ` | `{n}` – số lần nhập sai mã quản trị |
 | `gvcn` | `lớp\|khóa` (`*` = mọi khóa) | `{lop, khoa, title, name, by, at}` – tên thầy cô chủ nhiệm |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
@@ -568,8 +585,8 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `recover` | – | `code` | `{token, user}` |
 | `me` | ✔ | – | `{user}` |
 | `look` | ✔ | `look, name` | `{user}` |
-| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, noBalloon, say?, throw? {x, y, target}, chatAfter?` | `{others[], inbox[], chat[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
-| `online` | – | `chatAfter?` | `{others[], chat[], now}` |
+| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, noBalloon, say?, throw? {x, y, target}, chatAfter?, chatDelAfter?` | `{others[], inbox[], chat[], chatDel?, chatDelAt?, now}`; 403 `{banned}` nếu bị khoá – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
+| `online` | – | `chatAfter?, chatDelAfter?` | `{others[], chat[], chatDel?, chatDelAt?, now}` |
 | `guestbook` | – | `room` | `{items[]}` (100 mới nhất) |
 | `sign` | ✔ | `room, body` (≤ 600 ký tự) | `{item, user}` |
 | `roster` | – | `room` | `{items[]}` |
@@ -580,6 +597,11 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `setClassTeacher` | ✔ | `lop, title` (Thầy/Cô), `name` (≤ 30), `khoa?` (thầy cô) | `{item}`; 403 nếu không phải lớp mình |
 | `teachersAll` | – | – | `{items[]}` – mọi tên thầy cô đã đặt |
 | `adminCheck` | mã | `code` | `{ok, batch}`; 403 sai mã, 429 sai quá nhiều, 503 chưa đặt mã |
+| `adminChat` | mã | `code` | `{items[]}` – ~100 tin gần nhất |
+| `adminDeleteChat` | mã | `code, ids[]` (≤ 30) | `{deleted, remaining}` |
+| `adminPurgeChat` | mã | `code, uid` | `{deleted, remaining}` |
+| `adminUsers` | mã | `code, q?, banned?` | `{items[], total}` |
+| `adminBan` / `adminUnban` | mã | `code, uid, reason?` | `{ok, name}` |
 | `adminTeachers` | mã | `code, items[{lop, khoa, title, name}]` (≤ 40) | `{saved, deleted, errors[]}` |
 | `classlogAct` | ✔ | `lop, kind` (note/submit/notebook/writeup), `text?`, `target?`, `reason?` | note → `{ok, user}`; submit → `{fresh, by?, at?, user}`; notebook → `{today, fresh, notes[], user}`; writeup (chỉ thầy cô) → `{ok}` |
 | `menu` | – | – | `{sale, items[]}` |

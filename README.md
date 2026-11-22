@@ -106,7 +106,8 @@ npm run deploy                      # https://thpt.<subdomain>.workers.dev
 npx wrangler secret put ADMIN_CODE  # nhập mã quản trị (dài, khó đoán) khi được hỏi
 ```
 
-**Mã quản trị** dùng cho bảng *🔑 Quản trị: sửa tên thầy cô hàng loạt* (mở từ ảnh đại diện → Nhân vật của tôi, từ bảng sửa
+**Mã quản trị** dùng cho bảng *🔑 Quản trị* gồm 3 mục: sửa tên thầy cô, nhân vật hàng loạt; **xoá tin nhắn** trong khung chat chung;
+**khoá / mở khoá thành viên** thô lỗ (kèm xoá tin của họ). Mở bảng từ ảnh đại diện → Nhân vật của tôi, từ bảng sửa
 tên thầy cô, hoặc vào thẳng `https://<địa chỉ trang>/?quantri`). Mã lưu trong biến bí mật `ADMIN_CODE` của Cloudflare,
 không nằm trong mã nguồn. Đổi mã: chạy lại `npx wrangler secret put ADMIN_CODE`. Chạy thử trên máy với `npm run dev`:
 tạo file `.dev.vars` có dòng `ADMIN_CODE=...` (file này đã được `.gitignore`). Ở chế độ chỉ giao diện (`npm run static`)
