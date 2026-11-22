@@ -353,6 +353,18 @@ async function deleteChat(ctx, match, max = 30) {
   return { deleted: now.length, remaining: rows.length - now.length };
 }
 
+// Lưu lời chia tay + lời tri ân của một khóa, giữ một bản trước để quản trị khôi phục khi bị sửa bậy
+async function saveLetter(ctx, khoa, b, by) {
+  const clean = (v) => (typeof v === 'string' ? v.trim().replace(/\r/g, '').replace(/\n{3,}/g, '\n\n') : '');
+  const farewell = clean(b.farewell), thanks = clean(b.thanks);
+  if (!farewell && !thanks) throw new ApiError(400, 'Hãy viết lời chia tay hoặc lời tri ân');
+  if (farewell.length > 1500 || thanks.length > 1500) throw new ApiError(400, 'Mỗi phần tối đa 1500 ký tự');
+  const cur = await ctx.store.get('khoalt', khoa);
+  const item = { khoa, farewell, thanks, by, at: ctx.now, prev: cur ? { farewell: cur.farewell, thanks: cur.thanks, by: cur.by, at: cur.at } : null };
+  await ctx.store.put('khoalt', khoa, item);
+  return item;
+}
+
 // ---------- Quản trị: mã đặt trong biến bí mật ADMIN_CODE của Cloudflare (ctx.adminCode) ----------
 const ADMIN_MAX_FAILS = 10; // số lần nhập sai mỗi giờ cho một địa chỉ IP
 export const ADMIN_BATCH = 40; // số tên tối đa mỗi lần lưu (D1 gói miễn phí giới hạn 50 truy vấn mỗi yêu cầu)
@@ -587,6 +599,77 @@ const handlers = {
     return { items: rows.slice(0, 50), total: rows.length };
   },
 
+  // Xoá một lời lưu bút (room, at, id lấy từ chính bản ghi đang hiện)
+  async adminDeleteGb(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const key = `${str(b.room, 40, true, 'phòng')}|${String(num(b.at, 0, 9e15)).padStart(15, '0')}-${str(b.id, 12, true, 'mã')}`;
+    if (!(await ctx.store.get('gb', key))) throw new ApiError(404, 'Không tìm thấy lời lưu bút (có thể đã bị xoá)');
+    await ctx.store.del('gb', key);
+    return { ok: true };
+  },
+
+  // Xoá một ảnh trong album (ảnh nhỏ + ảnh lớn)
+  async adminDeletePhoto(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const id = str(b.id, 12, true, 'mã ảnh');
+    const key = `${String(num(b.at, 0, 9e15)).padStart(15, '0')}-${id}`;
+    const meta = await ctx.store.get('photo', key);
+    if (!meta) throw new ApiError(404, 'Không tìm thấy ảnh (có thể đã bị xoá)');
+    await ctx.store.del('photo', key);
+    await ctx.store.del('photofull', id);
+    await ctx.store.del('photouid', `${meta.uid}|${key}`);
+    return { ok: true };
+  },
+
+  // Xoá mọi lưu bút và ảnh của một thành viên. Mỗi lần ≤ 20 lưu bút và ≤ 6 ảnh (giới hạn truy vấn D1); còn thì gọi tiếp.
+  async adminPurgeContent(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const uid = str(b.uid, 20, true, 'thành viên');
+    const gb = (await ctx.store.list('gb', '', 5000)).filter((r) => r.v.uid === uid);
+    for (const r of gb.slice(0, 20)) await ctx.store.del('gb', r.k);
+    // ảnh: theo chỉ mục người đăng, và quét album gần đây (ảnh đăng trước khi có chỉ mục)
+    const keys = new Set((await ctx.store.list('photouid', uid + '|', 200)).map((r) => r.k.slice(uid.length + 1)));
+    for (const r of await ctx.store.list('photo', '', 60)) if (r.v.uid === uid) keys.add(r.k);
+    const photos = [...keys];
+    for (const k of photos.slice(0, 6)) {
+      await ctx.store.del('photo', k);
+      await ctx.store.del('photofull', k.slice(16));
+      await ctx.store.del('photouid', `${uid}|${k}`);
+    }
+    const g = Math.min(20, gb.length), ph = Math.min(6, photos.length);
+    return { gb: g, photos: ph, remaining: gb.length - g + photos.length - ph };
+  },
+
+  // ----- Lời chia tay của khóa + lời tri ân thầy cô (hiện trên bảng tin cho cựu học sinh) -----
+  async khoaLetter(ctx, b) {
+    const khoa = normKhoa(b.khoa, 'cuuhs');
+    return { item: await ctx.store.get('khoalt', khoa) };
+  },
+  async khoaLetters(ctx) {
+    const rows = await ctx.store.list('khoalt', '', 100);
+    return { items: rows.map((r) => ({ khoa: r.v.khoa, by: r.v.by, at: r.v.at })) };
+  },
+  // Cựu học sinh viết (hoặc viết lại) lời của khóa mình
+  async setKhoaLetter(ctx, b) {
+    const u = await auth(ctx);
+    if (u.role !== 'cuuhs' || !u.khoa) throw new ApiError(403, 'Chỉ cựu học sinh mới viết được lời chia tay của khóa mình');
+    return { item: await saveLetter(ctx, u.khoa, b, u.name) };
+  },
+  // Quản trị sửa lời của khóa bất kỳ; để trống cả hai = xoá (về lời mẫu); restore = khôi phục bản trước
+  async adminKhoaLetter(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const khoa = normKhoa(b.khoa, 'cuuhs');
+    const cur = await ctx.store.get('khoalt', khoa);
+    if (b.restore) {
+      if (!cur?.prev) throw new ApiError(400, 'Không có bản trước để khôi phục');
+      const item = { ...cur.prev, khoa, prev: { farewell: cur.farewell, thanks: cur.thanks, by: cur.by, at: cur.at } };
+      await ctx.store.put('khoalt', khoa, item);
+      return { item };
+    }
+    if (!str(b.farewell, 10) && !str(b.thanks, 10)) { await ctx.store.del('khoalt', khoa); return { item: null }; }
+    return { item: await saveLetter(ctx, khoa, b, 'Quản trị') };
+  },
+
   // Khoá thành viên: không đăng nhập, không nhắn, không hiện trên sân nữa (mở khoá được)
   async adminBan(ctx, b) {
     await checkAdmin(ctx, b.code);
@@ -761,6 +844,7 @@ const handlers = {
       thumb: b.thumb, at: ctx.now,
     };
     await ctx.store.put('photo', `${String(ctx.now).padStart(15, '0')}-${id}`, meta);
+    await ctx.store.put('photouid', `${u.id}|${String(ctx.now).padStart(15, '0')}-${id}`, { id }); // để quản trị xoá ảnh theo người
     await ctx.store.put('photofull', id, { id, full: b.full });
     return { item: meta, user: privateUser(u) };
   },

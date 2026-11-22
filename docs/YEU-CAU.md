@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.0 – quản trị xoá tin nhắn, khoá thành viên thô lỗ |
+| Phiên bản | 2.1 – quản trị xoá lưu bút và ảnh; bảng tin có lời chia tay của khóa và lời tri ân thầy cô |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -157,8 +157,11 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-QT-01 | **Quản trị xoá tin nhắn**: mục "💬 Tin nhắn" trong bảng quản trị liệt kê ~100 tin gần nhất (tên, khóa · lớp, khu, thời gian) với nút 🗑️ Xoá tin; khi đang mở quyền quản trị, mỗi dòng trong khung chat có nút ⋯ để xoá ngay. Tin bị xoá biến mất khỏi khung chat của mọi người (kể cả người gửi) trong vài giây | P1 | ✅ |
 | YC-QT-02 | **Khoá thành viên thô lỗ**: từ một tin nhắn hoặc mục "🚫 Thành viên" (tìm theo tên, không cần dấu; lọc người đang bị khoá), nhập lý do, tuỳ chọn xoá luôn mọi tin nhắn của người đó. Người bị khoá biến khỏi sân ngay, nhận thông báo kèm lý do, chỉ còn xem như khách; không nhắn tin, viết lưu bút, tham gia hoạt động được; tải lại trang hay nhập mã khôi phục vẫn bị khoá. Mở khoá lại được | P1 | ✅ |
 
+| YC-QT-03 | **Quản trị xoá lưu bút và ảnh**: khi đang mở quyền quản trị, mỗi lời lưu bút (mọi bảng lưu bút, sổ lưu bút cá nhân) có nút "🗑️ Xoá (quản trị)", mỗi ảnh trong album có nút "🗑️ Xoá ảnh"; bấm hai lần để chắc chắn. Mục Thành viên có nút "🗑️ Xoá lưu bút, ảnh" xoá mọi lưu bút và ảnh của một người; khi khoá có thể tích "xoá luôn lưu bút và ảnh" | P1 | ✅ |
+| YC-BT-01 | **Bảng tin cho cựu học sinh**: mở bảng tin, cựu học sinh thấy ngay **lời chia tay của khóa mình** kèm **lời tri ân thầy cô** (dạng lá thư có logo, chữ viết tay); mỗi phiên có lời nhắc "Bảng tin có lời chia tay khóa …". Người khác chọn khóa để đọc (khóa đã tự viết có dấu ✍️) | P1 | ✅ |
+| YC-BT-02 | Khóa chưa viết thì hiện **lời mẫu**; cựu học sinh của khóa đó viết lại được (mỗi phần ≤ 1500 ký tự). Quản trị sửa, xoá (về lời mẫu) hoặc **khôi phục bản trước** khi bị viết bậy | P1 | ✅ |
+
 > YC-QT-02: người bị khoá vẫn có thể tạo nhân vật mới (trang không dùng mật khẩu, email); khi đó quản trị khoá tiếp nhân vật mới.
-> Lưu bút và ảnh người đó đã đăng chưa bị xoá kèm.
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
 
 ### 4.6 Hoạt động trong trường

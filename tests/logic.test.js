@@ -453,3 +453,53 @@ test('quản trị xoá tin nhắn, khoá và mở khoá thành viên', async ()
   assert.equal((await call(s, 'me', {}, a.token, t + 63000)).status, 200);
   assert.equal((await adm('adminBan', { uid: 'khong-co' })).status, 404);
 });
+
+test('quản trị xoá lưu bút và ảnh của thành viên', async () => {
+  const s = memStore();
+  const t = Date.UTC(2026, 10, 22, 3);
+  const adm = (action, body) => handle(action, { store: s, token: '', now: t + 9e5, adminCode: 'm', ip: '1' }, { code: 'm', ...body });
+  const a = (await call(s, 'register', { name: 'Ác', role: 'cuuhs', khoa: 'K20', lop: 'Toán' }, '', t)).body;
+  const b = (await call(s, 'register', { name: 'Bình', role: 'cuuhs', khoa: 'K21', lop: 'Văn' }, '', t)).body;
+  for (let i = 0; i < 23; i++) await call(s, 'sign', { room: i % 2 ? 'gv' : 'so:' + b.user.id, body: 'lưu bút bậy ' + i }, a.token, t + i);
+  await call(s, 'sign', { room: 'gv', body: 'Em chào thầy cô' }, b.token, t + 100);
+  const jpg = (n) => 'data:image/jpeg;base64,' + 'A'.repeat(n);
+  for (let d = 0; d < 2; d++) for (let i = 0; i < 4; i++) await call(s, 'albumPost', { full: jpg(100), thumb: jpg(50), caption: 'ảnh ' + d + i }, a.token, t + d * 86400e3 + i);
+  await call(s, 'albumPost', { full: jpg(100), thumb: jpg(50), caption: 'ảnh của Bình' }, b.token, t + 500);
+  // xoá một lời lưu bút, một ảnh
+  const gb = (await call(s, 'guestbook', { room: 'gv' })).body.items;
+  const one = gb.find((x) => x.body === 'lưu bút bậy 1');
+  assert.equal((await adm('adminDeleteGb', { room: one.room, at: one.at, id: one.id })).status, 200);
+  assert.equal((await adm('adminDeleteGb', { room: one.room, at: one.at, id: one.id })).status, 404);
+  const album = (await call(s, 'album', {})).body.items;
+  const ph = album.find((x) => x.caption === 'ảnh 13');
+  await adm('adminDeletePhoto', { id: ph.id, at: ph.at });
+  assert.equal((await call(s, 'photo', { id: ph.id })).status, 404);
+  // xoá hết của Ác (nhiều lần)
+  let total = { gb: 0, photos: 0 }, r;
+  do { r = (await adm('adminPurgeContent', { uid: a.user.id })).body; total.gb += r.gb; total.photos += r.photos; } while (r.remaining > 0);
+  assert.deepEqual(total, { gb: 22, photos: 7 });
+  assert.deepEqual((await call(s, 'guestbook', { room: 'gv' })).body.items.map((x) => x.name), ['Bình']);
+  assert.deepEqual((await call(s, 'guestbook', { room: 'so:' + b.user.id })).body.items, []);
+  assert.deepEqual((await call(s, 'album', {})).body.items.map((x) => x.caption), ['ảnh của Bình']);
+});
+
+test('lời chia tay khóa + lời tri ân: cựu học sinh viết cho khóa mình, quản trị sửa và khôi phục', async () => {
+  const s = memStore();
+  const t = Date.UTC(2026, 10, 22, 3);
+  const adm = (body) => handle('adminKhoaLetter', { store: s, token: '', now: t + 9e5, adminCode: 'm', ip: '1' }, { code: 'm', ...body });
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' })).body;
+  const h = (await call(s, 'register', { name: 'Hà', role: 'hs', khoa: 'K40', lop: 'Văn' })).body;
+  assert.equal((await call(s, 'khoaLetter', { khoa: '20' })).body.item, null);
+  assert.equal((await call(s, 'setKhoaLetter', { farewell: 'x' }, h.token)).status, 403);
+  assert.equal((await call(s, 'setKhoaLetter', { farewell: ' ', thanks: '' }, a.token)).status, 400);
+  await call(s, 'setKhoaLetter', { farewell: 'Tạm biệt K20!', thanks: 'Cảm ơn thầy cô.' }, a.token, t);
+  await call(s, 'setKhoaLetter', { farewell: 'viết bậy', thanks: 'viết bậy' }, a.token, t + 1000);
+  let it = (await call(s, 'khoaLetter', { khoa: 'K20' })).body.item;
+  assert.deepEqual([it.farewell, it.by, it.prev.farewell], ['viết bậy', 'An', 'Tạm biệt K20!']);
+  it = (await adm({ khoa: 'K20', restore: true })).body.item;
+  assert.deepEqual([it.farewell, it.thanks], ['Tạm biệt K20!', 'Cảm ơn thầy cô.']);
+  await adm({ khoa: '5', farewell: 'Khóa 5 chia tay', thanks: '' });
+  assert.deepEqual((await call(s, 'khoaLetters', {})).body.items.map((x) => x.khoa).sort(), ['K20', 'K5']);
+  assert.equal((await adm({ khoa: 'K5', farewell: '', thanks: '' })).body.item, null);
+  assert.equal((await call(s, 'khoaLetter', { khoa: 'K5' })).body.item, null);
+});

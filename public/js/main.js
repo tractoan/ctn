@@ -496,6 +496,14 @@ function enterSchool() {
   setInterval(tick, 2500);
   setInterval(checkBell, 20000);
   checkBell(true);
+  // cựu học sinh: nhắc bảng tin có lời chia tay của khóa mình (mỗi phiên một lần)
+  // (kiểm tra định kỳ vì người mới ghi danh lúc vào trường còn là khách)
+  const letterHint = setInterval(() => {
+    if (sessionGet('ctn.letterHint')) { clearInterval(letterHint); return; }
+    if (me.role !== 'cuuhs' || !me.khoa || document.querySelector('.backdrop') || document.getElementById('banner')?.hidden === false) return;
+    sessionSet('ctn.letterHint', '1'); clearInterval(letterHint);
+    banner(`📜 Bảng tin có lời chia tay khóa ${me.khoa.slice(1)} và lời tri ân thầy cô`, { label: 'Xem', run: () => panels.board() });
+  }, 4000);
   setInterval(() => { if (world.scene.id !== 'campus') return; const z = world.zoneOf(world.me.x, world.me.y); if (z !== lastZone) { lastZone = z; zoneEl.textContent = ZONES[z] || 'Sân trường'; } }, 400);
   window.addEventListener('beforeunload', () => { if (world.scene.id === 'campus') savePos(); });
 }
@@ -593,9 +601,21 @@ function guestbook(container, room, { placeholder = 'Viết lưu bút…', empty
   load();
 }
 function gbItem(it) {
-  return h('article', { class: 'gb-item' },
+  const el = h('article', { class: 'gb-item' },
     h('header', {}, h('b', {}, it.name), h('span', { class: 'tag' }, describe(it)), h('time', {}, ago(it.at))),
     h('p', {}, it.body));
+  if (isAdmin()) el.append(adminDelGbBtn(it, () => el.remove()));
+  return el;
+}
+// Quản trị (đang mở phiên): nút xoá lời lưu bút
+const isAdmin = () => !!sessionGet(ADMIN_KEY);
+function adminDelGbBtn(it, onDone) {
+  return h('button', { class: 'btn link admin-del', onclick: async (e) => {
+    const btn = e.currentTarget;
+    if (btn.dataset.sure !== '1') { btn.dataset.sure = '1'; btn.textContent = '🗑️ Bấm lần nữa để xoá'; return; }
+    try { await call('adminDeleteGb', { code: sessionGet(ADMIN_KEY), room: it.room, at: it.at, id: it.id }); toast('Đã xoá lời lưu bút'); onDone(); }
+    catch (ex) { toast(ex.message, 'bad'); if (ex.status === 403 || ex.status === 503) { sessionSet(ADMIN_KEY, ''); refreshAdminUi(); } }
+  } }, '🗑️ Xoá (quản trị)');
 }
 
 
@@ -660,15 +680,18 @@ const panels = {
     });
   },
 
-  board() {
-    openSheet('🏆 Bảng thi đua', (b) => {
-      b.append(h('p', { class: 'muted' }, 'Điểm thi đua: điểm danh, ngồi vào lớp mình, chào cờ, viết lưu bút, chơi trò chơi, đãi bạn, nhận thành tựu…' + (me.guest ? '' : ` Bạn đang có ${me.points} điểm.`)));
+  board(hs) {
+    const alum = me.role === 'cuuhs' && !!me.khoa;
+    openSheet('📋 Bảng tin', (b) => {
+      const letterTab = { label: alum ? `📜 Khóa ${me.khoa.slice(1)}` : '📜 Lời chia tay', render: (c) => letterView(c, alum ? me.khoa : '') };
+      const score = (c) => c.append(h('p', { class: 'muted small' }, 'Điểm thi đua: điểm danh, ngồi vào lớp mình, chào cờ, viết lưu bút, chơi trò chơi, đãi bạn, nhận thành tựu…' + (me.guest ? '' : ` Bạn đang có ${me.points} điểm.`)));
       const gameBoard = async (c, id) => {
         const r = await call('leaderboard', { game: id });
         return rankList(r.items.map((x) => ({ name: x.name, sub: `${x.lop || ''} ${x.khoa || ''}`, val: `${x.score} ${GAMES[id].unit}` })), 'Chưa ai chơi.');
       };
-      b.append(tabs([
-        { label: 'Cá nhân', render: async (c) => {
+      const scoreTabs = [
+        { label: '🏆 Cá nhân', render: async (c) => {
+          score(c);
           const r = await call('khoaBoard');
           c.append(rankList(r.people.map((x) => ({ name: x.name, sub: x.khoa ? `${x.lop} ${x.khoa}` : ROLES[x.role], val: x.points })), 'Chưa có ai.'));
         } },
@@ -690,8 +713,10 @@ const panels = {
           c.append(chips, out);
           chips.firstChild.click();
         } },
-      ]));
-    });
+      ];
+      // cựu học sinh: mở bảng tin là thấy ngay lời chia tay của khóa mình
+      b.append(tabs(alum ? [letterTab, ...scoreTabs] : [...scoreTabs, letterTab], hs?.tab ?? 0));
+    }, { wide: true });
   },
 
   office(hs) {
@@ -1130,6 +1155,91 @@ function teacherEditSheet(slot) {
   });
 }
 
+// ======================= Bảng tin: lời chia tay của khóa + lời tri ân thầy cô =======================
+// Mỗi khóa một lá thư; chưa ai viết thì hiện lời mẫu. Cựu học sinh khóa đó viết lại được, quản trị sửa/khôi phục được.
+function defaultLetter(khoa) {
+  const n = khoa.replace(/^K/, '');
+  return {
+    farewell: `Gửi các bạn khóa ${n} thân yêu,\n\nBa năm dưới mái trường Chuyên Thái Nguyên – 234A Lương Ngọc Quyến – đã khép lại. Cảm ơn các bạn vì những giờ học căng thẳng mà vui, những buổi ôn đội tuyển tới tối, những trận đá cầu giờ ra chơi, những cốc trà đá căng tin và cả những lần cùng bị ghi tên vào sổ đầu bài.\n\nMai này mỗi người một ngả, mong rằng mỗi khi nghe tiếng trống trường hay thấy hoa phượng nở, ta lại nhớ về nhau. Hẹn gặp lại ở buổi họp lớp!`,
+    thanks: `Kính gửi các thầy cô,\n\nCác bạn học trò khóa ${n} xin gửi lời biết ơn sâu sắc tới thầy cô – những người đã tận tụy dìu dắt, thắp cho chúng em niềm say mê học tập và dạy chúng em cách làm người. Những bài giảng, lời khuyên và cả sự nghiêm khắc đầy yêu thương của thầy cô là hành trang theo chúng em suốt cuộc đời.\n\nChúc thầy cô luôn mạnh khỏe, hạnh phúc và tiếp tục chắp cánh cho nhiều thế hệ học trò Chuyên.`,
+  };
+}
+function letterCard(khoa, item) {
+  const d = item || defaultLetter(khoa);
+  const n = khoa.replace(/^K/, '');
+  const para = (t) => (t || '').split(/\n{2,}/).map((x) => h('p', {}, x));
+  return h('div', { class: 'letter' },
+    h('div', { class: 'letter-head' }, h('img', { src: 'logo.jpg', alt: '' }), h('div', {}, h('b', {}, 'TRƯỜNG THPT CHUYÊN THÁI NGUYÊN'), h('small', {}, `Bảng tin · Khóa ${n}`))),
+    d.farewell ? h('section', {}, h('h4', {}, `💌 Lời chia tay khóa ${n}`), ...para(d.farewell)) : null,
+    d.thanks ? h('section', { class: 'thanks' }, h('h4', {}, '💐 Lời tri ân thầy cô'), ...para(d.thanks)) : null,
+    h('div', { class: 'letter-foot' }, item ? `Viết bởi ${item.by} · ${ago(item.at)}` : `Lời mẫu · các bạn cựu học sinh khóa ${n} có thể viết lại`));
+}
+async function letterView(c, khoa) {
+  const box = h('div', {});
+  const picker = h('select', { class: 'input', 'aria-label': 'Chọn khóa' },
+    ...Array.from({ length: 40 }, (_, i) => 40 - i).map((n) => h('option', { value: 'K' + n, selected: khoa === 'K' + n }, `Khóa ${n} (K${n})`)));
+  const show = async (k) => {
+    box.replaceChildren(h('p', { class: 'muted' }, 'Đang tải…'));
+    let item = null;
+    try { item = (await call('khoaLetter', { khoa: k })).item; } catch { /* dùng lời mẫu */ }
+    const mine = me.role === 'cuuhs' && me.khoa === k;
+    box.replaceChildren(letterCard(k, item),
+      ...(mine ? [h('button', { class: 'btn ghost', onclick: () => letterEdit(box, k, item, () => show(k)) }, item ? '✏️ Sửa lời của khóa mình' : '✏️ Viết lời của khóa mình')] : []),
+      ...(isAdmin() ? [h('button', { class: 'btn link muted', onclick: () => adminSheet(3) }, '🔑 Sửa trong bảng quản trị')] : []));
+  };
+  picker.addEventListener('change', () => show(picker.value));
+  // có khóa nào đã viết thì đánh dấu trong danh sách chọn
+  call('khoaLetters').then((r) => { for (const it of r.items) { const o = picker.querySelector(`option[value="${it.khoa}"]`); if (o) o.textContent += ' ✍️'; } }).catch(() => {});
+  c.append(...(khoa ? [] : [h('p', { class: 'muted small' }, 'Lời chia tay của từng khóa và lời tri ân gửi thầy cô. Chọn khóa để đọc (✍️ = khóa đã tự viết).')]), picker, box);
+  show(khoa || 'K' + 40);
+}
+function letterEdit(box, khoa, item, onDone) {
+  const d = item || defaultLetter(khoa);
+  const f = h('textarea', { class: 'input', rows: 8, maxlength: 1500, 'aria-label': 'Lời chia tay' }); f.value = d.farewell;
+  const t = h('textarea', { class: 'input', rows: 7, maxlength: 1500, 'aria-label': 'Lời tri ân thầy cô' }); t.value = d.thanks;
+  const err = h('p', { class: 'err', role: 'alert' });
+  box.replaceChildren(
+    h('p', { class: 'muted small' }, `Lá thư này hiện trên bảng tin cho cả khóa ${khoa.slice(1)}. Mỗi phần tối đa 1500 ký tự; để trống dòng để tách đoạn.`),
+    h('label', { class: 'ob-lbl' }, `💌 Lời chia tay khóa ${khoa.slice(1)}`), f,
+    h('label', { class: 'ob-lbl' }, '💐 Lời tri ân thầy cô'), t, err,
+    h('div', { class: 'row-btns' },
+      h('button', { class: 'btn ghost', onclick: onDone }, 'Huỷ'),
+      h('button', { class: 'btn primary', onclick: async () => {
+        try { await call('setKhoaLetter', { farewell: f.value, thanks: t.value }); sfx.coin(); toast('Đã lưu lá thư của khóa'); onDone(); }
+        catch (e) { err.textContent = e.message; }
+      } }, 'Lưu')));
+}
+// Quản trị: sửa / xoá / khôi phục lá thư của khóa bất kỳ
+function adminLetterView(c) {
+  const code = sessionGet(ADMIN_KEY) || '';
+  const picker = h('select', { class: 'input', 'aria-label': 'Chọn khóa' }, ...Array.from({ length: 40 }, (_, i) => 40 - i).map((n) => h('option', { value: 'K' + n }, `Khóa ${n} (K${n})`)));
+  const box = h('div', {});
+  const msg = h('div', {});
+  const show = async () => {
+    const k = picker.value;
+    box.replaceChildren(h('p', { class: 'muted' }, 'Đang tải…'));
+    let item = null;
+    try { item = (await call('khoaLetter', { khoa: k })).item; } catch (e) { adminFail(e, msg); }
+    const f = h('textarea', { class: 'input', rows: 7, maxlength: 1500, 'aria-label': 'Lời chia tay (quản trị)', placeholder: 'Để trống cả hai phần rồi lưu = xoá, bảng tin hiện lời mẫu' }); f.value = item?.farewell || '';
+    const t = h('textarea', { class: 'input', rows: 6, maxlength: 1500, 'aria-label': 'Lời tri ân (quản trị)' }); t.value = item?.thanks || '';
+    const save = async (body) => {
+      try { const r = await call('adminKhoaLetter', { code, khoa: k, ...body }); toast(r.item ? 'Đã lưu lá thư khóa ' + k : 'Đã xoá, bảng tin hiện lời mẫu'); show(); }
+      catch (e) { adminFail(e, msg); }
+    };
+    box.replaceChildren(
+      h('p', { class: 'muted small' }, item ? `Đang có: viết bởi ${item.by} · ${ago(item.at)}.` : 'Khóa này chưa viết, bảng tin đang hiện lời mẫu.'),
+      h('label', { class: 'ob-lbl' }, '💌 Lời chia tay'), f, h('label', { class: 'ob-lbl' }, '💐 Lời tri ân thầy cô'), t,
+      h('div', { class: 'row-btns' },
+        h('button', { class: 'btn primary', onclick: () => save({ farewell: f.value, thanks: t.value }) }, 'Lưu'),
+        ...(item?.prev ? [h('button', { class: 'btn ghost', onclick: () => save({ restore: true }) }, `↩️ Khôi phục bản trước (${item.prev.by})`)] : [])),
+      h('details', {}, h('summary', {}, 'Xem trên bảng tin'), letterCard(k, item)));
+  };
+  picker.addEventListener('change', show);
+  call('khoaLetters').then((r) => { for (const it of r.items) { const o = picker.querySelector(`option[value="${it.khoa}"]`); if (o) o.textContent += ' ✍️'; } }).catch(() => {});
+  c.append(h('p', { class: 'muted small' }, 'Lời chia tay và lời tri ân của từng khóa (hiện trên bảng tin cho cựu học sinh khóa đó). Cựu học sinh tự viết được; quản trị sửa khi bị viết bậy, hoặc khôi phục bản trước.'), picker, msg, box);
+  show();
+}
+
 // ======================= Quản trị: sửa tên thầy cô hàng loạt =======================
 // Cần mã quản trị (biến bí mật ADMIN_CODE trên Cloudflare). Mã chỉ giữ trong phiên trình duyệt hiện tại.
 const ADMIN_KEY = 'ctn.admin';
@@ -1259,6 +1369,7 @@ function adminSheet(initialTab = 0) {
         { label: '👩‍🏫 Tên thầy cô', render: (c) => editor(c) },
         { label: '💬 Tin nhắn', render: (c) => adminChatView(c) },
         { label: '🚫 Thành viên', render: (c) => adminUsersView(c) },
+        { label: '📜 Lời chia tay', render: (c) => adminLetterView(c) },
       ], initialTab), h('button', { class: 'btn link muted', onclick: () => { sessionSet(ADMIN_KEY, ''); refreshAdminUi(); unlock(); } }, '🔒 Khoá lại quyền quản trị'));
     };
     if (sessionGet(ADMIN_KEY)) main(); else unlock();
@@ -1272,10 +1383,18 @@ function adminFail(e, box) {
 }
 const sceneName = (sc) => !sc || sc === 'campus' ? 'Sân trường' : sc.startsWith('lop:') ? 'Lớp ' + sc.slice(4) : ({ 'p:thuvien': 'Thư viện', 'p:phongmay': 'Phòng máy', 'p:phongtn': 'Phòng thí nghiệm', 'p:hieubo': 'Nhà hiệu bộ', 'p:cangtin': 'Căng tin', 'p:dana': 'Nhà đa năng' }[sc] || sc);
 
+// Xoá mọi lưu bút và ảnh của một thành viên (gọi nhiều lần tới khi hết)
+async function purgeContent(uid) {
+  const code = sessionGet(ADMIN_KEY) || '';
+  const sum = { gb: 0, photos: 0 };
+  for (let i = 0; i < 30; i++) { const r = await call('adminPurgeContent', { code, uid }); sum.gb += r.gb; sum.photos += r.photos; if (!r.remaining) break; }
+  return sum;
+}
 // Khoá một thành viên: lý do + tuỳ chọn xoá hết tin nhắn của người đó
 function banForm(u, onDone) {
   const reason = h('input', { class: 'input', maxlength: 120, placeholder: 'Lý do (vd: nói tục, xúc phạm người khác)', 'aria-label': 'Lý do khoá' });
   const purge = h('input', { type: 'checkbox', checked: true });
+  const purgeAll = h('input', { type: 'checkbox' });
   const msg = h('div', {});
   const go = h('button', { class: 'btn danger', onclick: async () => {
     const code = sessionGet(ADMIN_KEY) || '';
@@ -1284,13 +1403,15 @@ function banForm(u, onDone) {
       await call('adminBan', { code, uid: u.id || u.uid, reason: reason.value });
       let deleted = 0;
       if (purge.checked) for (let i = 0; i < 10; i++) { const r = await call('adminPurgeChat', { code, uid: u.id || u.uid }); deleted += r.deleted; if (!r.remaining) break; }
-      sfx.coin(); toast(`🚫 Đã khoá ${u.name}${deleted ? `, xoá ${deleted} tin nhắn` : ''}`);
+      const c2 = purgeAll.checked ? await purgeContent(u.id || u.uid) : { gb: 0, photos: 0 };
+      sfx.coin(); toast(`🚫 Đã khoá ${u.name}${deleted ? `, xoá ${deleted} tin nhắn` : ''}${c2.gb || c2.photos ? `, ${c2.gb} lưu bút, ${c2.photos} ảnh` : ''}`);
       onDone?.();
     } catch (e) { adminFail(e, msg); go.disabled = false; }
   } }, '🚫 Khoá thành viên');
   return h('div', { class: 'ban-form' },
     h('p', { class: 'small' }, `Khoá ${u.name}: không vào được nhân vật, không nhắn tin, không hiện trên sân nữa. Mở khoá lại được ở mục Thành viên.`),
-    reason, h('label', { class: 'check small' }, purge, ' Xoá luôn mọi tin nhắn của người này trong khung chat'), msg, go);
+    reason, h('label', { class: 'check small' }, purge, ' Xoá luôn mọi tin nhắn của người này trong khung chat'),
+    h('label', { class: 'check small' }, purgeAll, ' Xoá luôn mọi lưu bút và ảnh kỷ yếu người này đã đăng'), msg, go);
 }
 
 function adminChatView(c) {
@@ -1335,7 +1456,14 @@ function adminUsersView(c) {
             u.banned ? h('div', { class: 'small err' }, `🚫 Đã khoá ${ago(u.banned.at)}${u.banned.reason ? ': ' + u.banned.reason : ''}`) : null,
             h('div', { class: 'row-btns' }, u.banned
               ? h('button', { class: 'btn ghost sm', onclick: async () => { try { await call('adminUnban', { code, uid: u.id }); toast('Đã mở khoá ' + u.name); load(); } catch (e) { adminFail(e, msg); } } }, '🔓 Mở khoá')
-              : h('button', { class: 'btn ghost sm', onclick: () => row.append(banForm(u, load)) }, '🚫 Khoá')));
+              : h('button', { class: 'btn ghost sm', onclick: () => row.append(banForm(u, load)) }, '🚫 Khoá'),
+              h('button', { class: 'btn ghost sm', onclick: async (e) => {
+                const btn = e.currentTarget;
+                if (btn.dataset.sure !== '1') { btn.dataset.sure = '1'; btn.textContent = '🗑️ Bấm lần nữa để xoá hết'; return; }
+                btn.disabled = true;
+                try { const r = await purgeContent(u.id); toast(`Đã xoá ${r.gb} lưu bút, ${r.photos} ảnh của ${u.name}`); btn.textContent = `✓ Đã xoá ${r.gb} lưu bút, ${r.photos} ảnh`; }
+                catch (ex) { adminFail(ex, msg); btn.disabled = false; }
+              } }, '🗑️ Xoá lưu bút, ảnh')));
           return row;
         }));
     } catch (e) { adminFail(e, msg); list.replaceChildren(); }
@@ -1581,7 +1709,13 @@ function photoView(it) {
     const dl = h('a', { class: 'btn ghost', href: it.thumb, download: `ky-yeu-${it.id}.jpg` }, '⬇️ Lưu ảnh về máy');
     b.append(img, h('p', { class: 'muted' }, `Chụp bởi ${it.by} · ${new Date(it.at).toLocaleString('vi-VN')}`),
       it.people?.length ? h('p', {}, 'Trong ảnh: ' + it.people.join(', ')) : null,
-      h('div', { class: 'stack' }, dl, h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '← Về album')));
+      h('div', { class: 'stack' }, dl, h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '← Về album'),
+        ...(isAdmin() ? [h('button', { class: 'btn danger', onclick: async (e) => {
+          const btn = e.currentTarget;
+          if (btn.dataset.sure !== '1') { btn.dataset.sure = '1'; btn.textContent = '🗑️ Bấm lần nữa để xoá ảnh này'; return; }
+          try { await call('adminDeletePhoto', { code: sessionGet(ADMIN_KEY), id: it.id, at: it.at }); toast('Đã xoá ảnh'); albumSheet(); }
+          catch (ex) { toast(ex.message, 'bad'); }
+        } }, '🗑️ Xoá ảnh (quản trị)')] : [])));
     try { const r = await call('photo', { id: it.id }); img.src = r.full; dl.href = r.full; } catch { /* giữ ảnh nhỏ */ }
   }, { wide: true });
 }
@@ -1611,7 +1745,8 @@ function bookSheet(owner) {
           h('div', { class: 'book-to' }, `Gửi ${owner.name},`),
           h('p', { class: 'book-body' }, it.body),
           h('div', { class: 'book-sign' }, `— ${it.name}${describe(it) ? ' (' + describe(it) + ')' : ''}`),
-          h('div', { class: 'book-date' }, new Date(it.at).toLocaleDateString('vi-VN')));
+          h('div', { class: 'book-date' }, new Date(it.at).toLocaleDateString('vi-VN')),
+          ...(isAdmin() ? [adminDelGbBtn(it, () => { entries.splice(page - 1, 1); page = Math.min(page, entries.length); render(); })] : []));
       } else {
         const ta = h('textarea', { class: 'book-input', rows: 7, maxlength: 600, placeholder: mine ? 'Viết lời mở đầu cho sổ lưu bút của bạn…' : `Viết gì đó cho ${owner.name}…`, 'aria-label': 'Lời lưu bút' });
         const err = h('p', { class: 'err' });
@@ -1678,8 +1813,8 @@ function visitZone(z) {
 function banner(text, action) {
   const el = document.getElementById('banner');
   if (!el) return;
-  el.replaceChildren(h('span', {}, text), action ? h('button', { class: 'btn sm primary', onclick: () => { el.hidden = true; action.run(); } }, action.label) : null,
-    h('button', { class: 'icon-btn sm', 'aria-label': 'Ẩn thông báo', onclick: () => { el.hidden = true; } }, '✕'));
+  el.replaceChildren(...[h('span', {}, text), action ? h('button', { class: 'btn sm primary', onclick: () => { el.hidden = true; action.run(); } }, action.label) : null,
+    h('button', { class: 'icon-btn sm', 'aria-label': 'Ẩn thông báo', onclick: () => { el.hidden = true; } }, '✕')].filter(Boolean));
   el.hidden = false;
   clearTimeout(banner.t); banner.t = setTimeout(() => { el.hidden = true; }, 15000);
 }

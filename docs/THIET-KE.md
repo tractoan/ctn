@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.3 – quản trị xoá tin nhắn, khoá / mở khoá thành viên |
+| Phiên bản | 2.4 – quản trị xoá lưu bút, ảnh; bảng tin: lời chia tay của khóa + lời tri ân thầy cô |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -387,6 +387,27 @@ dán danh sách nhận cột thứ 5 là dòng phụ và tên nhân vật thư�
 - **Giao diện**: `adminSheet` có 3 mục (Tên thầy cô · Tin nhắn · Thành viên); `banForm` (lý do + "xoá luôn mọi tin nhắn"),
   không dùng `confirm()`; khung chat có lớp `admin` khi phiên quản trị đang mở → hiện nút ⋯ trên mỗi dòng (`adminMsgSheet`).
 
+### 5.6f Quản trị: lưu bút và ảnh
+
+- `adminDeleteGb {code, room, at, id}` dựng lại khóa `phòng|thời gian-id` từ chính lời lưu bút đang hiện; `adminDeletePhoto
+  {code, id, at}` xoá `photo`, `photofull` và chỉ mục `photouid`.
+- `adminPurgeContent {code, uid}`: quét bảng `gb` lấy lời của người đó (mỗi lần xoá ≤ 20), ảnh lấy từ chỉ mục `photouid`
+  (`uid|thời gian-id`, ghi khi đăng ảnh) cộng ảnh trong 60 ảnh mới nhất (ảnh đăng trước khi có chỉ mục), mỗi lần ≤ 6 ảnh;
+  trả `remaining` để trình duyệt gọi tiếp (`purgeContent`). Giới hạn mỗi lần để không vượt 50 truy vấn D1/yêu cầu.
+- Giao diện: `gbItem` và trang sổ lưu bút thêm `adminDelGbBtn` khi `isAdmin()`; `photoView` thêm nút xoá ảnh; nút xoá cần
+  bấm hai lần (không dùng `confirm()`). `banForm` có thêm "xoá luôn lưu bút và ảnh".
+
+### 5.6g Bảng tin: lời chia tay của khóa + lời tri ân thầy cô
+
+- Bảng `khoalt`, khóa `K20` → `{khoa, farewell, thanks, by, at, prev}` (`prev` = bản trước để khôi phục). `khoaLetter {khoa}`,
+  `khoaLetters` (khóa nào đã viết) công khai; `setKhoaLetter {farewell, thanks}` chỉ cho cựu học sinh, ghi vào khóa của họ;
+  `adminKhoaLetter {code, khoa, farewell, thanks | restore}` (để trống cả hai = xoá).
+- Bảng tin (`panels.board`) đổi tên "📋 Bảng tin": với cựu học sinh, mục đầu là "📜 Khóa N" (lá thư của khóa mình), sau đó
+  các mục thi đua; người khác có mục "📜 Lời chia tay" ở cuối với ô chọn khóa. `letterCard` vẽ lá thư (logo, tiêu đề
+  "Lời chia tay khóa N", "Lời tri ân thầy cô", chữ Pangolin, người viết); khóa chưa viết dùng `defaultLetter(khoa)`.
+  `letterEdit` cho cựu học sinh khóa đó viết lại. Mỗi phiên, cựu học sinh thấy banner nhắc kèm nút "Xem".
+- Bảng quản trị có thêm mục "📜 Lời chia tay" (`adminLetterView`): chọn khóa, sửa, xoá, khôi phục bản trước, xem trước.
+
 ### 5.7 Phong cách
 
 | Token | Giá trị | Dùng cho |
@@ -564,6 +585,8 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `clogday` | `lớp\|ngày` | `{day}` – các ngày có ghi chép, để chọn ngày xem lại |
 | `chat` | `thời gian-id` | `{id, uid, name, role, khoa, lop, school, scene, text, at}` – khung chat chung |
 | `chatlast` | `all` | `{at, n, del[], delAt}` – thời điểm tin mới nhất, số tin, id tin bị xoá gần đây |
+| `photouid` | `uid\|thời gian-id` | `{id}` – ảnh theo người đăng (để quản trị xoá) |
+| `khoalt` | `K20` | `{khoa, farewell, thanks, by, at, prev}` – lời chia tay của khóa + lời tri ân thầy cô |
 | `uidx` | id người dùng | `{id, name, role, khoa, lop, school, at, banned}` – chỉ mục thành viên cho quản trị |
 | `adminfail` | `ip\|giờ` | `{n}` – số lần nhập sai mã quản trị |
 | `gvcn` | `lớp\|khóa` (`*` = mọi khóa) | `{lop, khoa, title, name, by, at}` – tên thầy cô chủ nhiệm |
@@ -601,6 +624,12 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `adminDeleteChat` | mã | `code, ids[]` (≤ 30) | `{deleted, remaining}` |
 | `adminPurgeChat` | mã | `code, uid` | `{deleted, remaining}` |
 | `adminUsers` | mã | `code, q?, banned?` | `{items[], total}` |
+| `adminDeleteGb` | mã | `code, room, at, id` | `{ok}` |
+| `adminDeletePhoto` | mã | `code, id, at` | `{ok}` |
+| `adminPurgeContent` | mã | `code, uid` | `{gb, photos, remaining}` |
+| `khoaLetter` / `khoaLetters` | – | `khoa` / – | `{item}` / `{items[]}` |
+| `setKhoaLetter` | ✔ cựu HS | `farewell, thanks` | `{item}` |
+| `adminKhoaLetter` | mã | `code, khoa, farewell, thanks` hoặc `restore` | `{item}` |
 | `adminBan` / `adminUnban` | mã | `code, uid, reason?` | `{ok, name}` |
 | `adminTeachers` | mã | `code, items[{lop, khoa, title, name}]` (≤ 40) | `{saved, deleted, errors[]}` |
 | `classlogAct` | ✔ | `lop, kind` (note/submit/notebook/writeup), `text?`, `target?`, `reason?` | note → `{ok, user}`; submit → `{fresh, by?, at?, user}`; notebook → `{today, fresh, notes[], user}`; writeup (chỉ thầy cô) → `{ok}` |
