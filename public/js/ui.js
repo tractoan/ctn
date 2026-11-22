@@ -24,6 +24,7 @@ export function openSheet(title, build, { wide = false, onClose } = {}) {
   const body = h('div', { class: 'sheet-body' });
   // bỏ qua null/false khi thêm nội dung (tránh hiện chữ "null")
   body.append = (...kids) => Element.prototype.append.apply(body, kids.flat().filter((k) => k != null && k !== false));
+  body.replaceChildren = (...kids) => Element.prototype.replaceChildren.apply(body, kids.flat().filter((k) => k != null && k !== false));
   const closeBtn = h('button', { class: 'icon-btn', 'aria-label': 'Đóng', onclick: () => closeSheet() }, '✕');
   const sheet = h('div', { class: 'sheet' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
     h('div', { class: 'sheet-head' }, h('h2', {}, title), closeBtn), body);

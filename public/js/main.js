@@ -671,11 +671,11 @@ const panels = {
             setMe(r.user);
             if (r.already) { out.replaceChildren(ticket(r), h('p', { class: 'ok' }, 'Hôm nay bạn đã điểm danh rồi.')); return; }
             sfx.coin();
-            out.replaceChildren(ticket(r),
+            out.replaceChildren(...[ticket(r),
               r.punished ? h('p', { class: 'err' }, '📛 Hôm qua bị ghi tên vào sổ đầu bài nên hôm nay bố mẹ không cho tiền ăn vặt!')
                 : h('p', { class: 'ok big' }, `👪 Bố mẹ cho ${money(r.gained)} ăn vặt hôm nay!`),
               r.bonus ? h('p', { class: 'ok' }, `🔥 Đi học đều ${r.streak} ngày: thưởng thêm ${money(r.bonus)}!`) : null,
-              h('p', { class: 'muted' }, k === 'bus' ? '🚌 Xe bus miễn phí! ' : k === 'dibo' ? '🚶 Đi bộ cho khỏe! ' : '', 'Trong ví: ' + money(me.wallet)));
+              h('p', { class: 'muted' }, k === 'bus' ? '🚌 Xe bus miễn phí! ' : k === 'dibo' ? '🚶 Đi bộ cho khỏe! ' : '', 'Trong ví: ' + money(me.wallet))].filter(Boolean));
             world.say('me', `${t.icon} Đến trường rồi!`);
           } catch (e) { out.replaceChildren(h('p', { class: 'err' }, e.message)); }
         } }, h('span', {}, t.icon), t.name))), out);
@@ -1279,7 +1279,7 @@ function adminSheet(initialTab = 0) {
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
       b.replaceChildren(
         h('p', { class: 'muted' }, 'Sửa tên thầy cô và nhân vật hàng loạt, xoá tin nhắn trong khung chat chung, khoá thành viên thô lỗ. Chỉ người có mã quản trị mới dùng được.'),
-        getMode() === 'offline' ? h('p', { class: 'note' }, `Bản chạy thử ngoại tuyến (dữ liệu chỉ trên trình duyệt này): mã quản trị là ${OFFLINE_ADMIN_CODE}.`) : null,
+        getMode() === 'offline' ? h('p', { class: 'note' }, `Bản chạy thử ngoại tuyến (dữ liệu chỉ trên trình duyệt này): mã quản trị là ${OFFLINE_ADMIN_CODE}.`) : '',
         inp, err, h('button', { class: 'btn primary', onclick: go }, 'Mở khoá'));
       setTimeout(() => inp.focus(), 50);
     };
@@ -2084,7 +2084,7 @@ function thanksView(c) {
         try { const r = await call('flower', { to: to.value }); setMe(r.user); sfx.heart(); toast(r.fresh ? '💐 Đã tặng hoa tri ân thầy cô!' : 'Hôm nay bạn đã tặng hoa rồi, mai tặng tiếp nhé!'); sayPrompt.send?.('💐 Chúc mừng thầy cô 20/11!'); loadFlowers(); }
         catch (e) { toast(e.message, 'bad'); }
       } }, '💐 Tặng hoa tri ân thầy cô'),
-      f.recent.length ? h('div', { class: 'feed' }, ...f.recent.slice(0, 5).map((x) => h('div', { class: 'feed-item' }, `💐 ${x.name}${x.khoa ? ' (' + [x.lop, x.khoa].filter(Boolean).join(' ') + ')' : ''} tặng hoa${x.to ? ' ' + x.to : ''} · ${ago(x.at)}`))) : null);
+      f.recent.length ? h('div', { class: 'feed' }, ...f.recent.slice(0, 5).map((x) => h('div', { class: 'feed-item' }, `💐 ${x.name}${x.khoa ? ' (' + [x.lop, x.khoa].filter(Boolean).join(' ') + ')' : ''} tặng hoa${x.to ? ' ' + x.to : ''} · ${ago(x.at)}`))) : '');
   };
   c.append(flowerBox,
     h('h3', {}, '💌 Thiệp tri ân'), to, msg,
