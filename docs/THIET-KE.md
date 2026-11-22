@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.6 – nhạc tự phát ở lần chạm đầu trên điện thoại; bỏ danh sách bài; điện thoại thu nhỏ 0,8 |
+| Phiên bản | 2.7 – áo khoác đồng phục mới theo mẫu áo thật của trường, mặc định cho học sinh, cựu học sinh |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -269,10 +269,15 @@ rồi lần lượt: **Giới tính** (👦 Nam / 👧 Nữ) · **Màu da** (5 �
 | Kiểu tóc (13) | Ngắn, Rẽ ngôi, Tóc bob, Đuôi ngựa, Tóc dài, Búi cao, Rẽ ngôi 3/7, Đan Trường, Mullet, Undercut, Short quiff, Layer, Hai bím. Đổi sang nam thì các kiểu chỉ dành cho nữ (bob, đuôi ngựa, tóc dài, búi cao, layer, hai bím) về "Ngắn" |
 | Màu tóc (8) | Đen, Nâu, Xám, Bạc, Đỏ, Tím, Balayage (chuyển màu nâu đậm → vàng), Cam |
 | Màu da (5) | `#FBDDC2` `#F1C39B` `#D9A066` `#B97C4E` `#8E5C3A` |
-| Trang phục – cựu HS, HS | Sơ mi cà vạt · Áo khoác trường · Áo lớp (6 màu) · Áo dài kỷ yếu (nữ) / Vest kỷ yếu (nam) · Áo "Tôi yêu CTN" trắng/đen |
+| Trang phục – cựu HS, HS | **Áo khoác đồng phục** (mặc định) · Sơ mi cà vạt · Áo lớp (6 màu) · Áo dài kỷ yếu (nữ) / Vest kỷ yếu (nam) · Áo "Tôi yêu CTN" trắng/đen |
 | Trang phục – thầy cô | Sơ mi trắng/xanh/vàng · nữ: Áo dài tím/hồng/xanh/đỏ, nam: Vest · Áo "Tôi yêu CTN" |
-| Trang phục – bạn trường khác | Sơ mi trắng · Áo khoác · Áo phông · Áo dài trắng (nữ) / Vest (nam) · Áo "Tôi yêu CTN" |
+| Trang phục – bạn trường khác | Sơ mi trắng · Áo khoác (xanh, `khoacxanh`) · Áo phông · Áo dài trắng (nữ) / Vest (nam) · Áo "Tôi yêu CTN" |
 | Trang phục – em cấp 2 | Khăn quàng đỏ · Áo "Tôi yêu CTN" |
+
+**Áo khoác đồng phục** (`khoac`, theo ảnh áo thật của trường): thân trắng, vai và ngực trên xanh da trời `#5DBDEB`, dải chữ V
+xanh than `#1E2E6B` ngang ngực, cổ đứng xanh than, khoá kéo giữa, logo trường tròn trên ngực trái; tay áo trắng, vai xanh,
+hai sọc đỏ `#D8343A` + xanh than dọc mép ngoài, bo tay xanh; quần sẫm `#23262F` (nữ chọn được chân váy). Mặt sau giữ mảng
+màu vai và dải V.
 
 Ngoại hình lưu dạng `{v: 2, gender, skin, hair, hairColor, bottom, outfit, color, scarf}`. Nhân vật tạo trước bản 1.7
 (9 kiểu tóc, 5 màu tóc, có cặp sách) được đổi sang kiểu gần nhất ở cả máy chủ (`sanitizeLook`) lẫn trình duyệt

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.3 – sửa nhạc tự phát trên điện thoại, bỏ danh sách bài, điện thoại nhìn rộng hơn |
+| Phiên bản | 2.4 – áo khoác đồng phục mới theo mẫu áo thật của trường |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -87,7 +87,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
-| YC-NV-01 | Nhân vật kiểu chibi đầu to giống trang mẫu; mặc định đồng phục sơ mi trắng cà vạt, quần âu hoặc chân váy xanh than | P1 | ✅ |
+| YC-NV-01 | Nhân vật kiểu chibi đầu to giống trang mẫu; học sinh, cựu học sinh mặc định **áo khoác đồng phục của trường** (trắng, vai xanh da trời, dải chữ V xanh than, tay có sọc đỏ – xanh than, logo trường) với quần hoặc chân váy sẫm màu | P1 | ✅ |
 | YC-NV-02 | Bộ chọn ngoại hình giống trang mẫu: khung xem trước có hoạt ảnh + nút 🎲 Ngẫu nhiên; Giới tính, Màu da (5), **Kiểu tóc (13)**: Ngắn, Rẽ ngôi, Tóc bob, Đuôi ngựa, Tóc dài, Búi cao, Rẽ ngôi 3/7, Đan Trường, Mullet, Undercut, Short quiff, Layer, Hai bím; **Màu tóc (8)** gồm Balayage; Kiểu dáng Quần/Váy (nữ); **Trang phục theo vai**; màu áo lớp | P1 | ✅ |
 | YC-NV-07 | Nhân vật tạo trước bản 1.4 tự đổi sang kiểu tóc/màu tóc gần nhất, không mất nhân vật | P1 | ✅ |
 | YC-NV-08 | Thầy cô hiện danh xưng và bộ môn dưới tên (vd "Thầy · Vật lý") | P3 | ✅ |
@@ -234,7 +234,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-TT2-16 | **Ai đang online**: bấm số người trên thanh trên để xem danh sách theo khu, chạm để đi tới | P2 | ✅ |
 | YC-TT2-17 | **Âm thanh**: bảng chỉnh âm lượng nhạc nền và hiệu ứng (lưu trên máy); hiệu ứng tổng hợp: chuông, trống, tiền, bóng nước, tim… | P2 | 🟡 |
 | YC-TT2-18 | **Ngày / đêm** theo giờ Việt Nam: bình minh 6–7 h, hoàng hôn 16:30–18 h, chạng vạng 18–19:30, đêm 19:30–5 h, rạng sáng 5–6 h. Ban đêm: sân tối hẳn; **18 cột đèn** (giữa sân, cổng, lối vào, sân đá cầu, hành lang dãy 5 tầng, lối xuống căng tin, vườn, đèn đường) toả quầng sáng; **cửa sổ** các dãy nhà sáng vàng; **sân khấu** có hai luồng đèn chiếu; **biển trường** được rọi sáng; **trăng, sao** lấp lánh phía trên màn hình; **đom đóm** bay trên các bãi cỏ. Trong lớp học, các phòng luôn sáng đèn | P2 | ✅ |
-| YC-TT2-19 | **Trang phục**: sơ mi cà vạt, sơ mi trắng/xanh/vàng, áo khoác trường, áo lớp (6 màu), áo dài trắng/tím/hồng/xanh/đỏ, vest, áo phông, khăn quàng đỏ, áo "Tôi yêu CTN" trắng/đen – danh sách tuỳ vai (xem YC-NV-02) | P2 | ✅ |
+| YC-TT2-19 | **Trang phục**: áo khoác đồng phục, sơ mi cà vạt, sơ mi trắng/xanh/vàng, áo khoác trường, áo lớp (6 màu), áo dài trắng/tím/hồng/xanh/đỏ, vest, áo phông, khăn quàng đỏ, áo "Tôi yêu CTN" trắng/đen – danh sách tuỳ vai (xem YC-NV-02) | P2 | ✅ |
 | YC-TT2-20 | **Phòng chức năng**: phòng thí nghiệm, phòng máy, thư viện (góc giới thiệu sách hay); **Sổ lưu bút của trường** đặt trên giá ở sân | P2 | ✅ |
 
 ### 4.11 Các phòng bên trong (giống trang mẫu)

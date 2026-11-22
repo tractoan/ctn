@@ -13,7 +13,7 @@ export const SHIRT_COLORS = ['#F2B233', '#2F6FB5', '#D8343A', '#2E8B57', '#7E57C
 // Tên trang phục (mã → tên hiển thị)
 export const OUTFIT_NAMES = {
   somi: 'Sơ mi cà vạt', somitrang: 'Sơ mi trắng', somixanh: 'Sơ mi xanh', somivang: 'Sơ mi vàng',
-  khoac: 'Áo khoác trường', aolop: 'Áo lớp', vest: 'Vest kỷ yếu', phong: 'Áo phông', khanquang: 'Khăn quàng đỏ',
+  khoac: 'Áo khoác đồng phục', khoacxanh: 'Áo khoác', aolop: 'Áo lớp', vest: 'Vest kỷ yếu', phong: 'Áo phông', khanquang: 'Khăn quàng đỏ',
   aodai: 'Áo dài trắng', aodaitim: 'Áo dài tím', aodaihong: 'Áo dài hồng', aodaixanh: 'Áo dài xanh', aodaido: 'Áo dài đỏ',
   teew: 'Áo Tôi yêu CTN trắng 🤍', teeb: 'Áo Tôi yêu CTN đen 🖤',
 };
@@ -21,17 +21,16 @@ export const OUTFIT_NAMES = {
 export function outfitLabel(role, id) {
   if ((role === 'cuuhs' || role === 'hs') && id === 'aodai') return 'Áo dài kỷ yếu';
   if (role !== 'cuuhs' && role !== 'hs' && id === 'vest') return 'Vest';
-  if (role === 'khach' && id === 'khoac') return 'Áo khoác';
   return OUTFIT_NAMES[id] || id;
 }
 // Trang phục được chọn theo vai và giới tính
 export function outfitsFor(role, look) {
   const nu = look.gender === 'nu';
   const tees = ['teew', 'teeb'];
-  if (role === 'cuuhs' || role === 'hs') return ['somi', 'khoac', 'aolop', nu ? 'aodai' : 'vest', ...tees];
+  if (role === 'cuuhs' || role === 'hs') return ['khoac', 'somi', 'aolop', nu ? 'aodai' : 'vest', ...tees]; // mặc định: áo khoác đồng phục
   if (role === 'gv') return nu ? ['somitrang', 'somixanh', 'somivang', 'aodaitim', 'aodaihong', 'aodaixanh', 'aodaido', ...tees] : ['somitrang', 'somixanh', 'somivang', 'vest', ...tees];
   if (role === 'em') return ['khanquang', ...tees];
-  return ['somitrang', 'khoac', 'phong', nu ? 'aodai' : 'vest', ...tees];
+  return ['somitrang', 'khoacxanh', 'phong', nu ? 'aodai' : 'vest', ...tees];
 }
 
 // Chuyển ngoại hình cũ (9 kiểu tóc, 5 màu tóc) sang phiên bản 2
@@ -58,6 +57,7 @@ export function randomLook(role, gender) {
 }
 
 const NAVY = '#1E2A55';
+const J_SKY = '#5DBDEB', J_NAVY = '#1E2E6B'; // màu áo khoác đồng phục
 const AODAI = { aodai: '#FFFFFF', aodaitim: '#8E6BBF', aodaihong: '#F08DB4', aodaixanh: '#5BA8E8', aodaido: '#D8343A' };
 
 function rr(ctx, x, y, w, h, r) {
@@ -70,7 +70,8 @@ function clothes(look) {
   const o = look.outfit;
   if (AODAI[o]) return { top: AODAI[o], line: o === 'aodai' ? '#C9D3E1' : 'rgba(0,0,0,.18)', pants: '#F7F7F5', aodai: true };
   switch (o) {
-    case 'khoac': return { top: '#2F6FB5', line: '#255C98', pants: NAVY };
+    case 'khoac': return { top: '#FFFFFF', line: '#B9C6D6', pants: '#23262F', jacket: true }; // áo khoác đồng phục trường
+    case 'khoacxanh': return { top: '#2F6FB5', line: '#255C98', pants: NAVY };
     case 'aolop': return { top: SHIRT_COLORS[look.color ?? 0] || SHIRT_COLORS[0], line: 'rgba(0,0,0,.15)', pants: NAVY };
     case 'vest': return { top: '#2A2D36', line: '#1A1C22', pants: '#2A2D36' };
     case 'teew': return { top: '#FFFFFF', line: '#C9D3E1', pants: '#4A6FA5' };
@@ -198,7 +199,18 @@ function drawTop(ctx, look, c, dir, back, t, moving) {
   const o = look.outfit;
   ctx.fillStyle = c.top; ctx.strokeStyle = c.line; ctx.lineWidth = 1.2;
   // thân áo
-  rr(ctx, -9, -28.5, 18, 15.5, 5); ctx.fill(); ctx.stroke();
+  rr(ctx, -9, -28.5, 18, 15.5, 5); ctx.fill();
+  if (c.jacket) {
+    // áo khoác đồng phục: vai xanh da trời, dải chữ V xanh than ngang ngực, phía dưới trắng (cả mặt trước và sau)
+    ctx.save(); rr(ctx, -9, -28.5, 18, 15.5, 5); ctx.clip();
+    ctx.fillStyle = J_SKY;
+    ctx.beginPath(); ctx.moveTo(-9, -29); ctx.lineTo(9, -29); ctx.lineTo(9, -24.6); ctx.lineTo(0, -20.6); ctx.lineTo(-9, -24.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = J_NAVY;
+    ctx.beginPath(); ctx.moveTo(-9, -24.6); ctx.lineTo(0, -20.6); ctx.lineTo(9, -24.6); ctx.lineTo(9, -22.2); ctx.lineTo(0, -18.2); ctx.lineTo(-9, -22.2); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = c.top;
+  }
+  rr(ctx, -9, -28.5, 18, 15.5, 5); ctx.stroke();
   if (c.aodai) {
     // hai tà áo dài phủ xuống ống quần
     const sway = moving ? Math.sin(t / 90) * 1.4 : 0;
@@ -218,7 +230,18 @@ function drawTop(ctx, look, c, dir, back, t, moving) {
         ctx.fillStyle = '#D8343A'; rr(ctx, dir > 0 ? 3 : -6, -23, 3, 3.4, 0.8); ctx.fill(); // phù hiệu
       }
       break;
-    case 'khoac':
+    case 'khoac': {
+      // khoá kéo, cổ đứng xanh than, logo trường trên ngực
+      ctx.fillStyle = '#C9D3E1'; ctx.fillRect(-0.45, -27, 0.9, 13.6);
+      ctx.fillStyle = J_NAVY; rr(ctx, -4.2, -30, 8.4, 3.4, 1.4); ctx.fill();
+      ctx.fillStyle = J_SKY; ctx.fillRect(-3.2, -27.4, 6.4, 0.8);
+      const lx = dir > 0 ? 4.6 : -4.6;
+      ctx.fillStyle = '#FFFFFF'; circle(ctx, lx, -17.2, 1.7);
+      ctx.strokeStyle = J_SKY; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(lx, -17.2, 1.7, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#2F6FB5'; circle(ctx, lx, -17.2, 0.7);
+      break;
+    }
+    case 'khoacxanh':
       ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(-0.5, -27.5, 1, 14);
       ctx.fillStyle = '#FFFFFF'; circle(ctx, dir > 0 ? 4.5 : -4.5, -22.5, 2.2);
       ctx.fillStyle = '#2F6FB5'; circle(ctx, dir > 0 ? 4.5 : -4.5, -22.5, 0.9);
@@ -306,6 +329,16 @@ export function drawAvatar(ctx, x, y, look, { t = 0, moving = false, dir = 1, sc
   ctx.fillStyle = c.top; ctx.strokeStyle = c.line; ctx.lineWidth = 1.1;
   rr(ctx, -12, -27.5 + arm, 5, 7.5, 2.5); ctx.fill(); ctx.stroke();
   rr(ctx, 7, -27.5 - arm, 5, 7.5, 2.5); ctx.fill(); ctx.stroke();
+  if (c.jacket) {
+    // tay áo khoác: vai xanh, sọc đỏ + xanh than dọc mép ngoài, bo tay xanh
+    for (const [ax, ay, out] of [[-12, -27.5 + arm, -1], [7, -27.5 - arm, 1]]) {
+      ctx.fillStyle = J_SKY; rr(ctx, ax + 0.4, ay + 0.4, 4.2, 2.4, 1.6); ctx.fill();
+      const sx = out < 0 ? ax + 0.7 : ax + 3.4;
+      ctx.fillStyle = '#D8343A'; ctx.fillRect(sx, ay + 2.6, 0.8, 3.6);
+      ctx.fillStyle = J_NAVY; ctx.fillRect(sx + (out < 0 ? 0.9 : -0.9), ay + 2.6, 0.7, 3.6);
+      ctx.fillStyle = J_SKY; rr(ctx, ax + 0.3, ay + 5.7, 4.4, 1.7, 0.8); ctx.fill();
+    }
+  }
   ctx.fillStyle = skin; circle(ctx, -10.5, -18.5 + arm, 2.7); circle(ctx, 10.5, -18.5 - arm, 2.7);
 
   drawTop(ctx, look, c, dir, back, t, moving);

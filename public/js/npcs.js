@@ -18,7 +18,7 @@ export function campusNpcs() {
       look: L({ skin: 2, hair: 0, hairColor: 2, outfit: 'somixanh' }),
       lines: ['Đi học sớm thế cháu!', 'Xe đạp gửi ở bên trái cổng nhé.', 'Đeo thẻ vào cho bác nhé.', 'Cổng mở lúc 6 giờ sáng đấy.', 'Đi chậm thôi kẻo ngã!', 'Bác trông trường mấy chục năm rồi.', 'Hôm nay trời đẹp nhỉ!', 'Ngày xưa các cháu hay trèo tường ra quán nước, bác biết hết đấy!'] },
     { id: 'npc-codo', slot: 'codo', name: 'Đội cờ đỏ', sub: 'Trực cổng', x: 830, y: 1150, dir: 1,
-      look: L({ gender: 'nu', hair: 3, bottom: 'vay', scarf: true }),
+      look: L({ gender: 'nu', hair: 3, bottom: 'vay', outfit: 'khoac' }),
       lines: ['Đi muộn là bị ghi tên đấy nhé!', 'Nhớ đeo thẻ học sinh!', 'Áo phải bỏ trong quần nhé.', 'Sau 7 giờ là muộn rồi!', 'Bạn lớp nào thế?', 'Thứ Hai nhớ ra chào cờ!', 'Hôm nay lớp mình được cộng điểm thi đua!', 'Chào bạn, chúc học tốt!'] },
     { id: 'npc-hung', slot: 'hung', name: 'Bác Hùng', sub: 'K1 · Toán', x: 780, y: 590, dir: 1,
       look: L({ skin: 2, hair: 0, hairColor: 2, outfit: 'khoac' }),

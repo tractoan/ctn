@@ -233,7 +233,7 @@ export function isBreakTime(now) { return periodOf(now).isBreak; }
 // Ngoại hình phiên bản 2: 13 kiểu tóc, 8 màu tóc; bản cũ (9 kiểu, 5 màu) được đổi sang kiểu gần nhất
 const OLD_HAIR = [0, 0, 3, 4, 9, 12, 2, 5, 1];
 const OLD_HAIR_COLOR = [0, 1, 1, 6, 2];
-export const OUTFIT_IDS = ['somi', 'somitrang', 'somixanh', 'somivang', 'khoac', 'aolop', 'vest', 'phong', 'khanquang',
+export const OUTFIT_IDS = ['somi', 'somitrang', 'somixanh', 'somivang', 'khoac', 'khoacxanh', 'aolop', 'vest', 'phong', 'khanquang',
   'aodai', 'aodaitim', 'aodaihong', 'aodaixanh', 'aodaido', 'teew', 'teeb'];
 function sanitizeLook(l) {
   l = l && typeof l === 'object' ? l : {};
