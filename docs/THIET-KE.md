@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.4 – quản trị xoá lưu bút, ảnh; bảng tin: lời chia tay của khóa + lời tri ân thầy cô |
+| Phiên bản | 2.5 – ban đêm đẹp hơn: tối hơn, 18 cột đèn, cửa sổ sáng, đèn chiếu sân khấu, biển trường sáng, trăng, sao, đom đóm |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -439,9 +439,19 @@ Vẽ phẳng, màu ấm, bóng đổ mềm `rgba(20,30,50,.16)` lệch xuống d
 | Nhà đa năng | Mái tôn xanh hai dốc có sóng, cửa lớn ở giữa, vòm trang trí | mái `#8FA3BF` |
 | Căng tin | Mái cam | tường `#FFF1D6`, mái `#E08A4B` |
 
-Màu trời theo giờ Việt Nam (`skyTint`): trước 5 h và sau 19 h 30 phủ `rgba(16,24,58,.50)` và bật đèn; 5–6 h
-`rgba(60,50,110,.32)`; 6–7 h bình minh `rgba(255,170,120,.14)`; 7–16 h 30 không phủ; 16 h 30–18 h hoàng hôn
-`rgba(255,140,60,.16)`; 18–19 h 30 chạng vạng `rgba(80,50,110,.32)` và bật đèn. Ban đêm cửa sổ sáng vàng `#FFD97A`.
+Màu trời theo giờ Việt Nam (`skyTint`): trước 5 h và sau 19 h 30 đêm `rgba(6,12,38,.68)`; 5–6 h rạng sáng
+`rgba(52,44,104,.46)`; 6–7 h bình minh `rgba(255,170,120,.14)`; 7–16 h 30 không phủ; 16 h 30–18 h hoàng hôn
+`rgba(255,140,60,.16)`; 18–19 h 30 chạng vạng `rgba(62,40,104,.44)`. Rạng sáng, chạng vạng và đêm thì bật đèn.
+
+**Ban đêm** (`World._nightPass`, khi cảnh có `lamps` và trời bật đèn): vẽ bóng tối lên một canvas phụ cỡ màn hình rồi khoét
+sáng bằng `destination-out` – quầng tròn quanh 18 cột đèn (`LAMPS`: giữa sân, trước cổng, lối vào, sân đá cầu, hành lang dãy
+5 tầng, lối xuống căng tin, hai vườn, 4 đèn đường), các ô cửa sổ sáng đèn, biển trường + băng rôn, phông sân khấu, vùng sáng
+trước sân khấu và cổng, đom đóm – rồi đặt canvas đó lên cảnh. Sau đó cộng màu (`lighter`): quầng đèn và vũng sáng dưới chân
+đèn, ánh vàng quanh cửa sổ (`#FFD97A`), **hai luồng đèn chiếu sân khấu**, đèn rọi biển trường, **đom đóm** (≈ 40 con bay lượn,
+nhấp nháy trên các bãi cỏ). `nightLights()` tính một lần các ô cửa sổ sáng (cùng công thức `drawBuilding`, bỏ ô bị cây hoặc
+toà nhà phía trước che, bỏ ô dưới dải xanh nhà hiệu bộ). Chỉ xử lý nguồn sáng trong khung nhìn. `_drawSky` vẽ dải trời đêm
+phía trên màn hình (dưới thanh trên) có **trăng** và ~34 **sao** lấp lánh. Lớp học và các phòng không có `lamps` nên luôn
+sáng đèn. Toàn cảnh ban đêm: `docs/so-do-dem.png`.
 
 ### 5.8 Tiến trình người chơi (nhiệm vụ, thành tựu, ví)
 
@@ -494,8 +504,7 @@ Mỗi lượt presence trả kèm inbox của người gọi rồi xoá (nhận 
   `npcSheet` (nói tiếp + hành động theo `panel`: vào nhà hiệu bộ, căng tin, đá cầu, pha chế, kiểm tra bài cũ).
 - Chuông trống: `checkBell()` chạy mỗi 20 giây, so `periodOf()` với lần trước; đổi sang "Ra chơi" hoặc "Tiết …" thì
   hiện banner + âm thanh. Sáng thứ Hai mở trang thấy banner chào cờ với nút đưa tới đúng hàng ghế lớp mình.
-- Ngày/đêm: `skyTint()` trả về màu phủ theo giờ Việt Nam (xem 5.7); `_draw` phủ màu đó lên
-  cảnh có `lamps`, rồi vẽ quầng sáng đèn bằng `globalCompositeOperation = 'lighter'`; `drawBuilding` thắp cửa sổ.
+- Ngày/đêm: `skyTint()` trả về màu phủ theo giờ Việt Nam; ban đêm xem 5.7 (`_nightPass`, `_drawSky`).
   Lớp học không có `lamps` nên luôn sáng. Kiểm thử có thể ép `world.forceNight`.
 - Âm thanh (`sound.js`): bộ dao động + nhiễu Web Audio cho `click, coin, pop, whoosh, splash, drum, bell, win,
   lose, shutter, heart`; âm lượng nhạc nền đặt trực tiếp cho phần tử `Audio`; lưu ở

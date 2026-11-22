@@ -133,7 +133,15 @@ for (const [x, y] of [[1730, 60], [1880, 90], [1750, 250], [1890, 260]]) trees.p
 for (let x = 640; x <= 1560; x += 120) if (x < 860 || x > 960) trees.push({ x, y: 1070, kind: 'bonsai' });
 export const TREES = trees;
 
-export const LAMPS = [{ x: 940, y: 560 }, { x: 1140, y: 560 }, { x: 760, y: 1110 }, { x: 1300, y: 1110 }];
+export const LAMPS = [
+  { x: 940, y: 560 }, { x: 1140, y: 560 }, { x: 760, y: 1110 }, { x: 1300, y: 1110 }, // giữa sân, trước cổng
+  { x: 440, y: 760 }, { x: 440, y: 1000 }, // lối vào giữa nhà hiệu bộ và dãy 5 tầng
+  { x: 262, y: 572 }, { x: 572, y: 572 }, // sân đá cầu
+  { x: 760, y: 822 }, { x: 1395, y: 822 }, // hành lang mặt trong dãy 5 tầng
+  { x: 1640, y: 388 }, { x: 1800, y: 388 }, // lối xuống căng tin
+  { x: 1770, y: 1022 }, { x: 225, y: 1012 }, // vườn hai bên cổng
+  { x: 150, y: 1226 }, { x: 520, y: 1226 }, { x: 1350, y: 1226 }, { x: 1750, y: 1226 }, // đèn đường Lương Ngọc Quyến
+];
 // Ghế đá – chạm vào để ngồi. Mỗi ghế có 2 chỗ.
 export const BENCHES = [
   { x: 830, y: 640 }, { x: 1250, y: 640 },

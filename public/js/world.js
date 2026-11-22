@@ -9,12 +9,12 @@ const AV = 1.2; // tỉ lệ nhân vật
 // ban ngày trong, chiều tà cam, chạng vạng tím. lamps: bật đèn sân.
 export function skyTint(now = Date.now()) {
   const d = new Date(now + 7 * 3600e3), m = d.getUTCHours() * 60 + d.getUTCMinutes();
-  if (m < 5 * 60 || m >= 19.5 * 60) return { color: 'rgba(16,24,58,.50)', lamps: true, night: 1 };
-  if (m < 6 * 60) return { color: 'rgba(60,50,110,.32)', lamps: true, night: 0.6 };
+  if (m < 5 * 60 || m >= 19.5 * 60) return { color: 'rgba(6,12,38,.68)', lamps: true, night: 1 };
+  if (m < 6 * 60) return { color: 'rgba(52,44,104,.46)', lamps: true, night: 0.6 };
   if (m < 7 * 60) return { color: 'rgba(255,170,120,.14)', lamps: false, night: 0 };
   if (m < 16.5 * 60) return { color: null, lamps: false, night: 0 };
   if (m < 18 * 60) return { color: 'rgba(255,140,60,.16)', lamps: false, night: 0 };
-  return { color: 'rgba(80,50,110,.32)', lamps: true, night: 0.6 };
+  return { color: 'rgba(62,40,104,.44)', lamps: true, night: 0.6 };
 }
 export function nightLevel(now = Date.now()) { return skyTint(now).night; }
 let NIGHT = 0;
@@ -560,6 +560,68 @@ function drawGate(ctx, time) {
   label(ctx, 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ THẦY TRÒ VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 64 + wave, { size: 7.5, color: '#fff', weight: 800 });
 }
 
+// ---------- Nguồn sáng ban đêm (tính một lần) ----------
+// Ô cửa sổ của một toà nhà (cùng công thức với drawBuilding); lit = ô sáng đèn ban đêm
+function windowRects(b) {
+  const depth = b.hall ? 50 : 16 + b.floors * 9, fy = b.y + b.h - depth, out = [];
+  if (b.hall) {
+    for (let x = b.x + 14; x < b.x + b.w - 20; x += 28) if (b.doorW || Math.abs(x + 8 - (b.x + b.w / 2)) > 48) out.push({ x: x + 1, y: fy + 11, w: 14, h: 10 });
+    return out;
+  }
+  const rows = Math.max(1, b.floors), rowH = (depth - 6) / rows;
+  for (let r = 0; r < rows; r++) {
+    const ry = fy + 4 + r * rowH, wh = Math.max(4, rowH - 5), ground = r === rows - 1;
+    for (let x = b.x + 9, i = 0; x < b.x + b.w - 14; x += 22, i++) {
+      if (ground && rows > 1 && i % 4 === 2) continue;
+      if (b.bands && [0.18, 0.82].some((f) => Math.abs(x + 6 - (b.x + b.w * f)) < 20)) continue;
+      if (((x * 7 + r * 13) % 5) < 3) out.push({ x: x + 1, y: ry + 1, w: 11, h: wh - 2 });
+    }
+  }
+  return out;
+}
+const hits = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+let NIGHT_LIGHTS = null;
+function nightLights() {
+  if (NIGHT_LIGHTS) return NIGHT_LIGHTS;
+  // bỏ ô cửa bị cây hoặc toà nhà phía trước che
+  const covers = [];
+  for (const t of TREES) {
+    if (t.kind === 'tree') covers.push({ x: t.x - 50, y: t.y - 104, w: 100, h: 86, by: t.y });
+    else if (t.kind === 'bonsai') covers.push({ x: t.x - 22, y: t.y - 26, w: 44, h: 26, by: t.y });
+  }
+  for (const b of BUILDINGS) covers.push({ x: b.x - 5, y: b.y - 5, w: b.w + 10, h: b.h + 5, by: b.y + b.h, b });
+  const windows = [];
+  for (const b of BUILDINGS) for (const w of windowRects(b)) if (!covers.some((c) => c.b !== b && c.by > w.y + w.h && hits(w, c))) windows.push(w);
+  const g = GATE, top = g.y - 104, s = STAGE;
+  NIGHT_LIGHTS = {
+    windows,
+    signs: [
+      { x: g.x - 46, y: top + 2, w: g.w + 92, h: 50, a: 0.88 }, { x: g.x + 10, y: top + 54, w: g.w - 20, h: 20, a: 0.7 }, // biển trường, băng rôn
+      { x: s.x + 10, y: s.y - 86, w: s.w - 20, h: 86, a: 0.8 }, // phông sân khấu
+    ],
+    pools: [[s.x + s.w / 2, s.y + s.h / 2, 150, 0.6], [g.x + g.w / 2, top + 40, 170, 0.45]], // vùng sáng sân khấu, cổng
+  };
+  return NIGHT_LIGHTS;
+}
+// Đom đóm bay lượn trên các bãi cỏ (vị trí gốc cố định, bay theo hàm sin, nhấp nháy)
+let FLY_BASE = null;
+function fireflies(now) {
+  if (!FLY_BASE) {
+    FLY_BASE = [];
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (const gr of GROUNDS) if (gr.kind === 'grass') {
+      const n = Math.min(26, Math.round(gr.w * gr.h / 7000));
+      for (let i = 0; i < n; i++) FLY_BASE.push({ x: gr.x + 10 + rnd() * (gr.w - 20), y: gr.y + 10 + rnd() * (gr.h - 20), p: rnd() * 6.28, s: 0.6 + rnd() * 0.8 });
+    }
+  }
+  return FLY_BASE.map((f) => ({
+    x: f.x + Math.sin(now / 1400 * f.s + f.p) * 22,
+    y: f.y + Math.cos(now / 1700 * f.s + f.p * 1.3) * 14 - 8,
+    b: Math.max(0, Math.sin(now / 520 * f.s + f.p * 3)),
+  })).filter((f) => f.b > 0.15);
+}
+
 // Cảnh SÂN TRƯỜNG
 export const CAMPUS_SCENE = {
   id: 'campus', w: WORLD.w, h: WORLD.h, bgColor: '#8FBF73', name: 'Sân trường',
@@ -885,21 +947,10 @@ export class World {
       ctx.strokeStyle = `rgba(255,255,255,${1 - k})`; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(this.tapFx.x, this.tapFx.y, 6 + k * 16, 3 + k * 8, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    // màu trời theo giờ; tối thì đèn sân toả sáng
-    if (this.scene.lamps && SKY.color) {
-      ctx.fillStyle = SKY.color;
-      ctx.fillRect(this.cam.x - 50, this.cam.y - 50, this.vw / z + 100, this.vh / z + 100);
-      if (SKY.lamps) {
-        ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        for (const l of this.scene.lamps) {
-          const g = ctx.createRadialGradient(l.x, l.y - 76, 4, l.x, l.y - 40, 120);
-          g.addColorStop(0, 'rgba(255,214,140,.5)'); g.addColorStop(1, 'rgba(255,214,140,0)');
-          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(l.x, l.y - 40, 120, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.restore();
-      }
-    }
+    // màu trời theo giờ; tối thì đèn, cửa sổ, biển trường, sân khấu, đom đóm toả sáng
+    if (this.scene.lamps && SKY.color) this._nightPass(ctx, z, now);
     ctx.restore();
+    if (this.scene.lamps && SKY.lamps && !this._capturing) this._drawSky(ctx, now);
 
     // nhãn điểm tương tác (vẽ theo toạ độ màn hình để luôn dễ đọc)
     if (this._capturing) return;
@@ -930,6 +981,80 @@ export class World {
       const sx = (n.x - this.cam.x) * z, sy = (n.y - this.cam.y) * z;
       this.labelRects.push({ x: sx - 16 * AV * z, y: sy - 58 * AV * z, w: 32 * AV * z, h: 60 * AV * z, npc: n });
     }
+  }
+
+  // ---------- Ban đêm ----------
+  // Phủ bóng tối lên một canvas phụ, khoét sáng ở chỗ có đèn (destination-out), rồi đặt lên cảnh; sau đó cộng quầng sáng.
+  _nightPass(ctx, z, now) {
+    if (!SKY.lamps) { // bình minh, hoàng hôn: chỉ phủ màu
+      ctx.fillStyle = SKY.color; ctx.fillRect(this.cam.x - 50, this.cam.y - 50, this.vw / z + 100, this.vh / z + 100);
+      return;
+    }
+    const W = Math.ceil(this.vw * this.dpr), H = Math.ceil(this.vh * this.dpr);
+    const d = (this._dark ||= document.createElement('canvas'));
+    if (d.width !== W || d.height !== H) { d.width = W; d.height = H; }
+    const dc = d.getContext('2d');
+    dc.setTransform(1, 0, 0, 1, 0, 0); dc.globalCompositeOperation = 'source-over'; dc.clearRect(0, 0, W, H);
+    dc.fillStyle = SKY.color; dc.fillRect(0, 0, W, H);
+    const k = this.dpr * z;
+    dc.setTransform(k, 0, 0, k, -this.cam.x * k, -this.cam.y * k);
+    dc.globalCompositeOperation = 'destination-out';
+    // chỉ xử lý nguồn sáng trong (hoặc sát) khung nhìn
+    const vx0 = this.cam.x - 160, vy0 = this.cam.y - 160, vx1 = this.cam.x + this.vw / z + 160, vy1 = this.cam.y + this.vh / z + 200;
+    const inView = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
+    const L = nightLights(), lamps = this.scene.lamps.filter((l) => inView(l.x, l.y));
+    const hole = (x, y, r, a) => { const g = dc.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); dc.fillStyle = g; dc.beginPath(); dc.arc(x, y, r, 0, Math.PI * 2); dc.fill(); };
+    for (const l of lamps) { hole(l.x, l.y - 20, 125, 0.82); hole(l.x, l.y - 77, 18, 1); }
+    if (NIGHT > 0.4) for (const w of L.windows) { dc.fillStyle = 'rgba(0,0,0,.92)'; dc.fillRect(w.x, w.y, w.w, w.h); dc.fillStyle = 'rgba(0,0,0,.25)'; dc.fillRect(w.x - 3, w.y - 2, w.w + 6, w.h + 6); }
+    for (const r of L.signs) { dc.fillStyle = `rgba(0,0,0,${r.a})`; dc.fillRect(r.x, r.y, r.w, r.h); }
+    for (const [x, y, r, a] of L.pools) hole(x, y, r, a);
+    const flies = fireflies(now).filter((f) => inView(f.x, f.y));
+    for (const f of flies) hole(f.x, f.y, 9, 0.5 * f.b);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(d, 0, 0); ctx.restore();
+    // quầng sáng cộng màu
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const glow = (x, y, r, col) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+    for (const l of lamps) { glow(l.x, l.y - 76, 70, 'rgba(255,214,140,.38)'); glow(l.x, l.y, 60, 'rgba(255,200,120,.16)'); }
+    if (NIGHT > 0.4) { ctx.fillStyle = 'rgba(255,190,90,.16)'; for (const w of L.windows) ctx.fillRect(w.x - 2, w.y - 1, w.w + 4, w.h + 4); }
+    // đèn chiếu sân khấu: hai luồng sáng từ hai góc phông chiếu xuống giữa bục
+    const s = STAGE, flick = 0.85 + Math.sin(now / 900) * 0.05;
+    for (const sx of [s.x + 24, s.x + s.w - 24]) {
+      const g = ctx.createLinearGradient(sx, s.y - 80, s.x + s.w / 2, s.y + s.h);
+      g.addColorStop(0, `rgba(255,236,180,${0.32 * flick})`); g.addColorStop(1, 'rgba(255,236,180,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx - 6, s.y - 80); ctx.lineTo(sx + 6, s.y - 80);
+      ctx.lineTo(s.x + s.w / 2 + (sx < s.x + s.w / 2 ? 70 : -70) + 40, s.y + s.h + 10); ctx.lineTo(s.x + s.w / 2 + (sx < s.x + s.w / 2 ? 70 : -70) - 40, s.y + s.h + 10); ctx.closePath(); ctx.fill();
+      glow(sx, s.y - 80, 14, 'rgba(255,250,220,.9)');
+    }
+    // biển trường: hai đèn rọi từ dưới lên
+    const g0 = GATE, top = g0.y - 104;
+    for (const gx of [g0.x + g0.w * 0.25, g0.x + g0.w * 0.75]) glow(gx, top + 30, 120, 'rgba(255,245,220,.22)');
+    // đom đóm
+    for (const f of flies) { glow(f.x, f.y, 8, `rgba(210,255,120,${0.75 * f.b})`); ctx.fillStyle = `rgba(250,255,200,${f.b})`; ctx.beginPath(); ctx.arc(f.x, f.y, 1.3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+
+  // Dải trời đêm phía trên màn hình: trăng và sao lấp lánh (toạ độ màn hình)
+  _drawSky(ctx, now) {
+    const top = (this.insets?.top ?? 56), band = 120, a = NIGHT;
+    ctx.save(); ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const g = ctx.createLinearGradient(0, top, 0, top + band);
+    g.addColorStop(0, `rgba(4,8,28,${0.55 * a})`); g.addColorStop(1, 'rgba(4,8,28,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, top, this.vw, band);
+    for (let i = 0; i < 34; i++) {
+      const x = ((i * 9301 + 49297) % 233280) / 233280 * this.vw, y = top + 6 + ((i * 4253 + 1931) % 997) / 997 * (band * 0.7);
+      const tw = 0.45 + 0.55 * Math.abs(Math.sin(now / (700 + (i % 7) * 130) + i));
+      ctx.fillStyle = `rgba(255,255,240,${0.85 * tw * a * (1 - (y - top) / band)})`;
+      ctx.beginPath(); ctx.arc(x, y, i % 5 === 0 ? 1.5 : 0.9, 0, Math.PI * 2); ctx.fill();
+    }
+    // trăng
+    const mx = this.vw - 120, my = top + 34;
+    const mg = ctx.createRadialGradient(mx, my, 6, mx, my, 46);
+    mg.addColorStop(0, `rgba(255,246,210,${0.45 * a})`); mg.addColorStop(1, 'rgba(255,246,210,0)');
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, 46, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#FFF4CC'; ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(214,200,150,.55)'; ctx.beginPath(); ctx.arc(mx - 4, my - 3, 3, 0, Math.PI * 2); ctx.arc(mx + 5, my + 4, 2.2, 0, Math.PI * 2); ctx.arc(mx + 2, my - 6, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   // Chụp ảnh khung cảnh quanh nhân vật (không có nhãn, đường đi). Trả về canvas w × h.

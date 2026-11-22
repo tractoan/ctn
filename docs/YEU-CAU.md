@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.1 – quản trị xoá lưu bút và ảnh; bảng tin có lời chia tay của khóa và lời tri ân thầy cô |
+| Phiên bản | 2.2 – ban đêm: đèn, cửa sổ sáng, đèn sân khấu, biển trường, trăng sao, đom đóm |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -233,7 +233,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-TT2-15 | **Khung chat chung** góc trái: hiện tin nhắn của **mọi người ở mọi khu** (sân trường, lớp, phòng), tên kèm **khóa · lớp** (thầy cô: danh xưng · bộ môn; khách: tên trường); giữ 50 tin gần nhất, cuộn được; mở trang là thấy lịch sử gần đây; thu gọn được (có số tin chưa đọc, nhớ trên máy); khách chưa ghi danh vẫn đọc được | P1 | ✅ |
 | YC-TT2-16 | **Ai đang online**: bấm số người trên thanh trên để xem danh sách theo khu, chạm để đi tới | P2 | ✅ |
 | YC-TT2-17 | **Âm thanh**: bảng chỉnh âm lượng nhạc nền và hiệu ứng (lưu trên máy); hiệu ứng tổng hợp: chuông, trống, tiền, bóng nước, tim… | P2 | 🟡 |
-| YC-TT2-18 | **Ngày / đêm** theo giờ Việt Nam: chạng vạng 17:30–19:00, đêm tới 5:00; ban đêm sân tối lại, đèn sân toả sáng, cửa sổ các dãy nhà sáng đèn (trong lớp học vẫn sáng) | P3 | ✅ |
+| YC-TT2-18 | **Ngày / đêm** theo giờ Việt Nam: bình minh 6–7 h, hoàng hôn 16:30–18 h, chạng vạng 18–19:30, đêm 19:30–5 h, rạng sáng 5–6 h. Ban đêm: sân tối hẳn; **18 cột đèn** (giữa sân, cổng, lối vào, sân đá cầu, hành lang dãy 5 tầng, lối xuống căng tin, vườn, đèn đường) toả quầng sáng; **cửa sổ** các dãy nhà sáng vàng; **sân khấu** có hai luồng đèn chiếu; **biển trường** được rọi sáng; **trăng, sao** lấp lánh phía trên màn hình; **đom đóm** bay trên các bãi cỏ. Trong lớp học, các phòng luôn sáng đèn | P2 | ✅ |
 | YC-TT2-19 | **Trang phục**: sơ mi cà vạt, sơ mi trắng/xanh/vàng, áo khoác trường, áo lớp (6 màu), áo dài trắng/tím/hồng/xanh/đỏ, vest, áo phông, khăn quàng đỏ, áo "Tôi yêu CTN" trắng/đen – danh sách tuỳ vai (xem YC-NV-02) | P2 | ✅ |
 | YC-TT2-20 | **Phòng chức năng**: phòng thí nghiệm, phòng máy, thư viện (góc giới thiệu sách hay); **Sổ lưu bút của trường** đặt trên giá ở sân | P2 | ✅ |
 
