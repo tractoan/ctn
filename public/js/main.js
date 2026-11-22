@@ -1,5 +1,5 @@
 import { api, getToken, setToken, getMode, OFFLINE_ADMIN_CODE } from './api.js';
-import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS, CLASS_RULES, BAC_HO, ROOM_TEACHERS } from './logic.js';
+import { LOPS, ROLES, BREAK_TEXT, periodOf, vnClock, TRANSPORTS, GAMES, LOVE_LINES, LOVE_REPLIES, ZONE_IDS, CLASS_RULES, BAC_HO, ROOM_TEACHERS, OTHER_NPCS, NPC_SLOTS, NPC_TITLES } from './logic.js';
 import { World, CAMPUS_SCENE } from './world.js';
 import { classroomScene } from './classroom.js';
 import { SPAWN, HOTSPOTS, PLACES } from './campus.js';
@@ -308,13 +308,28 @@ function enterSchool() {
   const zoneEl = h('b', {}, 'Sân trường');
   const clockEl = h('small', {});
   const online = h('button', { class: 'online-pill', title: 'Ai đang online', onclick: () => onlineSheet() }, h('i', {}), h('span', {}, '1'));
-  const feed = h('div', { class: 'chat-feed', 'aria-live': 'polite' });
-  addFeed = (name, text, mine = false) => {
-    const row = h('div', { class: 'feed-row' + (mine ? ' mine' : '') }, h('b', {}, name + ': '), text);
-    feed.append(row);
-    while (feed.children.length > 4) feed.firstChild.remove();
-    setTimeout(() => { row.classList.add('fade'); setTimeout(() => row.remove(), 600); }, 9000);
+  // Khung chat chung: tin nhắn của mọi người ở mọi khu, tên kèm khóa · lớp; thu gọn được (nhớ trên máy)
+  const feedList = h('div', { class: 'chat-list', 'aria-live': 'polite' });
+  const feedBadge = h('i', { class: 'chat-badge', hidden: true });
+  const feedToggle = h('span', { class: 'chat-toggle', 'aria-hidden': 'true' });
+  let unread = 0;
+  const feed = h('section', { class: 'chat-feed', 'aria-label': 'Khung chat chung' });
+  const setMin = (min) => {
+    feed.classList.toggle('min', min); feedToggle.textContent = min ? '▴' : '▾';
+    feedHead.setAttribute('aria-expanded', String(!min));
+    if (!min) { unread = 0; feedBadge.hidden = true; feedList.scrollTop = feedList.scrollHeight; }
+    try { localStorage.setItem('ctn.chatMin', min ? '1' : ''); } catch { /* */ }
   };
+  const feedHead = h('button', { class: 'chat-head', onclick: () => setMin(!feed.classList.contains('min')) }, '💬 Trò chuyện chung', feedBadge, feedToggle);
+  feed.append(feedHead, feedList);
+  addFeed = ({ name, sub, text, mine = false }) => {
+    const atBottom = feedList.scrollHeight - feedList.scrollTop - feedList.clientHeight < 30;
+    feedList.append(h('div', { class: 'feed-row' + (mine ? ' own' : '') }, h('b', {}, name), sub ? h('small', {}, ' ' + sub) : null, ': ', text));
+    while (feedList.children.length > 50) feedList.firstChild.remove();
+    if (atBottom || mine) feedList.scrollTop = feedList.scrollHeight;
+    if (feed.classList.contains('min') && !mine) { unread++; feedBadge.textContent = String(unread); feedBadge.hidden = false; }
+  };
+  setMin((() => { try { return !!localStorage.getItem('ctn.chatMin'); } catch { return false; } })());
   const shieldBtn = h('button', { class: 'fab balloon shield', 'aria-label': 'Tạm không chơi bóng nước', 'aria-pressed': 'false', title: 'Bật khiên: không ai ném bóng nước trúng bạn', onclick: () => {
     world.shield = !world.shield;
     shieldBtn.classList.toggle('on', world.shield); shieldBtn.setAttribute('aria-pressed', String(world.shield));
@@ -380,10 +395,11 @@ function enterSchool() {
   world.setMe({ ...loadPos(), look: me.look, name: me.name, sub: '' });
   world.me.sub = world.subOf(me);
   world.npcs = campusNpcs();
+  loadNpcNames();
   world.onArrive = (hs) => openHotspot(hs);
   world.onTapPlayer = (p) => playerCard(p);
   world.onTapNpc = (n) => npcSheet(n);
-  world.onSay = (p, text) => addFeed(p.name, text);
+  world.onSay = () => {}; // lời nói hiện thành bong bóng; khung chat lấy từ máy chủ (tin của mọi khu)
   world.onSit = (seat) => onSit(seat);
   world.onHitOther = (id) => {
     sfx.splash();
@@ -404,7 +420,17 @@ function enterSchool() {
 
   let lastZone = '';
   let pendingSay = null;
-  sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); addFeed(me.name, t, true); };
+  sayPrompt.send = (t) => { pendingSay = t; world.say('me', t); addFeed({ name: me.name, sub: world.subOf(me), text: t, mine: true }); };
+  let chatAfter = 0;
+  // tin mới từ máy chủ; tin của chính mình đã hiện ngay lúc gửi nên chỉ lấy ở lần tải lịch sử đầu tiên
+  const takeChat = (list) => {
+    const first = chatAfter === 0;
+    for (const m of list || []) {
+      if (m.uid !== me.id || first) addFeed({ name: m.name, sub: world.subOf(m), text: m.text, mine: m.uid === me.id });
+      chatAfter = Math.max(chatAfter, m.at);
+    }
+    if (chatAfter === 0) chatAfter = 1;
+  };
   let pendingThrow = null;
   let lastThrow = 0;
   // Ném bóng nước vào người được chọn (targetId), hoặc ra phía trước nếu không chọn ai
@@ -430,10 +456,10 @@ function enterSchool() {
     visitZone(zone.startsWith('lop:') ? 'lop' : zone);
     try {
       let r;
-      if (me.guest) r = await api('online');
+      if (me.guest) r = await api('online', { chatAfter });
       else {
         const sit = world.me.sit;
-        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1, noBalloon: world.shield };
+        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1, noBalloon: world.shield, chatAfter };
         if (pendingSay) { body.say = pendingSay; pendingSay = null; }
         if (pendingThrow) { body.throw = pendingThrow; pendingThrow = null; }
         r = await api('presence', body);
@@ -445,6 +471,7 @@ function enterSchool() {
       online.lastChild.textContent = String(here);
       online.title = `${here} người ở khu này · ${r.others.length + (me.guest ? 0 : 1)} người cả trường. Bấm để xem`;
       for (const it of r.inbox || []) handleInbox(it);
+      takeChat(r.chat);
       if (!tick.done) { tick.done = true; hud.update(); }
     } catch { /* thử lại lượt sau */ }
     if (world.scene.id === 'campus') savePos();
@@ -501,7 +528,7 @@ function moreSheet() {
         h('button', { class: 'btn primary', onclick: () => panels.mirror() }, '👕 Đổi kiểu tóc, đồng phục'),
         h('button', { class: 'btn ghost', onclick: () => bookSheet({ id: me.id, name: me.name }) }, '📖 Sổ lưu bút của tôi'),
         h('button', { class: 'btn ghost', onclick: () => albumSheet() }, '🖼️ Album kỷ yếu'),
-        h('button', { class: 'btn ghost', onclick: () => adminTeachersSheet() }, '🔑 Quản trị: sửa tên thầy cô hàng loạt'),
+        h('button', { class: 'btn ghost', onclick: () => adminTeachersSheet() }, '🔑 Quản trị: sửa tên thầy cô, nhân vật hàng loạt'),
         h('a', { class: 'btn ghost', href: 'pages/gioi-thieu.html' }, 'Giới thiệu trang'),
         h('button', { class: 'btn ghost', onclick: () => { backToCampus(); world.teleport(SPAWN.x, SPAWN.y); closeSheet(); } }, 'Về cổng trường'),
         h('button', { class: 'btn danger', onclick: () => { if (confirm('Thoát nhân vật trên máy này? Hãy chắc chắn bạn đã lưu mã khôi phục.')) { setToken(''); location.reload(); } } }, 'Thoát nhân vật'))));
@@ -669,7 +696,7 @@ const panels = {
     classReturn = { x: hs.x, y: hs.y };
     world.npcs = [...world.npcs.filter((n) => n.scene === 'campus'), ...roomNpcs(sc.id)];
     world.setScene(sc, (hs.spot && sc.spots[hs.spot]) || sc.spawn);
-    if (isRoomSlot(sc.id.slice(2))) loadTeacher(sc.id.slice(2));
+    loadNpcNames();
     if (sc.zone) visitZone(sc.zone);
     sfx.click();
     toast(`${sc.name}: chạm vào đồ vật, nhãn hoặc nhân vật để dùng. Chạm "Ra sân" để ra.`);
@@ -997,71 +1024,90 @@ const panels = {
   },
 };
 
-// ======================= Tên thầy cô (chủ nhiệm lớp, phòng chức năng) =======================
-// Mỗi khóa đặt tên thầy cô của mình; vào lớp/phòng thấy tên của khóa mình, không có thì tên chung (thầy cô đặt),
-// không có nữa thì tên được đặt gần nhất, cuối cùng là tên mặc định. "slot" = tên lớp chuyên hoặc mã phòng.
+// ======================= Tên thầy cô và nhân vật phụ (cấu hình theo khóa) =======================
+// Mỗi khóa đặt tên của mình; vào lớp/phòng/sân thấy tên của khóa mình, không có thì tên chung (thầy cô, quản trị đặt),
+// không có nữa thì tên được đặt gần nhất, cuối cùng là tên mặc định. "slot" = tên lớp chuyên, mã phòng hoặc mã nhân vật.
 const ROOM_TEACHER_NAMES = { thuvien: 'thư viện', phongmay: 'phòng máy', phongtn: 'phòng thí nghiệm', hieubo: 'văn phòng nhà hiệu bộ' };
-const isRoomSlot = (slot) => ROOM_TEACHERS.includes(slot);
+const NPC_NAMES = { baove: 'Bác bảo vệ (cổng trường)', codo: 'Đội cờ đỏ (cổng trường)', hung: 'Bác Hùng (cựu HS, sân trường)', mai: 'Chị Mai (ghế đá vườn)', tuan: 'Anh Tuấn (sân đá cầu)', linh: 'Bạn Linh (trước dãy 5 tầng)', cangtin: 'Cô căng tin', dung: 'Anh Dũng (trong căng tin)', nam: 'Bạn Nam (nhà đa năng)' };
+const isRoomSlot = (slot) => NPC_SLOTS.includes(slot); // không phải lớp chuyên: ai cũng sửa cho khóa mình
+const isOtherNpc = (slot) => OTHER_NPCS.includes(slot);
+const MALE_TITLES = ['Thầy', 'Chú', 'Anh', 'Ông'], FEMALE_TITLES = ['Cô', 'Chị', 'Bà'];
 function pickTeacher(items, slot) {
   const mine = me.khoa && (isRoomSlot(slot) || me.lop === slot) ? items.find((x) => x.khoa === me.khoa) : null;
   return mine || items.find((x) => x.khoa === '*') || items[0] || null;
 }
-// Đổi dáng nhân vật theo danh xưng (Thầy → nam, Cô → nữ), giữ nguyên nếu đã đúng
+// Đổi dáng nhân vật theo danh xưng (Thầy/Chú/Anh/Ông → nam; Cô/Chị/Bà → nữ), danh xưng khác giữ nguyên
 function lookForTitle(base, title) {
-  const want = title === 'Thầy' ? 'nam' : 'nu';
+  const want = MALE_TITLES.includes(title) ? 'nam' : FEMALE_TITLES.includes(title) ? 'nu' : base.gender || 'nam';
   if ((base.gender || 'nam') === want) return base;
   return want === 'nam'
     ? { ...base, gender: 'nam', hair: 6, bottom: 'quan', outfit: String(base.outfit).startsWith('aodai') ? 'somitrang' : base.outfit }
     : { ...base, gender: 'nu', hair: 5, outfit: base.outfit === 'vest' ? 'aodaitim' : base.outfit };
 }
 function applyTeacher(slot, t) {
-  const n = world.npcs.find((x) => x.slot === slot);
-  if (!n || !t) return;
-  n.baseLook ||= n.look;
-  n.name = `${t.title} ${t.name}`;
-  n.sub = `${t.title} · ${n.subject}${!isRoomSlot(slot) && t.khoa && t.khoa !== '*' ? ' ' + t.khoa : ''}`;
-  n.look = lookForTitle(n.baseLook, t.title);
+  for (const n of world.npcs.filter((x) => x.slot === slot)) {
+    n.baseLook ||= n.look; n.baseName ||= n.name; n.baseSub ||= n.sub;
+    if (!t) continue;
+    if (isOtherNpc(slot)) {
+      n.name = [t.title, t.name].filter(Boolean).join(' ');
+      n.sub = t.sub || n.baseSub;
+    } else {
+      n.name = `${t.title} ${t.name}`;
+      n.sub = `${t.title} · ${n.subject}${!isRoomSlot(slot) && t.khoa && t.khoa !== '*' ? ' ' + t.khoa : ''}`;
+    }
+    n.look = lookForTitle(n.baseLook, t.title);
+  }
 }
 async function loadTeacher(slot) {
   try { const r = await call('classTeacher', { lop: slot }); applyTeacher(slot, pickTeacher(r.items, slot)); return r.items; } catch { return []; }
 }
+// Áp tên đã đặt cho mọi nhân vật đang có (một lần gọi cho cả trường)
+async function loadNpcNames() {
+  try {
+    const { items } = await call('teachersAll');
+    for (const slot of new Set(world.npcs.map((n) => n.slot).filter(Boolean))) applyTeacher(slot, pickTeacher(items.filter((x) => x.lop === slot).sort((a, c) => c.at - a.at), slot));
+  } catch { /* giữ tên mặc định */ }
+}
 function teacherEditSheet(slot) {
   if (!needMe()) return;
-  const room = isRoomSlot(slot);
+  const room = isRoomSlot(slot), other = isOtherNpc(slot);
   const isGv = me.role === 'gv';
   const canEdit = isGv || ((me.role === 'cuuhs' || me.role === 'hs') && (room || me.lop === slot));
   const npc = world.npcs.find((x) => x.slot === slot);
-  openSheet(room ? `👩‍🏫 Thầy cô ${ROOM_TEACHER_NAMES[slot]}` : '👩‍🏫 Thầy cô chủ nhiệm · Lớp chuyên ' + slot, async (b) => {
+  openSheet(other ? `🧑 ${NPC_NAMES[slot]}` : room ? `👩‍🏫 Thầy cô ${ROOM_TEACHER_NAMES[slot]}` : '👩‍🏫 Thầy cô chủ nhiệm · Lớp chuyên ' + slot, async (b) => {
     const listEl = h('div', {});
     const render = (items) => listEl.replaceChildren(items.length
-      ? h('ul', { class: 'notes' }, ...items.map((x) => h('li', {}, h('b', {}, x.khoa === '*' ? 'Các khóa' : x.khoa), `: ${x.title} ${x.name} `, h('small', { class: 'muted' }, `(${x.by} sửa · ${ago(x.at)})`))))
+      ? h('ul', { class: 'notes' }, ...items.map((x) => h('li', {}, h('b', {}, x.khoa === '*' ? 'Các khóa' : x.khoa), `: ${[x.title, x.name].filter(Boolean).join(' ')}${x.sub ? ' · ' + x.sub : ''} `, h('small', { class: 'muted' }, `(${x.by} sửa · ${ago(x.at)})`))))
       : h('p', { class: 'muted' }, `Chưa khóa nào đặt tên. Đang hiện tên mặc định${npc ? ': ' + npc.name : ''}.`));
     b.append(listEl);
     render(await loadTeacher(slot));
-    b.append(h('button', { class: 'btn link muted', onclick: () => adminTeachersSheet() }, '🔑 Sửa tên thầy cô hàng loạt (quản trị)'));
+    b.append(h('button', { class: 'btn link muted', onclick: () => adminTeachersSheet() }, '🔑 Sửa tên hàng loạt (quản trị)'));
     if (!canEdit) {
-      b.append(h('p', { class: 'muted small' }, room ? 'Chỉ học sinh, cựu học sinh (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.' : `Chỉ học sinh lớp chuyên ${slot} (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.`));
+      b.append(h('p', { class: 'muted small' }, room ? 'Chỉ học sinh, cựu học sinh (sửa cho khóa mình), thầy cô hoặc quản trị mới sửa được tên.' : `Chỉ học sinh lớp chuyên ${slot} (sửa cho khóa mình) hoặc thầy cô mới sửa được tên.`));
       return;
     }
-    let title = npc && npc.name.startsWith('Thầy') ? 'Thầy' : 'Cô';
-    const nameInp = h('input', { class: 'input', id: 'gvcn-name', maxlength: 30, placeholder: 'Ví dụ: Nguyễn Thị Hoa', 'aria-label': 'Họ tên thầy cô' });
+    const titles = other ? [...NPC_TITLES.filter((t) => t !== 'Thầy'), ''] : ['Thầy', 'Cô'];
+    let title = (npc && titles.find((t) => t && npc.name.startsWith(t + ' '))) || (other ? '' : 'Cô');
+    const nameInp = h('input', { class: 'input', id: 'gvcn-name', maxlength: 30, placeholder: other ? 'Ví dụ: Tư, Nguyễn Văn Hùng' : 'Ví dụ: Nguyễn Thị Hoa', 'aria-label': 'Họ tên thầy cô' });
+    const subInp = other ? h('input', { class: 'input', id: 'npc-sub', maxlength: 30, placeholder: 'Ví dụ: K1 · Toán, Bảo vệ 1995–2010', 'aria-label': 'Dòng phụ' }) : null;
     const khoaSel = isGv ? h('select', { class: 'input', 'aria-label': 'Khóa' }, h('option', { value: '' }, 'Tất cả các khóa'),
       ...Array.from({ length: 40 }, (_, i) => 40 - i).map((n) => h('option', { value: 'K' + n }, 'Khóa ' + n))) : null;
     const err = h('p', { class: 'err', role: 'alert' });
     b.append(h('h4', {}, '✏️ Sửa tên'),
       h('div', { class: 'ob-lbl' }, 'Danh xưng'),
-      h('div', { class: 'ob-chips' }, ...['Thầy', 'Cô'].map((t) => h('button', { class: 'ob-chip' + (t === title ? ' on' : ''), onclick: (e) => {
+      h('div', { class: 'ob-chips' }, ...titles.map((t) => h('button', { class: 'ob-chip' + (t === title ? ' on' : ''), onclick: (e) => {
         title = t; e.currentTarget.parentNode.querySelectorAll('.ob-chip').forEach((x) => x.classList.toggle('on', x === e.currentTarget));
-      } }, t))),
-      h('label', { class: 'ob-lbl', for: 'gvcn-name' }, 'Họ tên'), nameInp,
+      } }, t || 'Không'))),
+      h('label', { class: 'ob-lbl', for: 'gvcn-name' }, other ? 'Tên' : 'Họ tên'), nameInp,
+      ...(other ? [h('label', { class: 'ob-lbl', for: 'npc-sub' }, 'Dòng phụ dưới tên (không bắt buộc)'), subInp] : []),
       ...(isGv ? [h('label', { class: 'ob-lbl' }, room ? 'Công tác cùng khóa' : 'Chủ nhiệm khóa'), khoaSel] : []),
       h('p', { class: 'muted small' }, isGv ? 'Chọn khóa; "Tất cả các khóa" là tên dùng khi khóa đó chưa đặt.'
-        : room ? `Tên này hiện khi các bạn khóa ${me.khoa} vào ${ROOM_TEACHER_NAMES[slot]}.` : `Tên này hiện khi các bạn ${me.khoa} ${slot} vào lớp.`),
+        : other ? `Tên này hiện cho các bạn khóa ${me.khoa}.` : room ? `Tên này hiện khi các bạn khóa ${me.khoa} vào ${ROOM_TEACHER_NAMES[slot]}.` : `Tên này hiện khi các bạn ${me.khoa} ${slot} vào lớp.`),
       err,
       h('button', { class: 'btn primary', onclick: async () => {
         try {
-          await call('setClassTeacher', { lop: slot, title, name: nameInp.value, khoa: khoaSel?.value || undefined });
-          sfx.coin(); toast('Đã lưu tên thầy cô'); nameInp.value = ''; err.textContent = '';
+          await call('setClassTeacher', { lop: slot, title, name: nameInp.value, sub: subInp?.value, khoa: khoaSel?.value || undefined });
+          sfx.coin(); toast(other ? 'Đã lưu tên nhân vật' : 'Đã lưu tên thầy cô'); nameInp.value = ''; if (subInp) subInp.value = ''; err.textContent = '';
           render(await loadTeacher(slot));
         } catch (e) { err.textContent = e.message; }
       } }, 'Lưu tên'));
@@ -1071,12 +1117,15 @@ function teacherEditSheet(slot) {
 // ======================= Quản trị: sửa tên thầy cô hàng loạt =======================
 // Cần mã quản trị (biến bí mật ADMIN_CODE trên Cloudflare). Mã chỉ giữ trong phiên trình duyệt hiện tại.
 const ADMIN_KEY = 'ctn.admin';
-const TEACHER_SLOTS = [...LOPS.map((l) => [l, 'Lớp chuyên ' + l]), ['thuvien', '📚 Thư viện'], ['phongmay', '💻 Phòng máy'], ['phongtn', '🧪 Phòng thí nghiệm'], ['hieubo', '🏛️ Văn phòng nhà hiệu bộ']];
-const SLOT_ALIASES = { 'thư viện': 'thuvien', 'phòng máy': 'phongmay', 'phòng thí nghiệm': 'phongtn', 'văn phòng': 'hieubo', 'nhà hiệu bộ': 'hieubo' };
+const TEACHER_SLOTS = [...LOPS.map((l) => [l, 'Lớp chuyên ' + l]), ['thuvien', '📚 Thư viện'], ['phongmay', '💻 Phòng máy'], ['phongtn', '🧪 Phòng thí nghiệm'], ['hieubo', '🏛️ Văn phòng nhà hiệu bộ'],
+  ...OTHER_NPCS.map((k) => [k, '🧑 ' + NPC_NAMES[k]])];
+const SLOT_ALIASES = { 'thư viện': 'thuvien', 'phòng máy': 'phongmay', 'phòng thí nghiệm': 'phongtn', 'văn phòng': 'hieubo', 'nhà hiệu bộ': 'hieubo',
+  'bảo vệ': 'baove', 'bác bảo vệ': 'baove', 'cờ đỏ': 'codo', 'đội cờ đỏ': 'codo', 'bác hùng': 'hung', 'chị mai': 'mai', 'anh tuấn': 'tuan', 'bạn linh': 'linh',
+  'căng tin': 'cangtin', 'cô căng tin': 'cangtin', 'anh dũng': 'dung', 'bạn nam': 'nam' };
 function slotOf(text) {
   const t = text.trim().toLowerCase().replace(/^(lớp\s+)?(chuyên\s+)?/, '');
   const lop = LOPS.find((l) => l.toLowerCase() === t);
-  return lop || SLOT_ALIASES[t] || (ROOM_TEACHERS.includes(t) ? t : '');
+  return lop || SLOT_ALIASES[t] || (NPC_SLOTS.includes(t) ? t : '');
 }
 // Lưu theo từng đợt (mỗi đợt ≤ batch tên)
 async function adminSave(code, items, batch = 40) {
@@ -1085,12 +1134,11 @@ async function adminSave(code, items, batch = 40) {
     const r = await call('adminTeachers', { code, items: items.slice(i, i + batch) });
     sum.saved += r.saved; sum.deleted += r.deleted; sum.errors.push(...r.errors.map((e) => e.replace(/Dòng (\d+)/, (_, n) => 'Dòng ' + (i + Number(n)))));
   }
-  const slot = world.npcs.find((n) => n.slot && n.scene === world.scene.id)?.slot;
-  if (slot) loadTeacher(slot);
+  loadNpcNames();
   return sum;
 }
 function adminTeachersSheet() {
-  openSheet('🔑 Quản trị · Tên thầy cô', (b) => {
+  openSheet('🔑 Quản trị · Tên thầy cô, nhân vật', (b) => {
     const unlock = () => {
       const inp = h('input', { class: 'input', type: 'password', autocomplete: 'off', 'aria-label': 'Mã quản trị', placeholder: 'Mã quản trị' });
       const err = h('p', { class: 'err', role: 'alert' });
@@ -1100,7 +1148,7 @@ function adminTeachersSheet() {
       };
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
       b.replaceChildren(
-        h('p', { class: 'muted' }, 'Sửa tên thầy cô chủ nhiệm của 12 lớp và thầy cô các phòng chức năng cùng lúc. Chỉ người có mã quản trị mới dùng được.'),
+        h('p', { class: 'muted' }, 'Sửa cùng lúc tên thầy cô chủ nhiệm 12 lớp, thầy cô các phòng chức năng và các nhân vật khác (bác bảo vệ, cô căng tin…). Chỉ người có mã quản trị mới dùng được.'),
         getMode() === 'offline' ? h('p', { class: 'note' }, `Bản chạy thử ngoại tuyến (dữ liệu chỉ trên trình duyệt này): mã quản trị là ${OFFLINE_ADMIN_CODE}.`) : null,
         inp, err, h('button', { class: 'btn primary', onclick: go }, 'Mở khoá'));
       setTimeout(() => inp.focus(), 50);
@@ -1127,18 +1175,24 @@ function adminTeachersSheet() {
       const renderTable = () => {
         rows = TEACHER_SLOTS.map(([slot, label]) => {
           const old = cur.get(`${slot}|${khoa}`);
-          const title = h('select', { class: 'input sm', 'aria-label': 'Danh xưng ' + label }, ...['Cô', 'Thầy'].map((t) => h('option', { value: t, selected: old?.title === t }, t)));
-          const name = h('input', { class: 'input', maxlength: 30, value: old?.name || '', placeholder: 'Họ tên', 'aria-label': 'Họ tên thầy cô ' + label });
-          return { slot, label, old, title, name };
+          const other = isOtherNpc(slot);
+          const titles = other ? ['', ...NPC_TITLES.filter((t) => t !== 'Thầy')] : ['Cô', 'Thầy'];
+          const title = h('select', { class: 'input sm', 'aria-label': 'Danh xưng ' + label }, ...titles.map((t) => h('option', { value: t, selected: (old?.title ?? (other ? '' : 'Cô')) === t }, t || '—')));
+          const name = h('input', { class: 'input', maxlength: 30, value: old?.name || '', placeholder: other ? 'Tên' : 'Họ tên', 'aria-label': 'Họ tên thầy cô ' + label });
+          const sub = other ? h('input', { class: 'input admin-sub', maxlength: 30, value: old?.sub || '', placeholder: 'Dòng phụ (vd K1 · Toán)', 'aria-label': 'Dòng phụ ' + label }) : null;
+          return { slot, label, old, title, name, sub };
         });
-        table.replaceChildren(...rows.map((r) => h('div', { class: 'admin-row' }, h('span', { class: 'admin-slot' }, r.label), r.title, r.name)));
+        const head = (t) => h('div', { class: 'admin-head' }, t);
+        table.replaceChildren(head('Thầy cô chủ nhiệm 12 lớp chuyên'),
+          ...rows.map((r, i) => [i === LOPS.length ? head('Thầy cô phòng chức năng') : null, i === LOPS.length + ROOM_TEACHERS.length ? head('Nhân vật khác') : null,
+            h('div', { class: 'admin-row' }, h('span', { class: 'admin-slot' }, r.label), r.title, r.name, r.sub)]).flat().filter(Boolean));
       };
       renderTable();
       // tải lại tên đã lưu rồi vẽ lại bảng (giữ thông báo kết quả)
       const refresh = async () => { const fresh = (await call('teachersAll')).items; cur.clear(); fresh.forEach((x) => cur.set(`${x.lop}|${x.khoa}`, x)); renderTable(); };
       const saveTable = h('button', { class: 'btn primary', onclick: async () => {
-        const items = rows.filter((r) => r.name.value.trim() !== (r.old?.name || '') || (r.old && r.title.value !== r.old.title && r.name.value.trim()))
-          .map((r) => ({ lop: r.slot, khoa, title: r.title.value, name: r.name.value.trim() }));
+        const items = rows.filter((r) => r.name.value.trim() !== (r.old?.name || '') || (r.old && r.name.value.trim() && (r.title.value !== r.old.title || (r.sub && r.sub.value.trim() !== (r.old.sub || '')))))
+          .map((r) => ({ lop: r.slot, khoa, title: r.title.value, name: r.name.value.trim(), sub: r.sub?.value.trim() }));
         if (!items.length) { toast('Chưa có thay đổi nào'); return; }
         saveTable.disabled = true;
         try { const sum = await adminSave(code, items); showResult(sum); sfx.coin(); await refresh(); toast(`Đã lưu ${sum.saved} tên`); }
@@ -1147,7 +1201,7 @@ function adminTeachersSheet() {
       } }, 'Lưu tất cả');
       // Dán danh sách: "Toán | Cô | Nguyễn Thị Hoa | K20"
       const paste = h('textarea', { class: 'input', rows: 8, 'aria-label': 'Danh sách tên thầy cô',
-        placeholder: 'Mỗi dòng: Lớp | Thầy/Cô | Họ tên | Khóa (không bắt buộc)\nToán | Cô | Nguyễn Thị Hoa | K20\nLý | Thầy | Trần Văn Nam\nPhòng thí nghiệm | Thầy | Phạm Văn Hòa' });
+        placeholder: 'Mỗi dòng: Lớp/nhân vật | Danh xưng | Tên | Khóa | Dòng phụ (hai cột cuối không bắt buộc)\nToán | Cô | Nguyễn Thị Hoa | K20\nLý | Thầy | Trần Văn Nam\nPhòng thí nghiệm | Thầy | Phạm Văn Hòa\nBảo vệ | Chú | Tư | * | Bảo vệ 1995–2010' });
       const parse = () => {
         const items = [], errors = [];
         paste.value.split('\n').map((l) => l.trim()).filter(Boolean).forEach((line, i) => {
@@ -1155,9 +1209,11 @@ function adminTeachersSheet() {
           if (parts.length < 3) { errors.push(`Dòng ${i + 1}: cần ít nhất "Lớp | Thầy/Cô | Họ tên"`); return; }
           const slot = slotOf(parts[0]);
           if (!slot) { errors.push(`Dòng ${i + 1}: không nhận ra lớp/phòng "${parts[0]}"`); return; }
-          const title = /^th/i.test(parts[1]) ? 'Thầy' : 'Cô';
+          const tw = parts[1].trim().toLowerCase();
+          const found = NPC_TITLES.find((t) => t.toLowerCase() === tw) || '';
+          const title = isOtherNpc(slot) ? found : found === 'Thầy' ? 'Thầy' : 'Cô';
           const k = (parts[3] || '').trim();
-          items.push({ lop: slot, title, name: parts[2], khoa: !k ? khoa : k === '*' ? '*' : k.toUpperCase().replace(/^K?/, 'K') });
+          items.push({ lop: slot, title, name: parts[2], sub: parts[4] || '', khoa: !k ? khoa : k === '*' ? '*' : k.toUpperCase().replace(/^K?/, 'K') });
         });
         return { items, errors };
       };
@@ -1176,7 +1232,7 @@ function adminTeachersSheet() {
         h('p', { class: 'muted small' }, '"Tất cả các khóa" là tên hiện cho mọi khóa chưa tự đặt tên. Xoá trắng ô tên rồi lưu để bỏ tên đã đặt.'),
         tabs([
           { label: '📋 Bảng', render: (c) => c.append(table, saveTable) },
-          { label: '📝 Dán danh sách', render: (c) => c.append(h('p', { class: 'muted small' }, 'Dán từ Excel/Google Sheets (các cột cách nhau bằng tab) hoặc gõ, mỗi dòng một thầy cô. Lớp viết như trong game (Toán, Lý…) hoặc tên phòng (Thư viện, Phòng máy, Phòng thí nghiệm, Văn phòng). Bỏ trống khóa thì dùng khóa đang chọn ở trên.'), paste, preview, savePaste) },
+          { label: '📝 Dán danh sách', render: (c) => c.append(h('p', { class: 'muted small' }, 'Dán từ Excel/Google Sheets (các cột cách nhau bằng tab) hoặc gõ, mỗi dòng một người. Cột đầu: lớp như trong game (Toán, Lý…), tên phòng (Thư viện, Phòng máy, Phòng thí nghiệm, Văn phòng) hoặc nhân vật (Bảo vệ, Cờ đỏ, Bác Hùng, Chị Mai, Anh Tuấn, Bạn Linh, Căng tin, Anh Dũng, Bạn Nam). Thầy cô chỉ Thầy/Cô; nhân vật khác có thể Bác, Chú, Anh, Chị, Bạn… hoặc để trống. Bỏ trống khóa thì dùng khóa đang chọn ở trên.'), paste, preview, savePaste) },
         ]),
         result,
         h('button', { class: 'btn link muted', onclick: () => { sessionSet(ADMIN_KEY, ''); unlock(); } }, '🔒 Khoá lại'));
@@ -1669,7 +1725,7 @@ function npcSheet(n) {
       h('div', { class: 'row-btns' },
         h('button', { class: 'btn ghost', onclick: () => { line.textContent = n.lines[Math.floor(Math.random() * n.lines.length)]; } }, '💬 Nói chuyện tiếp'),
         act ? h('button', { class: 'btn primary', onclick: () => act[1](n) }, act[0]) : null),
-      ...(n.slot ? [h('button', { class: 'btn link', onclick: () => teacherEditSheet(n.slot) }, n.id === 'npc-gvcn' ? '✏️ Sửa tên thầy cô chủ nhiệm' : '✏️ Sửa tên thầy cô')] : []));
+      ...(n.slot ? [h('button', { class: 'btn link', onclick: () => teacherEditSheet(n.slot) }, n.id === 'npc-gvcn' ? '✏️ Sửa tên thầy cô chủ nhiệm' : isOtherNpc(n.slot) ? '✏️ Sửa tên nhân vật' : '✏️ Sửa tên thầy cô')] : []));
   });
 }
 

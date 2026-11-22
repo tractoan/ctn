@@ -374,3 +374,43 @@ test('quản trị sửa tên thầy cô hàng loạt: cần mã, sai quá 10 l�
   // địa chỉ khác vẫn dùng được
   assert.equal((await adm({ code: 'bi-mat-123', items: [{ lop: 'Toán', name: 'A' }] }, { ip: '5.6.7.8' })).status, 200);
 });
+
+test('khung chat chung: tin của mọi khu, kèm lớp khóa, chỉ trả tin mới, giữ ~100 tin', async () => {
+  const s = memStore();
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' })).body;
+  const b = (await call(s, 'register', { name: 'Bình', role: 'cuuhs', khoa: 'K21', lop: 'Văn' })).body;
+  let t = Date.UTC(2026, 10, 22, 3);
+  await call(s, 'presence', { x: 1, y: 1, scene: 'campus', say: 'Chào cả trường!' }, a.token, t);
+  await call(s, 'presence', { x: 1, y: 1, scene: 'lop:Văn', say: 'Mình ở lớp Văn nè' }, b.token, t + 1000);
+  const r = (await call(s, 'presence', { x: 1, y: 1, scene: 'campus' }, a.token, t + 2000)).body;
+  assert.deepEqual(r.chat.map((m) => `${m.name} (${m.khoa} · ${m.lop}): ${m.text}`), ['An (K20 · Toán): Chào cả trường!', 'Bình (K21 · Văn): Mình ở lớp Văn nè']);
+  // chỉ tin mới hơn chatAfter; khách cũng đọc được
+  const r2 = (await call(s, 'online', { chatAfter: t }, '', t + 3000)).body;
+  assert.deepEqual(r2.chat.map((m) => m.text), ['Mình ở lớp Văn nè']);
+  assert.deepEqual((await call(s, 'online', { chatAfter: t + 1000 }, '', t + 3000)).body.chat, []);
+  // dọn bớt: còn khoảng 100–120 tin
+  for (let i = 0; i < 130; i++) await call(s, 'presence', { x: 1, y: 1, say: 'tin ' + i }, a.token, t + 5000 + i * 10);
+  const left = await s.list('chat', '', 1000);
+  assert.ok(left.length >= 100 && left.length <= 120, 'còn ' + left.length);
+  const last = (await call(s, 'online', { chatAfter: 0 }, '', t + 9000)).body.chat;
+  assert.equal(last.length, 30); assert.equal(last[29].text, 'tin 129');
+});
+
+test('nhân vật phụ đặt được tên: danh xưng tuỳ chọn, dòng phụ; quản trị sửa hàng loạt', async () => {
+  const s = memStore();
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' })).body;
+  const r = (await call(s, 'setClassTeacher', { lop: 'baove', title: 'Chú', name: 'Chú Tư', sub: 'Bảo vệ 1995–2010' }, a.token)).body.item;
+  assert.deepEqual([r.lop, r.khoa, r.title, r.name, r.sub], ['baove', 'K20', 'Chú', 'Tư', 'Bảo vệ 1995–2010']);
+  const r2 = (await call(s, 'setClassTeacher', { lop: 'codo', title: '', name: 'Đội cờ đỏ K20' }, a.token)).body.item;
+  assert.deepEqual([r2.title, r2.name], ['', 'Đội cờ đỏ K20']);
+  // thầy cô vẫn chỉ Thầy/Cô, không có dòng phụ
+  const r3 = (await call(s, 'setClassTeacher', { lop: 'Toán', title: 'Bác', name: 'Hoa', sub: 'x' }, a.token)).body.item;
+  assert.deepEqual([r3.title, r3.sub], ['Cô', undefined]);
+  const adm = (await handle('adminTeachers', { store: s, token: '', now: Date.now(), adminCode: 'm', ip: '1' }, { code: 'm', items: [
+    { lop: 'hung', khoa: '*', title: 'Bác', name: 'Nguyễn Văn Hùng', sub: 'K1 · Toán' },
+    { lop: 'cangtin', khoa: '*', title: 'Cô', name: 'Sáu' },
+  ] })).body;
+  assert.equal(adm.saved, 2);
+  const all = (await handle('teachersAll', { store: s, token: '', now: Date.now() }, {})).body.items;
+  assert.ok(all.some((x) => x.lop === 'hung' && x.name === 'Nguyễn Văn Hùng' && x.sub === 'K1 · Toán'));
+});

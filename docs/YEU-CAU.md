@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 1.8 – quản trị sửa tên thầy cô hàng loạt bằng mã quản trị |
+| Phiên bản | 1.9 – khung chat chung, cấu hình tên mọi nhân vật phụ, lối đi xuống căng tin, bỏ vạch kẻ đường |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -100,7 +100,8 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
-| YC-SD-01 | Sơ đồ dựng theo bản vẽ của cựu học sinh: dãy nhà 4 tầng (chữ L), dãy 3 tầng, dãy 5 tầng, nhà hiệu bộ, sân trường cao có bậc thang, sân đá cầu, nhà đa năng, căng tin (sau nhà đa năng), chỗ trốn học đá bóng, cổng phụ, cổng chính ra đường Lương Ngọc Quyến | P1 | ✅ |
+| YC-SD-01 | Sơ đồ dựng theo bản vẽ của cựu học sinh: dãy nhà 4 tầng (chữ L), dãy 3 tầng, dãy 5 tầng, nhà hiệu bộ, sân trường cao có bậc thang, sân đá cầu, nhà đa năng, căng tin (sau nhà đa năng), chỗ trốn học đá bóng, cổng phụ, cổng chính ra đường Lương Ngọc Quyến (không có vạch kẻ đường) | P1 | ✅ |
+| YC-SD-18 | **Lối xuống căng tin**: nhà đa năng và căng tin lùi xuống, chừa lối đi rộng giữa dãy 3 tầng và nhà đa năng; cửa căng tin ở đầu trên (mái hiên sọc cam trắng) quay ra lối đi đó | P1 | ✅ |
 | YC-SD-02 | Sân trường lên/xuống qua **bậc thang chính** và **bậc thang xuống sân đá cầu** ở cạnh trái, và **bậc thang giữa** xuống lối đi dãy 5 tầng | P2 | ✅ |
 | YC-SD-03 | Cổng chính giống ảnh thật: trụ xanh nhạt, biển trắng chữ đỏ "SỞ GIÁO DỤC & ĐÀO TẠO TỈNH THÁI NGUYÊN – TRƯỜNG THPT CHUYÊN THÁI NGUYÊN", băng rôn xanh | P2 | ✅ |
 | YC-SD-04 | Vị trí lớp chuyên: **dãy 4 tầng** trái → phải Toán, Lý, Hóa, Sinh, Văn, Trung (Lý sát Hóa, các lớp giãn đều); **dãy 3 tầng** trái → phải Anh, Sử, Địa; **dãy 5 tầng** phải → trái Tin, Nga, Pháp, cửa ở mặt trong quay vào sân trường | P1 | ✅ |
@@ -152,6 +153,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-LH-15 | **Sửa tên thầy cô ở phòng chức năng**: cô thủ thư (thư viện), thầy dạy Tin (phòng máy), thầy dạy Hóa (phòng thí nghiệm), cô văn phòng (nhà hiệu bộ). Chạm nhân vật → "✏️ Sửa tên thầy cô": chọn Thầy/Cô (nhân vật đổi dáng theo), nhập họ tên. Học sinh/cựu học sinh lớp bất kỳ sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ hoặc mọi khóa; khách không sửa được | P2 | ✅ |
 | YC-LH-16 | **Quản trị sửa tên thầy cô hàng loạt**: người có **mã quản trị** mở bảng (từ Nhân vật của tôi, bảng sửa tên thầy cô, hoặc `/?quantri`, không cần nhân vật), chọn khóa áp dụng (tất cả các khóa hoặc một khóa), sửa cùng lúc 12 lớp + 4 phòng trong một bảng, hoặc **dán danh sách** từ Excel/Google Sheets (`Lớp | Thầy/Cô | Họ tên | Khóa`); xoá trắng tên để bỏ tên đã đặt; báo số tên đã lưu và từng dòng lỗi | P1 | ✅ |
 | YC-LH-17 | **Mã quản trị** đặt trong biến bí mật của Cloudflare (`ADMIN_CODE`), không nằm trong mã nguồn; chưa đặt mã thì không ai dùng được bảng quản trị; nhập sai 10 lần trong 1 giờ thì bị khoá 1 giờ; trên bản chạy thử ngoại tuyến mã là `DEMO` | P1 | ✅ |
+| YC-LH-18 | **Cấu hình nhân vật phụ** giống thầy cô: bác bảo vệ, đội cờ đỏ, bác Hùng, chị Mai, anh Tuấn, bạn Linh, cô căng tin, anh Dũng, bạn Nam. Chạm nhân vật → "✏️ Sửa tên nhân vật": danh xưng (Bác, Chú, Anh, Chị, Bạn, Em, Ông, Bà, Cô hoặc không), tên, dòng phụ dưới tên (vd "K1 · Toán"); học sinh/cựu học sinh sửa cho khóa mình, thầy cô và quản trị sửa cho mọi khóa; có trong bảng quản trị sửa hàng loạt và dán danh sách | P2 | ✅ |
 | YC-LH-04 | **Đố vui** 3 câu theo môn chuyên; mỗi câu đúng +1 điểm thi đua, tối đa 10 điểm/ngày | P3 | ✅ |
 
 ### 4.6 Hoạt động trong trường
@@ -220,7 +222,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-TT2-12 | **Trò chơi 5 vòng** (mỗi vòng 20 điểm): ⚽ sút penalty (chỗ trốn học), 🏀 bóng rổ (nhà đa năng), 🧪 pha chế hóa học (phòng thí nghiệm, 12 phản ứng thật), 💣 dò mìn (phòng máy); mỗi trò có bảng xếp hạng | P1 | ✅ |
 | YC-TT2-13 | **Nhân vật phụ** có tên và lời thoại riêng, thỉnh thoảng tự nói: bác bảo vệ, đội cờ đỏ, cô văn phòng, cô căng tin, các anh chị cựu học sinh, thầy dạy Hóa; trong mỗi lớp có **cô chủ nhiệm** gọi lên **kiểm tra bài cũ** (2 câu, chấm /10) | P2 | ✅ |
 | YC-TT2-14 | **Khiên** 🛡️: bật thì không ai ném bóng nước trúng mình; người khác thấy vòng khiên và trong danh sách ném bóng hiện "đang bật khiên" | P2 | ✅ |
-| YC-TT2-15 | **Khung chat** góc trái hiện 4 lời nói gần nhất (tên + nội dung), tự mờ sau ~9 giây | P2 | ✅ |
+| YC-TT2-15 | **Khung chat chung** góc trái: hiện tin nhắn của **mọi người ở mọi khu** (sân trường, lớp, phòng), tên kèm **khóa · lớp** (thầy cô: danh xưng · bộ môn; khách: tên trường); giữ 50 tin gần nhất, cuộn được; mở trang là thấy lịch sử gần đây; thu gọn được (có số tin chưa đọc, nhớ trên máy); khách chưa ghi danh vẫn đọc được | P1 | ✅ |
 | YC-TT2-16 | **Ai đang online**: bấm số người trên thanh trên để xem danh sách theo khu, chạm để đi tới | P2 | ✅ |
 | YC-TT2-17 | **Âm thanh**: bảng chỉnh âm lượng nhạc nền và hiệu ứng (lưu trên máy); hiệu ứng tổng hợp: chuông, trống, tiền, bóng nước, tim… | P2 | 🟡 |
 | YC-TT2-18 | **Ngày / đêm** theo giờ Việt Nam: chạng vạng 17:30–19:00, đêm tới 5:00; ban đêm sân tối lại, đèn sân toả sáng, cửa sổ các dãy nhà sáng đèn (trong lớp học vẫn sáng) | P3 | ✅ |

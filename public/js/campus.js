@@ -37,8 +37,9 @@ export const BUILDINGS = [
   { id: 'HB', name: 'Nhà hiệu bộ', short: 'NHÀ HIỆU BỘ', x: 6, y: 600, w: 363, h: 392, floors: 4, wall: '#F2EEE4', roof: '#CFC9BD', bands: '#3E8E4A' },
   { id: 'D5', name: 'Dãy nhà 5 tầng', short: 'DÃY NHÀ 5 TẦNG', x: 578, y: 830, w: 1019, h: 160, floors: 5, wall: '#F4E2A6', roof: '#D9C9A0' },
   // cửa nhà đa năng ở mặt trái, quay ra sân trường (doorW = toạ độ y giữa cửa)
-  { id: 'DN', name: 'Nhà đa năng', short: 'NHÀ ĐA NĂNG', x: 1501, y: 339, w: 328, h: 426, floors: 1, wall: '#EFE6C8', roof: '#8FA3BF', hall: true, doorW: 552 },
-  { id: 'CT', name: 'Căng tin', short: 'CĂNG TIN', x: 1835, y: 373, w: 98, h: 320, floors: 1, wall: '#FFF1D6', roof: '#E08A4B', vertical: true },
+  // nhà đa năng và căng tin lùi xuống, chừa lối đi rộng giữa dãy 3 tầng và nhà đa năng (y 309–400) dẫn tới cửa căng tin
+  { id: 'DN', name: 'Nhà đa năng', short: 'NHÀ ĐA NĂNG', x: 1501, y: 400, w: 328, h: 390, floors: 1, wall: '#EFE6C8', roof: '#8FA3BF', hall: true, doorW: 595 },
+  { id: 'CT', name: 'Căng tin', short: 'CĂNG TIN', x: 1835, y: 430, w: 98, h: 320, floors: 1, wall: '#FFF1D6', roof: '#E08A4B', vertical: true, doorN: 1884 },
 ];
 
 // Tường rào. Chừa cổng chính (x 693–1130) và cổng phụ bên trái (y 414–564).
@@ -97,8 +98,8 @@ export const HOTSPOTS = [
   { id: 'yard', x: 1040, y: 590, icon: '🌳', label: 'Sân trường · Ghế đá', map: 'Sân trường', panel: 'garden' },
   { id: 'schoolbook', x: 735, y: 650, icon: '✍️', label: 'Sổ lưu bút', map: 'Sổ lưu bút', panel: 'schoolbook' },
   { id: 'dacau', x: 417, y: 400, icon: '🏸', label: 'Sân đá cầu', map: 'Đá cầu', panel: 'football' },
-  { id: 'clubs', x: 1482, y: 552, icon: '🎭', label: 'Nhà đa năng · CLB', map: 'Đa năng', panel: 'enterRoom', room: 'dana', spot: 'clubs' },
-  { id: 'canteen', x: 1884, y: 718, icon: '🍜', label: 'Căng tin', panel: 'enterRoom', room: 'cangtin', spot: 'canteen' },
+  { id: 'clubs', x: 1482, y: 595, icon: '🎭', label: 'Nhà đa năng · CLB', map: 'Đa năng', panel: 'enterRoom', room: 'dana', spot: 'clubs' },
+  { id: 'canteen', x: 1884, y: 412, icon: '🍜', label: 'Căng tin', panel: 'enterRoom', room: 'cangtin', spot: 'canteen' },
   { id: 'tronhoc', x: 1805, y: 150, icon: '⚽', label: 'Chỗ trốn học đá bóng', map: 'Trốn học', panel: 'tronhoc' },
   { id: 'photo', x: 1370, y: 300, icon: '📸', label: 'Chụp ảnh kỷ yếu', map: 'Chụp ảnh', panel: 'photo' },
   { id: 'drum', x: 1172, y: 790, icon: '🥁', label: 'Trống trường', map: 'Trống', panel: 'drum' },

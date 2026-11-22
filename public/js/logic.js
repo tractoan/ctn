@@ -303,6 +303,30 @@ function lopParam(b) {
   if (!LOPS.includes(lop)) throw new ApiError(400, 'Lớp không hợp lệ');
   return lop;
 }
+// ---------- Khung chat chung: mọi tin nhắn của mọi người, ở mọi khu ----------
+// Bảng `chat` (khóa = thời gian-id, giữ khoảng 100 tin mới nhất); `chatlast` = thời điểm tin mới nhất để mỗi lượt đồng bộ
+// chỉ phải đọc danh sách khi thật sự có tin mới.
+const CHAT_KEEP = 100, CHAT_SEND = 30;
+async function postChat(ctx, u, text, scene) {
+  const id = randId(6);
+  const msg = { id, uid: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', scene, text, at: ctx.now };
+  await ctx.store.put('chat', `${String(ctx.now).padStart(15, '0')}-${id}`, msg);
+  const last = (await ctx.store.get('chatlast', 'all')) || { at: 0, n: 0 };
+  const n = last.n + 1;
+  if (n > CHAT_KEEP + 20) { // dọn bớt tin cũ
+    const rows = await ctx.store.list('chat', '', CHAT_KEEP + 40);
+    for (const r of rows.slice(CHAT_KEEP)) await ctx.store.del('chat', r.k);
+  }
+  await ctx.store.put('chatlast', 'all', { at: ctx.now, n: n > CHAT_KEEP + 20 ? CHAT_KEEP : n });
+}
+async function chatSince(ctx, after) {
+  const since = Number(after) || 0;
+  const last = await ctx.store.get('chatlast', 'all');
+  if (!last || last.at <= since) return [];
+  const rows = await ctx.store.list('chat', '', CHAT_SEND);
+  return rows.map((r) => r.v).filter((m) => m.at > since).sort((a, c) => a.at - c.at);
+}
+
 // ---------- Quản trị: mã đặt trong biến bí mật ADMIN_CODE của Cloudflare (ctx.adminCode) ----------
 const ADMIN_MAX_FAILS = 10; // số lần nhập sai mỗi giờ cho một địa chỉ IP
 export const ADMIN_BATCH = 40; // số tên tối đa mỗi lần lưu (D1 gói miễn phí giới hạn 50 truy vấn mỗi yêu cầu)
@@ -324,10 +348,24 @@ async function checkAdmin(ctx, code) {
 
 // Phòng chức năng có thầy cô đặt được tên (ngoài 12 lớp chuyên)
 export const ROOM_TEACHERS = ['thuvien', 'phongmay', 'phongtn', 'hieubo'];
+// Các nhân vật phụ khác cũng đặt được tên (danh xưng tuỳ chọn + tên + dòng phụ)
+export const OTHER_NPCS = ['baove', 'codo', 'hung', 'mai', 'tuan', 'linh', 'cangtin', 'dung', 'nam'];
+export const NPC_SLOTS = [...ROOM_TEACHERS, ...OTHER_NPCS];
+export const NPC_TITLES = ['Thầy', 'Cô', 'Bác', 'Chú', 'Anh', 'Chị', 'Bạn', 'Em', 'Ông', 'Bà'];
 function teacherSlot(b) {
   const v = str(b.lop, 10, true, 'lớp');
-  if (!LOPS.includes(v) && !ROOM_TEACHERS.includes(v)) throw new ApiError(400, 'Lớp hoặc phòng không hợp lệ');
+  if (!LOPS.includes(v) && !NPC_SLOTS.includes(v)) throw new ApiError(400, 'Lớp hoặc phòng không hợp lệ');
   return v;
+}
+// Chuẩn hoá một tên nhân vật: thầy cô chỉ Thầy/Cô; nhân vật khác danh xưng tuỳ chọn (có thể bỏ trống) và dòng phụ
+function npcEntry(lop, khoa, it, by, now) {
+  const other = OTHER_NPCS.includes(lop);
+  const title = other ? (NPC_TITLES.includes(it.title) ? it.title : '') : it.title === 'Thầy' ? 'Thầy' : 'Cô';
+  const re = new RegExp('^(' + NPC_TITLES.join('|') + ')\\s+', 'i');
+  const name = str(it.name, 30).replace(re, '');
+  const e = { lop, khoa, title, name, by, at: now };
+  if (other) e.sub = str(it.sub, 30);
+  return e;
 }
 function canWriteLog(u, lop) { return NO_CLASS.includes(u.role) || u.lop === lop; }
 function isLessonTime(now) { return periodOf(now).label.startsWith('Tiết'); }
@@ -385,7 +423,10 @@ const handlers = {
       noBalloon: !!b.noBalloon,
     };
     const old = await ctx.store.get('presence', u.id);
-    if (typeof b.say === 'string' && b.say.trim()) { p.say = str(b.say, 80); p.sayAt = ctx.now; }
+    if (typeof b.say === 'string' && b.say.trim()) {
+      p.say = str(b.say, 80); p.sayAt = ctx.now;
+      await postChat(ctx, u, p.say, p.scene);
+    }
     else if (old && old.say && ctx.now - old.sayAt < 6000) { p.say = old.say; p.sayAt = old.sayAt; }
     // Ném bóng nước: lưu cú ném gần nhất 6 giây để người khác kịp thấy
     if (b.throw && typeof b.throw === 'object') {
@@ -401,13 +442,13 @@ const handlers = {
     // hộp thư: quà được đãi, lời tỏ tình, câu trả lời – lấy ra là xoá
     const inbox = [];
     for (const { k, v } of await ctx.store.list('inbox', u.id + '|', 20)) { inbox.push(v); await ctx.store.del('inbox', k); }
-    return { others, inbox: inbox.reverse(), now: ctx.now };
+    return { others, inbox: inbox.reverse(), chat: await chatSince(ctx, b.chatAfter), now: ctx.now };
   },
 
-  // Khách chưa ghi danh: chỉ xem ai đang online, không hiện mình
-  async online(ctx) {
+  // Khách chưa ghi danh: chỉ xem ai đang online và khung chat chung, không hiện mình
+  async online(ctx, b) {
     const all = await ctx.store.list('presence', '', 500);
-    return { others: all.map((r) => r.v).filter((v) => ctx.now - v.at <= PRESENCE_TTL), now: ctx.now };
+    return { others: all.map((r) => r.v).filter((v) => ctx.now - v.at <= PRESENCE_TTL), chat: await chatSince(ctx, b.chatAfter), now: ctx.now };
   },
 
   async guestbook(ctx, b) {
@@ -458,14 +499,13 @@ const handlers = {
   async setClassTeacher(ctx, b) {
     const u = await auth(ctx);
     const lop = teacherSlot(b);
-    const room = ROOM_TEACHERS.includes(lop);
+    const room = NPC_SLOTS.includes(lop);
     let khoa;
     if (u.role === 'gv') khoa = b.khoa ? normKhoa(b.khoa, 'cuuhs') : '*';
     else if ((u.role === 'cuuhs' || u.role === 'hs') && (room || u.lop === lop)) khoa = u.khoa;
-    else throw new ApiError(403, room ? 'Chỉ học sinh, cựu học sinh hoặc thầy cô mới sửa được tên thầy cô' : `Chỉ học sinh lớp chuyên ${lop} hoặc thầy cô mới sửa được tên thầy cô chủ nhiệm`);
-    const title = b.title === 'Thầy' ? 'Thầy' : 'Cô';
-    const name = str(b.name, 30, true, 'tên thầy cô').replace(/^(thầy|cô)\s+/i, '');
-    const item = { lop, khoa, title, name, by: u.name, at: ctx.now };
+    else throw new ApiError(403, room ? 'Chỉ học sinh, cựu học sinh hoặc thầy cô mới sửa được tên' : `Chỉ học sinh lớp chuyên ${lop} hoặc thầy cô mới sửa được tên thầy cô chủ nhiệm`);
+    const item = npcEntry(lop, khoa, b, u.name, ctx.now);
+    if (!item.name) throw new ApiError(400, 'Thiếu tên');
     await ctx.store.put('gvcn', `${lop}|${khoa}`, item);
     return { item };
   },
@@ -493,9 +533,9 @@ const handlers = {
       try {
         const lop = teacherSlot(it || {});
         const khoa = it.khoa && it.khoa !== '*' ? normKhoa(it.khoa, 'cuuhs') : '*';
-        const name = str(it.name, 30).replace(/^(thầy|cô)\s+/i, '');
-        if (!name) { await ctx.store.del('gvcn', `${lop}|${khoa}`); deleted++; continue; }
-        await ctx.store.put('gvcn', `${lop}|${khoa}`, { lop, khoa, title: it.title === 'Thầy' ? 'Thầy' : 'Cô', name, by: 'Quản trị', at: ctx.now });
+        const e = npcEntry(lop, khoa, it, 'Quản trị', ctx.now);
+        if (!e.name) { await ctx.store.del('gvcn', `${lop}|${khoa}`); deleted++; continue; }
+        await ctx.store.put('gvcn', `${lop}|${khoa}`, e);
         saved++;
       } catch (e) { errors.push(`Dòng ${i + 1}: ${e.message}`); }
     }

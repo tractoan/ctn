@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.1 – bảng quản trị sửa tên thầy cô hàng loạt, khoá bằng mã quản trị (ADMIN_CODE) |
+| Phiên bản | 2.2 – khung chat chung (mọi khu, kèm khóa · lớp); cấu hình tên mọi nhân vật phụ; nhà đa năng, căng tin lùi xuống, lối đi giữa dãy 3 tầng và nhà đa năng; bỏ vạch kẻ đường |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -84,8 +84,9 @@ Lối đi chính: cổng → khoảng sân trước dãy 5 tầng → **lối v�
 chính** lên sân trường. **Lối đi giữa** (x 1052–1122): dải bồn hoa mép sân **chia đôi** đúng chỗ trống trường, mép sân hở và có **bậc thang
 giữa** (`dir: 's'`) xuống hành lang trước mặt trong dãy 5 tầng (nơi có cửa lớp Pháp, Nga, Tin, thư viện, phòng máy);
 dãy 5 tầng giữ nguyên một khối. Trống trường dời sang cạnh phải bậc thang (x 1172); cửa lớp Nga, Tin dời sang phải
-(x 1310, 1480) để nhãn không chồng nhau. Căng tin và chỗ trốn học đi vòng phía
-Đông nhà đa năng.
+(x 1310, 1480) để nhãn không chồng nhau. **Lối xuống căng tin**: nhà đa năng (y 400–790) và căng tin (y 430–750)
+lùi xuống, chừa lối đi rộng ~90 px giữa dãy 3 tầng và nhà đa năng, từ mép phải sân trường sang thẳng cửa căng tin (đầu
+trên) và chỗ trốn học; cửa nhà đa năng ở mặt trái (y 595) quay ra sân trường.
 
 Phân bổ lớp (theo cựu học sinh, `CLASS_DOORS`): **dãy 4 tầng** trái → phải – Toán (chân chữ L), rồi Lý, Hóa, Sinh,
 Văn, Trung cách đều nhau, cây phượng – bằng lăng có bồn đứng xen giữa; **dãy 3 tầng** trái → phải – Anh, Sử, Địa; **dãy 5 tầng** phải → trái – Tin, Nga, Pháp, cửa ở **mặt trong**
@@ -157,8 +158,8 @@ quay lưng). Mỗi phòng có `spots` (điểm xuất hiện theo cửa đã và
 | `p:phongmay` 💻 Phòng máy | `computer` | 640 × 660 | Màn chiếu bài Pascal, nội quy, điều hoà, bàn thầy, 6 bàn × 3 máy CRT (18 ghế); Dò mìn → `domin`, kỷ niệm → `computer` | Thầy Quang (Tin) |
 | `p:phongtn` 🧪 Phòng thí nghiệm | `lab` (dãy 3 tầng) | 640 × 660 | Tủ hoá chất, bảng tuần hoàn, tủ hút khí độc, bàn thầy → `hoahoc`, 4 bàn thí nghiệm có bồn rửa (8 ghế đẩu), vòi rửa mắt | Thầy Minh (Hóa) |
 | `p:hieubo` 🏛️ Nhà hiệu bộ | `office`, `teachers`, `history` | 640 × 760 | Bảng thông báo họp lớp → `office` tab 0, phòng truyền thống → `history`, tủ cúp **bảng vàng đội tuyển** → `honor` (lưu bút `doituyen`), gian Tri ân → `office` tab 1, Phòng giáo viên → `teachers`, Phòng cấp bằng → `office` tab 2 | Cô Lan (văn phòng) |
-| `p:cangtin` 🍜 Căng tin | `canteen` | 560 × 720 | Bảng thực đơn (từ `MENU`), quầy → `canteen`, 5 bàn tròn (10 ghế đẩu), tủ nước, biển giảm giá giờ ra chơi | Cô căng tin, anh Dũng (ngồi) |
-| `p:dana` 🏀 Nhà đa năng · CLB | `clubs` (cửa mặt trái, x 1482 y 552, quay ra sân trường; `doorW` trên toà nhà vẽ cửa đôi, tam cấp, biển CLB) | 640 × 860, cửa ở tường trái (`room({ door: 'w', doorY: 477 })`) | Bảng tỉ số, nửa sân bóng rổ có rổ → `bongro`, 6 gian CLB → `club` (lưu bút `clb:<id>`) | Bạn Nam |
+| `p:cangtin` 🍜 Căng tin | `canteen` (cửa ở đầu trên căng tin, x 1884 y 412, quay ra lối đi giữa dãy 3 tầng và nhà đa năng; `doorN` vẽ mái hiên sọc) | 560 × 720 | Bảng thực đơn (từ `MENU`), quầy → `canteen`, 5 bàn tròn (10 ghế đẩu), tủ nước, biển giảm giá giờ ra chơi | Cô căng tin, anh Dũng (ngồi) |
+| `p:dana` 🏀 Nhà đa năng · CLB | `clubs` (cửa mặt trái, x 1482 y 595, quay ra sân trường; `doorW` trên toà nhà vẽ cửa đôi, tam cấp, biển CLB) | 640 × 860, cửa ở tường trái (`room({ door: 'w', doorY: 477 })`) | Bảng tỉ số, nửa sân bóng rổ có rổ → `bongro`, 6 gian CLB → `club` (lưu bút `clb:<id>`) | Bạn Nam |
 
 Vào phòng: `panels.enterRoom(hs)` (hotspot có `room`, `spot`) → `ROOMS[room]()`, nhớ cửa trong `classReturn`, thay nhân
 vật phụ bằng `campusNpcs` + `roomNpcs(id)`, `setScene(sc, sc.spots[spot])`, `visitZone(sc.zone)`. Ra: `exitRoom` →
@@ -285,6 +286,7 @@ Ngoại hình lưu dạng `{v: 2, gender, skin, hair, hairColor, bottom, outfit,
 | Trống trường 🥁 | `beatDrum()`: 3 nhịp, mỗi nhịp một `OscillatorNode` sóng sine trượt 110 → 45 Hz trong 0,4 s, âm lượng tắt dần theo hàm mũ. `AudioContext` chỉ tạo khi người dùng bấm | YC-HD-09 |
 | Bóng nước 🎈 | `World.throwBalloon`: quỹ đạo nội suy tuyến tính + cung `sin(πk)`, thời gian bay `450 + khoảng cách × 1,3` ms, bám theo vị trí hiện tại của mục tiêu; khi chạm: vòng nước + 10 giọt bắn trong 0,7 s; đặt `wet[id]` 4 s → `_wetFx` vẽ giọt nước rơi quanh người | YC-OL-07 |
 | Bong bóng lời nói | `World.say(id, text)`: hiện 5 s trên đầu, cắt bớt chữ quá dài | YC-OL-05 |
+| Khung chat chung 💬 | `presence` có `say` → `postChat` lưu tin vào bảng `chat` (kèm tên, vai, khóa, lớp, trường, khu) và cập nhật `chatlast`; mỗi lượt `presence`/`online` gửi `chatAfter` (thời điểm tin cuối đã có) → `chatSince` trả tin mới (tối đa 30; chỉ đọc danh sách khi `chatlast` mới hơn). Giữ khoảng 100–120 tin. Trình duyệt hiện tin của mình ngay khi gửi, giữ 50 dòng, cuộn theo tin mới, thu gọn được (`ctn.chatMin`), đếm tin chưa đọc khi thu gọn. Dòng: **tên** + `subOf` (khóa · lớp…) + nội dung | YC-TT2-15 |
 
 Đồng bộ cú ném: người ném đặt `pendingThrow = {x, y, target}` và gửi kèm lượt `presence` kế tiếp. Máy chủ lưu
 `throw` (kèm `at`) trong bản ghi presence 6 giây. Máy khác thấy `throw.at` mới thì diễn lại cú ném từ vị trí người
@@ -341,6 +343,16 @@ Cùng cơ chế cho thầy cô phòng chức năng: mỗi NPC có `slot` (`thuvi
 tên lớp) và `subject` (Thủ thư, Tin, Hóa, Văn phòng). Với phòng chức năng (`ROOM_TEACHERS` trong `logic.js`), học sinh/
 cựu học sinh **lớp bất kỳ** sửa cho khóa mình; thầy cô sửa cho khóa bất kỳ; khách bị từ chối. Vào phòng thì `loadTeacher(slot)`.
 `lookForTitle` đổi dáng theo danh xưng (Thầy → nam, sơ mi; Cô → nữ, áo dài nếu đang mặc vest).
+
+### 5.6c2 Nhân vật phụ cấu hình được
+
+Mọi nhân vật phụ có `slot`: ngoài lớp chuyên và 4 phòng chức năng còn `baove, codo, hung, mai, tuan, linh, cangtin, dung,
+nam` (`OTHER_NPCS` trong `logic.js`). Với các nhân vật này, bản ghi `gvcn` có thêm `sub` (dòng phụ dưới tên, ≤ 30 ký tự)
+và danh xưng lấy từ `NPC_TITLES` (Thầy, Cô, Bác, Chú, Anh, Chị, Bạn, Em, Ông, Bà) hoặc để trống; thầy cô vẫn chỉ Thầy/Cô.
+Quyền sửa như phòng chức năng (học sinh/cựu học sinh lớp bất kỳ cho khóa mình, thầy cô cho mọi khóa). Trình duyệt gọi
+`teachersAll` một lần khi vào trường và mỗi khi vào phòng (`loadNpcNames`) để đặt tên theo khóa mình; danh xưng nam
+(Thầy, Chú, Anh, Ông) / nữ (Cô, Chị, Bà) đổi dáng nhân vật. Bảng quản trị có thêm nhóm "Nhân vật khác" với cột dòng phụ;
+dán danh sách nhận cột thứ 5 là dòng phụ và tên nhân vật thường gọi (Bảo vệ, Cờ đỏ, Bác Hùng, Căng tin…).
 
 ### 5.6d Quản trị: sửa tên thầy cô hàng loạt
 
@@ -534,6 +546,8 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `roster` | `phòng\|uid` | `{id, name, khoa, at}` – danh sách cả lớp theo khóa |
 | `clog` | `lớp\|ngày\|loại\|id` | Sổ đầu bài: `p` có mặt `{name, label, at}`, `n` ghi chú `{name, text, at}`, `o` điểm miệng `{name, label, grade, at}`, `s` nộp sổ (id `0`) `{name, at}`, `w` vi phạm `{uid, name, label, reason, by, at}` |
 | `clogday` | `lớp\|ngày` | `{day}` – các ngày có ghi chép, để chọn ngày xem lại |
+| `chat` | `thời gian-id` | `{id, uid, name, role, khoa, lop, school, scene, text, at}` – khung chat chung |
+| `chatlast` | `all` | `{at, n}` – thời điểm tin mới nhất, số tin |
 | `adminfail` | `ip\|giờ` | `{n}` – số lần nhập sai mã quản trị |
 | `gvcn` | `lớp\|khóa` (`*` = mọi khóa) | `{lop, khoa, title, name, by, at}` – tên thầy cô chủ nhiệm |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
@@ -554,8 +568,8 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `recover` | – | `code` | `{token, user}` |
 | `me` | ✔ | – | `{user}` |
 | `look` | ✔ | `look, name` | `{user}` |
-| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, noBalloon, say?, throw? {x, y, target}` | `{others[], inbox[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
-| `online` | – | – | `{others[], now}` |
+| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, noBalloon, say?, throw? {x, y, target}, chatAfter?` | `{others[], inbox[], chat[], now}` – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
+| `online` | – | `chatAfter?` | `{others[], chat[], now}` |
 | `guestbook` | – | `room` | `{items[]}` (100 mới nhất) |
 | `sign` | ✔ | `room, body` (≤ 600 ký tự) | `{item, user}` |
 | `roster` | – | `room` | `{items[]}` |

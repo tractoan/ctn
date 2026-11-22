@@ -165,8 +165,6 @@ function drawGround(ctx, g) {
       ctx.fillStyle = '#FFFFFF';
       for (let x = g.x + 10; x < g.x + g.w; x += 80) ctx.fillRect(x, g.y + g.h / 2 - 2, 40, 4);
       for (let x = 260; x < g.w; x += 740) label(ctx, g.label, x, g.y + g.h / 2 + 36, { size: 14, color: 'rgba(255,255,255,.85)', weight: 800 });
-      ctx.fillStyle = '#FFFFFF';
-      for (let x = 820; x < 1000; x += 22) ctx.fillRect(x, g.y + 10, 12, 44);
       break;
     }
     case 'sidewalk':
@@ -312,6 +310,15 @@ function drawBuilding(ctx, b) {
     ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(b.x + 3, y - 20, 2, 16); ctx.fillRect(b.x + 3, y + 5, 2, 16);
     ctx.fillStyle = '#2F6FB5'; rr(ctx, b.x + 12, y - 22, 16, 44, 4); ctx.fill();
     ctx.save(); ctx.translate(b.x + 20, y); ctx.rotate(-Math.PI / 2); label(ctx, 'CLB', 0, 0, { size: 8, color: '#fff', weight: 800 }); ctx.restore();
+  }
+  if (b.doorN) {
+    // cửa ở đầu trên (phía Bắc) quay ra lối đi: mái hiên sọc, cánh cửa, bậc
+    const x = b.doorN;
+    ctx.fillStyle = '#C9C1B2'; ctx.fillRect(x - 20, b.y - 14, 40, 10);
+    ctx.fillStyle = '#E9E4D8'; for (let k = 0; k < 2; k++) ctx.fillRect(x - 18, b.y - 12 + k * 4, 36, 2);
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x - 15, b.y - 5, 30, 9);
+    ctx.fillStyle = '#8A5A35'; ctx.fillRect(x - 13, b.y - 4, 26, 7);
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#FFFFFF' : '#F26A21'; ctx.fillRect(x - 24 + k * 8, b.y + 3, 8, 9); }
   }
   if (!b.short) return;
   const cx = b.x + b.w / 2, cy = b.y + rh / 2;
