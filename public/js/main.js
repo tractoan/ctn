@@ -300,7 +300,7 @@ const music = {
   title() { return PLAYLIST[this.i].title; },
   sync() {
     this.button.classList.toggle('on', this.playing); this.button.setAttribute('aria-pressed', String(this.playing));
-    this.button.title = this.playing ? '🎵 Đang phát: ' + this.title() : 'Âm thanh';
+    this.button.title = this.playing ? '🎵 Đang phát nhạc nền' : 'Âm thanh';
     this.onChange?.();
   },
 };
@@ -1897,7 +1897,7 @@ function soundSheet() {
     const now = h('p', { class: 'now-playing' });
     const playBtn = h('button', { class: 'mp-btn main', 'aria-label': 'Phát / tạm dừng', onclick: () => music.toggle() });
     const render = () => {
-      now.replaceChildren(music.playing ? '▶️ Đang phát: ' : '⏸ Tạm dừng: ', h('b', {}, music.title()));
+      now.textContent = music.playing ? '▶️ Đang phát nhạc nền' : '⏸ Nhạc nền đang tạm dừng'; // không hiện tên bài
       playBtn.textContent = music.playing ? '⏸' : '▶️';
     };
     music.onChange = render;

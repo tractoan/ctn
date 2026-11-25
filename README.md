@@ -30,7 +30,7 @@ giờ Việt Nam và tiết học hiện tại; thanh dưới có câu nói nhan
 
 **Nhạc nền** tự phát khi vào trường, 3 bài lần lượt rồi lặp lại: *Hanoi n U (beat)* → *Tháng 5 không trở lại* →
 *Ngày ấy bạn và tôi* (file trong `public/music/`, danh sách ở hằng số `PLAYLIST` trong `public/js/main.js`).
-Nút 🎵 mở bảng chọn bài, ⏮ ⏯ ⏭ và âm lượng. Lưu ý: đây là các bài hát có bản quyền, cần có quyền sử dụng
+Nút 🎵 mở bảng ⏮ ⏯ ⏭ và âm lượng (không hiện tên bài). Lưu ý: đây là các bài hát có bản quyền, cần có quyền sử dụng
 trước khi đưa trang lên mạng công khai.
 
 **Các phòng bên trong** (giống trang mẫu): chạm cửa thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin,

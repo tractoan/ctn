@@ -199,7 +199,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | Mã | Yêu cầu | Ưu tiên | TT |
 |---|---|---|---|
 | YC-AT-01 | Thanh trên hiện **đồng hồ giờ Việt Nam** và **tiết học hiện tại** (Tiết 1 sáng … Tiết 5 chiều, Ra chơi, Nghỉ trưa, Tan học) | P2 | ✅ |
-| YC-AT-02 | **Nhạc nền 3 bài** phát lần lượt: *Hanoi n U (beat)* → *Tháng 5 không trở lại* → *Ngày ấy bạn và tôi*, hết bài cuối quay lại bài đầu. Nút **🎵** mở bảng có tên bài đang phát, ⏮ ⏯ ⏭ và âm lượng (không hiện danh sách bài) | P1 | ✅ |
+| YC-AT-02 | **Nhạc nền 3 bài** phát lần lượt: *Hanoi n U (beat)* → *Tháng 5 không trở lại* → *Ngày ấy bạn và tôi*, hết bài cuối quay lại bài đầu. Nút **🎵** mở bảng có trạng thái đang phát / tạm dừng, ⏮ ⏯ ⏭ và âm lượng (không hiện tên bài, danh sách bài) | P1 | ✅ |
 | YC-AT-03 | Nhạc **tự phát** khi vào trường. Trên điện thoại (trình duyệt chỉ cho phát tiếng sau thao tác của người dùng) nhạc bắt đầu ngay ở **lần chạm đầu tiên** bất kỳ trên trang; chưa phát được thì thử lại ở lần chạm sau. Tạm dừng chỉ có hiệu lực trong lần truy cập đó; lần sau mở trang nhạc lại tự phát | P1 | ✅ |
 
 > YC-AT-02/03: đã kiểm thử tự động việc phát, chuyển bài khi hết bài, quay vòng sau bài cuối; chưa nghe thử trên điện thoại thật.

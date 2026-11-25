@@ -186,7 +186,7 @@ cẳng chân thõng trước ghế (nhìn thẳng) hoặc chỉ thấy lưng (qu
 | Nút 🎈 (mọi nơi) | – | Danh sách người cùng cảnh để chọn ném bóng nước | Thấy được bởi người khác: có |
 | Thẻ người chơi | – | Vẫy tay, ném bóng nước, viết sổ lưu bút, đi tới | Một số: có |
 | Nhân vật của tôi | – | Đổi kiểu, sổ lưu bút của tôi, album kỷ yếu, mã khôi phục | Có |
-| Nút 🎵 (thanh trên) | – | Nhạc nền 3 bài: bài đang phát, ⏮ ⏯ ⏭, danh sách bài, âm lượng | Không |
+| Nút 🎵 (thanh trên) | – | Nhạc nền 3 bài: đang phát / tạm dừng, ⏮ ⏯ ⏭, âm lượng (không hiện tên bài) | Không |
 | Sân trường · ghế đá | `garden` | Lưu bút tâm sự | Ghi: có |
 | Nhà hiệu bộ | `office` | Lịch họp lớp (tạo, đăng ký/huỷ), thiệp tri ân thầy cô | Ghi: có |
 | Phòng giáo viên | `teachers` | Lưu bút `gv` | Ghi: có |
@@ -287,7 +287,7 @@ Ngoại hình lưu dạng `{v: 2, gender, skin, hair, hairColor, bottom, outfit,
 
 | Thành phần | Thiết kế | Yêu cầu |
 |---|---|---|
-| Nhạc nền 🎵 | `music` trong `main.js`: một phần tử `Audio`, danh sách `PLAYLIST` (3 file trong `public/music/`). Sự kiện `ended` → bài kế tiếp, sau bài cuối quay về bài đầu; `error` → bỏ qua bài lỗi. `autostart()` gọi khi vào trường; nếu trình duyệt chặn tự phát thì nghe `pointerup`, `touchend`, `click`, `keydown` (các sự kiện được tính là thao tác người dùng – iOS Safari không tính `pointerdown`/`touchstart` của cảm ứng) và gọi `play()` ngay trong lúc xử lý, chưa được thì thử tiếp ở lần sau. Tạm dừng lưu `ctn.musicOff` trong `sessionStorage` (chỉ lần truy cập đó). Bảng 🎵 không hiện danh sách bài. Âm lượng = `settings.music / 100`. Đổi bài: sửa `PLAYLIST` | YC-AT-02, YC-AT-03 |
+| Nhạc nền 🎵 | `music` trong `main.js`: một phần tử `Audio`, danh sách `PLAYLIST` (3 file trong `public/music/`). Sự kiện `ended` → bài kế tiếp, sau bài cuối quay về bài đầu; `error` → bỏ qua bài lỗi. `autostart()` gọi khi vào trường; nếu trình duyệt chặn tự phát thì nghe `pointerup`, `touchend`, `click`, `keydown` (các sự kiện được tính là thao tác người dùng – iOS Safari không tính `pointerdown`/`touchstart` của cảm ứng) và gọi `play()` ngay trong lúc xử lý, chưa được thì thử tiếp ở lần sau. Tạm dừng lưu `ctn.musicOff` trong `sessionStorage` (chỉ lần truy cập đó). Bảng 🎵 không hiện danh sách bài và tên bài (tên chỉ nằm trong `PLAYLIST` để quản lý file). Âm lượng = `settings.music / 100`. Đổi bài: sửa `PLAYLIST` | YC-AT-02, YC-AT-03 |
 | Trống trường 🥁 | `beatDrum()`: 3 nhịp, mỗi nhịp một `OscillatorNode` sóng sine trượt 110 → 45 Hz trong 0,4 s, âm lượng tắt dần theo hàm mũ. `AudioContext` chỉ tạo khi người dùng bấm | YC-HD-09 |
 | Bóng nước 🎈 | `World.throwBalloon`: quỹ đạo nội suy tuyến tính + cung `sin(πk)`, thời gian bay `450 + khoảng cách × 1,3` ms, bám theo vị trí hiện tại của mục tiêu; khi chạm: vòng nước + 10 giọt bắn trong 0,7 s; đặt `wet[id]` 4 s → `_wetFx` vẽ giọt nước rơi quanh người | YC-OL-07 |
 | Bong bóng lời nói | `World.say(id, text)`: hiện 5 s trên đầu, cắt bớt chữ quá dài | YC-OL-05 |
