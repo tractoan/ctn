@@ -34,7 +34,9 @@ export const MENU = [
 export const DAILY_ALLOWANCE = 20000;
 const PRESENCE_TTL = 20000;
 
-const POINTS = { checkin: 2, guestbook: 5, event: 3, join: 3, quiz: 1, game: 1, classSit: 10, flag: 20, treat: 3, flower: 5, ach: 20, submit: 10, notebook: 5 };
+const POINTS = { checkin: 2, guestbook: 5, event: 3, join: 3, quiz: 1, game: 1, classSit: 10, flag: 20, treat: 3, flower: 5, ach: 20, submit: 10, notebook: 5, invite: 50 };
+// Mời bạn bằng link: người mời được +50 điểm thi đua và 10.000đ cho mỗi bạn mới, tối đa 10 bạn được thưởng mỗi ngày
+export const INVITE_MONEY = 10000, INVITE_DAILY = 10;
 
 // ---------- Tiến trình: nhiệm vụ ngày, thành tựu, ví ----------
 export const TRANSPORTS = {
@@ -137,7 +139,7 @@ function vnWeekday(now) { return new Date(now + 7 * 3600e3).getUTCDay(); }
 
 function ensure(u, now) {
   const st = (u.stats ||= {});
-  for (const k of ['checkins', 'streak', 'bestStreak', 'classDays', 'buys', 'treats', 'gb', 'games', 'sports80', 'perfect', 'hits', 'photos', 'flagWeeks', 'loveYes', 'events', 'diploma', 'flowers']) st[k] ||= 0;
+  for (const k of ['checkins', 'streak', 'bestStreak', 'classDays', 'buys', 'treats', 'gb', 'games', 'sports80', 'perfect', 'hits', 'photos', 'flagWeeks', 'loveYes', 'events', 'diploma', 'flowers', 'invites']) st[k] ||= 0;
   st.gameKinds ||= []; st.zones ||= [];
   const day = questDay(now);
   if (!u.today || u.today.day !== day) u.today = { day, zones: [] };
@@ -259,7 +261,8 @@ function publicUser(u) {
 function privateUser(u) {
   return {
     ...publicUser(u), wallet: u.wallet, lastCheckin: u.lastCheckin || null, code: u.code, quizToday: u.quizCount || 0,
-    streak: u.stats?.streak || 0, transport: u.transport || '', badge: badgeCount(u),
+    streak: u.stats?.streak || 0, transport: u.transport || '', badge: badgeCount(u), contact: u.contact || null,
+    invites: u.stats?.invites || 0,
   };
 }
 
@@ -276,9 +279,35 @@ async function auth(ctx) {
 function bannedError(u) {
   return new ApiError(403, `Nhân vật "${u.name}" đã bị quản trị khoá${u.banned.reason ? ': ' + u.banned.reason : ''}.`, { banned: true, reason: u.banned.reason || '' });
 }
-// Chỉ mục thành viên gọn nhẹ (tên, vai, khóa, lớp) để quản trị tìm theo tên mà không phải đọc toàn bộ hồ sơ
+// Chỉ mục thành viên gọn nhẹ (tên, vai, khóa, lớp, ngoại hình, liên hệ) để quản trị tìm theo tên và để "Tìm bạn cũ"
+// lọc theo khóa, lớp mà không phải đọc toàn bộ hồ sơ
+const INDEX_VER = 2;
 async function indexUser(ctx, u) {
-  await ctx.store.put('uidx', u.id, { id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', at: u.createdAt || 0, banned: u.banned || null });
+  await ctx.store.put('uidx', u.id, {
+    id: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', at: u.createdAt || 0,
+    banned: u.banned || null, look: u.look, c: u.contact || null,
+  });
+}
+const fold = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+// Facebook: tên người dùng hoặc link facebook.com/… → phần đường dẫn sau facebook.com/
+function normFb(v) {
+  let s = str(v, 160);
+  if (!s) return '';
+  s = s.replace(/^https?:\/\//i, '').replace(/^(www\.|m\.|web\.|mbasic\.)?(facebook|fb)\.com\//i, '').replace(/^@/, '');
+  if (!/^profile\.php\?id=\d{5,20}/.test(s)) s = s.split(/[?#]/)[0];
+  else s = s.match(/^profile\.php\?id=\d{5,20}/)[0];
+  s = s.replace(/\/+$/, '');
+  if (!/^[A-Za-z0-9.\-_]{2,60}(\/[A-Za-z0-9.\-_]{1,40})?$/.test(s) && !/^profile\.php\?id=\d{5,20}$/.test(s)) {
+    throw new ApiError(400, 'Facebook: nhập tên người dùng hoặc link facebook.com/…');
+  }
+  return s;
+}
+// Zalo: số điện thoại Việt Nam (0xxxxxxxxx hoặc 84xxxxxxxxx)
+function normZalo(v) {
+  const d = String(v ?? '').replace(/[\s.\-()]/g, '').replace(/^\+/, '');
+  if (!d) return '';
+  if (!/^(0\d{9,10}|84\d{9,10})$/.test(d)) throw new ApiError(400, 'Zalo: nhập số điện thoại, ví dụ 0912345678');
+  return d;
 }
 async function addPoints(ctx, u, kind, mult = 1) {
   u.points = (u.points || 0) + (POINTS[kind] || 0) * mult;
@@ -314,43 +343,76 @@ function lopParam(b) {
 // ---------- Khung chat chung: mọi tin nhắn của mọi người, ở mọi khu ----------
 // Bảng `chat` (khóa = thời gian-id, giữ khoảng 100 tin mới nhất); `chatlast` = thời điểm tin mới nhất để mỗi lượt đồng bộ
 // chỉ phải đọc danh sách khi thật sự có tin mới.
+// Phòng chat riêng: 'k:K20' (cả khóa 20) và 'l:Toán|K20' (lớp chuyên Toán khóa 20), lưu ở bảng `chatr`
+// (khóa = phòng|thời gian-id) và `chatrl` (tin mới nhất của từng phòng). 'all' là khung chat chung.
 const CHAT_KEEP = 100, CHAT_SEND = 30;
-async function postChat(ctx, u, text, scene) {
+const ROOM_SEND_MAX = 8, ROOM_SEND_WINDOW = 30e3; // tối đa 8 tin / 30 giây mỗi người trong phòng riêng
+const chatLoc = (room) => (room === 'all' ? { t: 'chat', pre: '', lt: 'chatlast', lk: 'all' } : { t: 'chatr', pre: room + '|', lt: 'chatrl', lk: room });
+// Các phòng riêng của một người: học sinh / cựu học sinh có khóa vào phòng khóa mình và phòng lớp mình trong khóa
+export function chatRooms(u) {
+  if (!u || (u.role !== 'cuuhs' && u.role !== 'hs') || !u.khoa) return [];
+  return u.lop ? ['k:' + u.khoa, `l:${u.lop}|${u.khoa}`] : ['k:' + u.khoa];
+}
+function roomParam(v) {
+  const s = str(v, 30) || 'all';
+  if (s === 'all') return s;
+  const m = /^k:K\d{1,2}$/.exec(s) || /^l:([^|]{1,10})\|K\d{1,2}$/.exec(s);
+  if (!m || (s.startsWith('l:') && !LOPS.includes(m[1]))) throw new ApiError(400, 'Phòng chat không hợp lệ');
+  return s;
+}
+async function postChat(ctx, u, text, scene, room = 'all') {
+  const L = chatLoc(room);
   const id = randId(6);
   const msg = { id, uid: u.id, name: u.name, role: u.role, khoa: u.khoa, lop: u.lop, school: u.school || '', scene, text, at: ctx.now };
-  await ctx.store.put('chat', `${String(ctx.now).padStart(15, '0')}-${id}`, msg);
-  const last = (await ctx.store.get('chatlast', 'all')) || { at: 0, n: 0 };
+  if (room !== 'all') msg.room = room;
+  await ctx.store.put(L.t, `${L.pre}${String(ctx.now).padStart(15, '0')}-${id}`, msg);
+  const last = (await ctx.store.get(L.lt, L.lk)) || { at: 0, n: 0 };
   const n = last.n + 1;
   if (n > CHAT_KEEP + 20) { // dọn bớt tin cũ
-    const rows = await ctx.store.list('chat', '', CHAT_KEEP + 40);
-    for (const r of rows.slice(CHAT_KEEP)) await ctx.store.del('chat', r.k);
+    const rows = await ctx.store.list(L.t, L.pre, CHAT_KEEP + 40);
+    for (const r of rows.slice(CHAT_KEEP)) await ctx.store.del(L.t, r.k);
   }
-  await ctx.store.put('chatlast', 'all', { ...last, at: ctx.now, n: n > CHAT_KEEP + 20 ? CHAT_KEEP : n });
+  await ctx.store.put(L.lt, L.lk, { ...last, room, at: ctx.now, n: n > CHAT_KEEP + 20 ? CHAT_KEEP : n });
+  return msg;
 }
-// Tin mới hơn `chatAfter`, và danh sách tin đã bị quản trị xoá nếu có xoá mới hơn `chatDelAfter`
-async function chatFeed(ctx, b) {
-  const since = Number(b.chatAfter) || 0, delSince = Number(b.chatDelAfter) || 0;
-  const last = await ctx.store.get('chatlast', 'all');
+// Tin mới hơn `since`, và danh sách tin đã bị quản trị xoá nếu có xoá mới hơn `delSince`
+async function feedOf(ctx, room, since, delSince) {
+  const L = chatLoc(room);
+  const last = await ctx.store.get(L.lt, L.lk);
   const out = { chat: [] };
   if (!last) return out;
   if (last.at > since) {
-    const rows = await ctx.store.list('chat', '', CHAT_SEND);
+    const rows = await ctx.store.list(L.t, L.pre, CHAT_SEND);
     out.chat = rows.map((r) => r.v).filter((m) => m.at > since).sort((a, c) => a.at - c.at);
   }
   if (last.delAt && last.delAt > delSince) { out.chatDel = last.del || []; out.chatDelAt = last.delAt; }
   return out;
 }
-// Xoá tin theo điều kiện (tối đa `max` tin mỗi lần), ghi lại id đã xoá để các máy đang mở xoá theo
-async function deleteChat(ctx, match, max = 30) {
-  const rows = (await ctx.store.list('chat', '', CHAT_KEEP + 40)).filter((r) => match(r.v));
-  const now = rows.slice(0, max);
-  for (const r of now) await ctx.store.del('chat', r.k);
-  if (now.length) {
-    const last = (await ctx.store.get('chatlast', 'all')) || { at: 0, n: 0 };
-    const del = [...now.map((r) => r.v.id), ...(last.del || [])].slice(0, 200);
-    await ctx.store.put('chatlast', 'all', { ...last, n: Math.max(0, last.n - now.length), del, delAt: ctx.now });
+const chatFeed = (ctx, b) => feedOf(ctx, 'all', Number(b.chatAfter) || 0, Number(b.chatDelAfter) || 0);
+// rooms = { 'k:K20': { after, delAfter }, … } – chỉ trả phòng người đó được vào
+async function roomFeeds(ctx, u, b) {
+  if (!b.rooms || typeof b.rooms !== 'object') return {};
+  const out = {};
+  for (const room of chatRooms(u)) {
+    const q = b.rooms[room];
+    if (q && typeof q === 'object') out[room] = await feedOf(ctx, room, Number(q.after) || 0, Number(q.delAfter) || 0);
   }
+  return { roomFeed: out };
+}
+// Xoá tin theo điều kiện (tối đa `max` tin mỗi lần), ghi lại id đã xoá để các máy đang mở xoá theo
+async function deleteChat(ctx, match, max = 30, room = 'all') {
+  const L = chatLoc(room);
+  const rows = (await ctx.store.list(L.t, L.pre, CHAT_KEEP + 40)).filter((r) => match(r.v));
+  const now = rows.slice(0, max);
+  for (const r of now) await ctx.store.del(L.t, r.k);
+  if (now.length) await markDeleted(ctx, room, now.map((r) => r.v.id));
   return { deleted: now.length, remaining: rows.length - now.length };
+}
+async function markDeleted(ctx, room, ids) {
+  const L = chatLoc(room);
+  const last = (await ctx.store.get(L.lt, L.lk)) || { at: 0, n: 0 };
+  const del = [...ids, ...(last.del || [])].slice(0, 200);
+  await ctx.store.put(L.lt, L.lk, { ...last, n: Math.max(0, last.n - ids.length), del, delAt: ctx.now });
 }
 
 // Lưu lời chia tay + lời tri ân của một khóa, giữ một bản trước để quản trị khôi phục khi bị sửa bậy
@@ -424,19 +486,104 @@ const handlers = {
     const code = recoveryCode();
     const u = {
       id, token, code, name, role, khoa, lop, school,
-      look: sanitizeLook(b.look), wallet: 0, points: 0, createdAt: ctx.now,
+      look: sanitizeLook(b.look), wallet: 0, points: 0, createdAt: ctx.now, ix: INDEX_VER,
     };
+    // Vào trường qua link mời của bạn (?ref=<mã nhân vật>): người mời được thưởng
+    const inviter = b.ref ? await ctx.store.get('user', str(String(b.ref), 20)) : null;
+    if (inviter && !inviter.banned) u.ref = inviter.id;
     await ctx.store.put('user', id, u);
     await ctx.store.put('tok', token, id);
     await ctx.store.put('code', code, id);
     await indexUser(ctx, u);
-    return { token, user: privateUser(u) };
+    let invitedBy = null;
+    if (u.ref) {
+      ensure(inviter, ctx.now);
+      const rewarded = (inviter.today.invites || 0) < INVITE_DAILY;
+      inviter.stats.invites++;
+      if (rewarded) {
+        inviter.today.invites = (inviter.today.invites || 0) + 1;
+        inviter.points = (inviter.points || 0) + POINTS.invite;
+        credit(inviter, INVITE_MONEY, `Mời ${name} vào trường`, ctx.now);
+      }
+      await ctx.store.put('user', inviter.id, inviter);
+      await ctx.store.put('invite', `${inviter.id}|${String(ctx.now).padStart(15, '0')}-${id}`, { id, name, role, khoa, lop, school, at: ctx.now, rewarded });
+      await sendInbox(ctx, inviter.id, { id: randId(8), kind: 'invite', fromName: name, sub: personLabel(u), rewarded, points: POINTS.invite, money: INVITE_MONEY, at: ctx.now });
+      invitedBy = inviter.name;
+    }
+    return { token, user: privateUser(u), invitedBy };
+  },
+
+  // Link mời của tôi: số bạn đã vào trường qua link, danh sách gần đây, số bạn được thưởng hôm nay
+  async inviteInfo(ctx) {
+    const u = await auth(ctx);
+    const rows = await ctx.store.list('invite', u.id + '|', 300);
+    return {
+      items: rows.slice(0, 50).map((r) => r.v), total: rows.length, today: u.today.invites || 0,
+      cap: INVITE_DAILY, points: POINTS.invite, money: INVITE_MONEY,
+    };
+  },
+
+  // Thông tin liên hệ tuỳ chọn cho "Tìm bạn cũ": Facebook, Zalo, một dòng giới thiệu; vis = 'khoa' (chỉ bạn cùng khóa)
+  // hoặc 'all' (mọi thành viên đã ghi danh). Để trống hết = xoá.
+  async setContact(ctx, b) {
+    const u = await auth(ctx);
+    const fb = normFb(b.fb), zalo = normZalo(b.zalo), note = str(b.note, 80);
+    if (fb || zalo || note) u.contact = { fb, zalo, note, vis: b.vis === 'all' ? 'all' : 'khoa' };
+    else delete u.contact;
+    await ctx.store.put('user', u.id, u);
+    await indexUser(ctx, u);
+    return { user: privateUser(u) };
+  },
+
+  // Tìm bạn cũ: lọc theo khóa ('gv' = thầy cô), lớp, tên. Người xem đã ghi danh thấy dòng giới thiệu; Facebook / Zalo
+  // chỉ hiện khi chủ nhân cho phép (cùng khóa, hoặc mọi thành viên). Người đang online xếp trước.
+  async friends(ctx, b) {
+    const viewer = await tokenUser(ctx);
+    const khoa = b.khoa === 'gv' ? 'gv' : b.khoa ? normKhoa(b.khoa, 'cuuhs') : '';
+    const lop = LOPS.includes(b.lop) ? b.lop : '';
+    const q = fold(str(b.q, 40));
+    const all = (await ctx.store.list('uidx', '', 5000)).map((r) => r.v).filter((r) => !r.banned);
+    const khoas = {};
+    let gv = 0;
+    for (const r of all) { if (r.role === 'gv') gv++; else if (r.khoa) khoas[r.khoa] = (khoas[r.khoa] || 0) + 1; }
+    const inKhoa = all.filter((r) => !khoa || (khoa === 'gv' ? r.role === 'gv' : r.khoa === khoa));
+    const byLop = {};
+    for (const r of inKhoa) if (r.lop) byLop[r.lop] = (byLop[r.lop] || 0) + 1;
+    const list = inKhoa.filter((r) => (!lop || r.lop === lop) && (!q || fold(r.name).includes(q)));
+    const pres = new Map();
+    for (const { v } of await ctx.store.list('presence', '', 500)) if (ctx.now - v.at <= PRESENCE_TTL) pres.set(v.id, v);
+    const canSee = (r) => viewer && r.c && (viewer.id === r.id || r.c.vis === 'all' || (r.c.vis === 'khoa' && viewer.khoa && viewer.khoa === r.khoa));
+    const items = list.map((r) => {
+      const p = pres.get(r.id), see = canSee(r);
+      const it = { id: r.id, name: r.name, role: r.role, khoa: r.khoa, lop: r.lop, school: r.school || '', look: r.look || null, online: !!p };
+      if (p) { it.scene = p.scene || 'campus'; it.zone = p.zone || ''; it.x = p.x; it.y = p.y; }
+      if (viewer && r.c?.note) it.note = r.c.note;
+      if (see) { if (r.c.fb) it.fb = r.c.fb; if (r.c.zalo) it.zalo = r.c.zalo; }
+      else if (r.c && (r.c.fb || r.c.zalo)) it.hidden = r.c.vis === 'all' ? 'member' : 'khoa';
+      if (viewer && r.id === viewer.id) it.me = true;
+      return it;
+    }).sort((a, c) => (c.online - a.online) || (c.role === 'gv') - (a.role === 'gv') || a.name.localeCompare(c.name, 'vi'));
+    return { items: items.slice(0, 100), total: items.length, byLop, khoas, gv, all: all.length };
+  },
+
+  // Gửi tin vào phòng chat riêng của khóa / lớp mình
+  async roomSay(ctx, b) {
+    const u = await auth(ctx);
+    const room = roomParam(b.room);
+    if (room === 'all' || !chatRooms(u).includes(room)) throw new ApiError(403, 'Bạn không ở trong phòng chat này');
+    const t = text(b.text, 200, 'Tin nhắn').replace(/\s+/g, ' ');
+    const key = `${u.id}|${Math.floor(ctx.now / ROOM_SEND_WINDOW)}`;
+    const sent = (await ctx.store.get('chatrate', key))?.n || 0;
+    if (sent >= ROOM_SEND_MAX) throw new ApiError(429, 'Bạn gửi nhanh quá, đợi vài giây nhé');
+    await ctx.store.put('chatrate', key, { n: sent + 1 });
+    const msg = await postChat(ctx, u, t, str(b.scene, 40) || 'campus', room);
+    return { msg };
   },
 
   async me(ctx) {
     const u = await auth(ctx);
-    // nhân vật tạo trước khi có chỉ mục thành viên: thêm vào chỉ mục một lần
-    if (!u.ix) { u.ix = 1; await indexUser(ctx, u); await ctx.store.put('user', u.id, u); }
+    // nhân vật tạo trước khi có chỉ mục thành viên (hoặc chỉ mục bản cũ): thêm vào chỉ mục một lần
+    if ((u.ix || 0) < INDEX_VER) { u.ix = INDEX_VER; await indexUser(ctx, u); await ctx.store.put('user', u.id, u); }
     return { user: privateUser(u) };
   },
 
@@ -488,7 +635,7 @@ const handlers = {
     // hộp thư: quà được đãi, lời tỏ tình, câu trả lời – lấy ra là xoá
     const inbox = [];
     for (const { k, v } of await ctx.store.list('inbox', u.id + '|', 20)) { inbox.push(v); await ctx.store.del('inbox', k); }
-    return { others, inbox: inbox.reverse(), ...(await chatFeed(ctx, b)), now: ctx.now };
+    return { others, inbox: inbox.reverse(), ...(await chatFeed(ctx, b)), ...(await roomFeeds(ctx, u, b)), now: ctx.now };
   },
 
   // Khách chưa ghi danh: chỉ xem ai đang online và khung chat chung, không hiện mình
@@ -568,30 +715,54 @@ const handlers = {
   },
 
   // ----- Quản trị: tin nhắn và thành viên -----
+  // room: 'all' (khung chung, mặc định) hoặc phòng riêng 'k:K20' / 'l:Toán|K20'
   async adminChat(ctx, b) {
     await checkAdmin(ctx, b.code);
-    const rows = await ctx.store.list('chat', '', CHAT_KEEP + 40);
+    const L = chatLoc(roomParam(b.room));
+    const rows = await ctx.store.list(L.t, L.pre, CHAT_KEEP + 40);
     return { items: rows.map((r) => r.v) };
+  },
+
+  // Các phòng chat riêng đã có tin, mới hoạt động trước
+  async adminRooms(ctx, b) {
+    await checkAdmin(ctx, b.code);
+    const rows = await ctx.store.list('chatrl', '', 2000);
+    return { items: rows.map((r) => ({ room: r.k, at: r.v.at, n: r.v.n })).filter((r) => r.n > 0).sort((a, c) => c.at - a.at) };
   },
 
   async adminDeleteChat(ctx, b) {
     await checkAdmin(ctx, b.code);
     const ids = new Set((Array.isArray(b.ids) ? b.ids : []).slice(0, 30).map((x) => str(String(x), 12)));
     if (!ids.size) throw new ApiError(400, 'Chưa chọn tin nhắn');
-    return deleteChat(ctx, (m) => ids.has(m.id));
+    return deleteChat(ctx, (m) => ids.has(m.id), 30, roomParam(b.room));
   },
 
-  // Xoá mọi tin nhắn của một thành viên (mỗi lần tối đa 30 tin; còn thì gọi tiếp)
+  // Xoá mọi tin nhắn của một thành viên ở khung chung và các phòng riêng (mỗi lần tối đa 30 tin; còn thì gọi tiếp)
   async adminPurgeChat(ctx, b) {
     await checkAdmin(ctx, b.code);
     const uid = str(b.uid, 20, true, 'thành viên');
-    return deleteChat(ctx, (m) => m.uid === uid);
+    const a = await deleteChat(ctx, (m) => m.uid === uid);
+    let deleted = a.deleted;
+    const rows = (await ctx.store.list('chatr', '', 5000)).filter((r) => r.v.uid === uid);
+    const take = rows.slice(0, Math.max(0, Math.min(20, 30 - deleted)));
+    const byRoom = new Map();
+    for (const r of take) {
+      const room = r.k.slice(0, r.k.lastIndexOf('|'));
+      if (!byRoom.has(room) && byRoom.size >= 3) continue; // mỗi lần tối đa 3 phòng (giới hạn truy vấn D1)
+      if (!byRoom.has(room)) byRoom.set(room, []);
+      byRoom.get(room).push(r);
+    }
+    for (const [room, list] of byRoom) {
+      for (const r of list) await ctx.store.del('chatr', r.k);
+      await markDeleted(ctx, room, list.map((r) => r.v.id));
+      deleted += list.length;
+    }
+    return { deleted, remaining: a.remaining + rows.length - (deleted - a.deleted) };
   },
 
   // Tìm thành viên theo tên (không phân biệt dấu, hoa thường); banned = chỉ người bị khoá
   async adminUsers(ctx, b) {
     await checkAdmin(ctx, b.code);
-    const fold = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
     const q = fold(str(b.q, 40));
     const rows = (await ctx.store.list('uidx', '', 5000)).map((r) => r.v)
       .filter((u) => (!b.banned || u.banned) && (!q || fold(u.name).includes(q)))

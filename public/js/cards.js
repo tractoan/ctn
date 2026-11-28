@@ -109,3 +109,49 @@ export async function shareCanvas(canvas, filename, text) {
   } catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
   return 'download';
 }
+
+// Thiệp mời vào trường (in ra hoặc gửi ảnh): tên người mời, mã QR to dẫn tới link mời
+export async function drawInviteCard({ name, sub, link }) {
+  await logoReady();
+  const { qrMatrix } = await import('./qr.js');
+  const W = 720, H = 1040;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#FFFDF6'); g.addColorStop(1, '#FFF3E4');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  // viền xanh đồng phục + chùm phượng ở các góc
+  x.strokeStyle = '#1E2E6B'; x.lineWidth = 10; x.strokeRect(18, 18, W - 36, H - 36);
+  x.strokeStyle = '#5DBDEB'; x.lineWidth = 3; x.strokeRect(34, 34, W - 68, H - 68);
+  const petal = (cx, cy, r, col) => {
+    x.fillStyle = col;
+    for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5 - Math.PI / 2; x.beginPath(); x.ellipse(cx + Math.cos(a) * r, cy + Math.sin(a) * r, r * 0.85, r * 0.6, a, 0, Math.PI * 2); x.fill(); }
+    x.fillStyle = '#FFD54F'; x.beginPath(); x.arc(cx, cy, r * 0.35, 0, Math.PI * 2); x.fill();
+  };
+  const cluster = (cx, cy, dx, dy) => {
+    x.fillStyle = '#4E8B3A';
+    for (let i = 0; i < 6; i++) { x.beginPath(); x.ellipse(cx + dx * i * 16, cy + dy * (i % 3) * 14, 16, 6, dx * dy * 0.7, 0, Math.PI * 2); x.fill(); }
+    [[0, 0], [26, 14], [8, 34], [44, 4], [30, 44]].forEach(([a, b], i) => petal(cx + dx * a, cy + dy * b, 11 - (i % 2) * 2, i % 2 ? '#F4511E' : '#E53935'));
+  };
+  cluster(60, 60, 1, 1); cluster(W - 60, 60, -1, 1); cluster(60, H - 60, 1, -1); cluster(W - 60, H - 60, -1, -1);
+  x.textAlign = 'center';
+  if (LOGO.naturalWidth) drawLogo(x, W / 2, 120, 48);
+  x.fillStyle = '#1E2E6B'; x.font = F(800, 19); x.fillText('TRƯỜNG THPT CHUYÊN THÁI NGUYÊN', W / 2, 200);
+  x.fillStyle = '#C62828'; x.font = F(800, 46); x.fillText('Thiệp mời họp lớp', W / 2, 262);
+  x.fillStyle = '#5B6577'; x.font = F(600, 18); x.fillText('Về thăm sân trường xưa · 234A Lương Ngọc Quyến (1995–2019)', W / 2, 296);
+  x.fillStyle = '#25407A'; x.font = F(400, 32, HAND);
+  wrap(x, `${name || 'Bạn cũ'}${sub ? ' (' + sub + ')' : ''} mời bạn ghé chơi!`, W - 140).slice(0, 2).forEach((ln, i) => x.fillText(ln, W / 2, 356 + i * 40));
+  // mã QR
+  const m = qrMatrix(link), n = m.length, box = 400, px = Math.floor(box / (n + 8)), size = px * (n + 8);
+  const qx = (W - size) / 2, qy = 430;
+  x.fillStyle = '#FFFFFF'; x.fillRect(qx, qy, size, size);
+  x.strokeStyle = '#D8DEE9'; x.lineWidth = 2; x.strokeRect(qx, qy, size, size);
+  x.fillStyle = '#1B2A4E';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (m[r][k]) x.fillRect(qx + (k + 4) * px, qy + (r + 4) * px, px, px);
+  x.fillStyle = '#1E2E6B'; x.font = F(700, 20); x.fillText('Quét mã để vào trường, tạo nhân vật của bạn', W / 2, qy + size + 44);
+  x.fillStyle = '#5B6577'; x.font = F(500, 16);
+  const shown = link.replace(/^https?:\/\//, '');
+  wrap(x, shown.replace(/([/?=&])/g, '$1 '), W - 160).slice(0, 2).forEach((ln, i) => x.fillText(ln.replace(/([/?=&]) /g, '$1'), W / 2, qy + size + 76 + i * 22));
+  x.fillStyle = '#B8862B'; x.font = F(400, 24, HAND);
+  wrap(x, 'Một lần là học trò Chuyên, mãi mãi là một phần của ngôi trường này', W - 200).slice(0, 2).forEach((ln, i) => x.fillText(ln, W / 2, H - 122 + i * 30));
+  return c;
+}

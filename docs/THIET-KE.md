@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.7 – áo khoác đồng phục mới theo mẫu áo thật của trường, mặc định cho học sinh, cựu học sinh |
+| Phiên bản | 2.8 – tìm bạn cũ (Facebook/Zalo tuỳ chọn), phòng chat riêng của khóa và lớp, mời bạn bằng link + mã QR + thiệp mời, trang trí theo mùa và thời tiết |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -413,6 +413,49 @@ dán danh sách nhận cột thứ 5 là dòng phụ và tên nhân vật thư�
   `letterEdit` cho cựu học sinh khóa đó viết lại. Mỗi phiên, cựu học sinh thấy banner nhắc kèm nút "Xem".
 - Bảng quản trị có thêm mục "📜 Lời chia tay" (`adminLetterView`): chọn khóa, sửa, xoá, khôi phục bản trước, xem trước.
 
+### 5.6h Tìm bạn cũ và liên hệ
+
+- Chỉ mục `uidx` (phiên bản 2) thêm `look` và `c` (liên hệ) để lọc mà không đọc hồ sơ; nhân vật có chỉ mục cũ được ghi lại ở
+  lần `me` đầu tiên (`u.ix < INDEX_VER`).
+- `setContact {fb, zalo, note, vis}`: Facebook nhận link hoặc tên người dùng (`normFb` bỏ `https://www.facebook.com/`,
+  tham số theo dõi; chỉ nhận ký tự an toàn hoặc `profile.php?id=…`), Zalo là số điện thoại Việt Nam (`normZalo`), dòng giới
+  thiệu ≤ 80 ký tự; `vis` = `khoa` (mặc định, chỉ bạn cùng khóa thấy Facebook/Zalo) hoặc `all` (mọi thành viên đã ghi danh).
+  Để trống cả ba = xoá. Link mở bằng `https://www.facebook.com/<fb>` và `https://zalo.me/<số>`.
+- `friends {khoa?, lop?, q?}` (khóa `gv` = thầy cô): không cần ghi danh; trả đếm theo khóa (`khoas`, `gv`) và theo lớp
+  (`byLop`), tối đa 100 người, người đang online (theo `presence`) lên trước kèm cảnh/khu để "Đi tới". Người xem đã ghi danh
+  thấy dòng giới thiệu; Facebook/Zalo chỉ trả khi chủ nhân cho phép, nếu không trả `hidden: 'khoa' | 'member'`.
+- Giao diện `friendsSheet`: ô chọn khóa (mặc định khóa của mình, kèm số người), chip 12 lớp kèm số người, ô tìm tên không
+  dấu; mỗi dòng: ảnh nhân vật (chấm xanh nếu online), lớp · khóa, nơi đang đứng, lời giới thiệu, nút Facebook, Zalo,
+  Lưu bút (sổ lưu bút cá nhân), Đi tới (`goToPerson`: cùng cảnh thì đi bộ tới, ở lớp/phòng khác thì đi tới cửa rồi vào).
+  Mở từ "Nhân vật của tôi", danh sách online và thẻ của người khác. `contactSheet` để sửa liên hệ.
+
+### 5.6i Phòng chat riêng của khóa và lớp
+
+- Học sinh, cựu học sinh có thêm 2 phòng: `k:K20` (cả khóa 20) và `l:Toán|K20` (lớp chuyên Toán khóa 20) – `chatRooms(u)`
+  dùng chung cho máy chủ và trình duyệt. Lưu ở bảng `chatr` (khóa `phòng|thời gian-id`, giữ ~100 tin mỗi phòng) và
+  `chatrl` (tin mới nhất, số tin, id bị xoá của từng phòng); khung chung vẫn là `chat`/`chatlast`.
+- Gửi: `roomSay {room, text ≤ 200, scene}` – chỉ người thuộc phòng, tối đa 8 tin / 30 giây (`chatrate`). Nhận: mỗi lượt
+  `presence` gửi `rooms: {phòng: {after, delAfter}}`, máy chủ trả `roomFeed: {phòng: {chat[], chatDel?, chatDelAt?}}` chỉ
+  cho phòng người đó được vào (`feedOf` dùng chung cho khung chung và phòng riêng).
+- Giao diện: đầu khung chat thành các tab "💬 Chung · Khóa 20 · Toán K20", mỗi tab một danh sách và số tin chưa đọc; bấm
+  tab đang mở để thu gọn. Ô nhập đổi gợi ý ("Nhắn riêng khóa 20…") và giới hạn ký tự theo tab. Tin phòng riêng không hiện
+  bong bóng trên đầu (người ngoài phòng không đọc được). Khách, thầy cô, bạn trường khác chỉ có tab chung.
+- Quản trị: `adminRooms` liệt kê phòng có tin; `adminChat`/`adminDeleteChat` nhận `room`; `adminPurgeChat` xoá cả trong phòng
+  riêng (mỗi lần ≤ 30 tin, ≤ 3 phòng). Mục "Tin nhắn" có ô chọn phòng; nút ⋯ trên dòng tin phòng riêng xoá đúng phòng.
+
+### 5.6j Mời bạn bằng link, mã QR, thiệp mời
+
+- Link mời `<địa chỉ trang>?ref=<id nhân vật>`. Mở link: `main.js` lưu `ref` vào `localStorage` (`ctn.ref`) rồi bỏ khỏi
+  thanh địa chỉ; lúc ghi danh gửi kèm `ref`. Người đã có nhân vật thì `ref` bị bỏ.
+- `register` có `ref` hợp lệ (người mời tồn tại, không bị khoá): ghi `user.ref`, bảng `invite` (`người mời|thời gian-id`),
+  cộng cho người mời **+50 điểm thi đua và 10.000đ** (dòng ví "Mời … vào trường"), tối đa 10 bạn được thưởng mỗi ngày
+  (`today.invites`), `stats.invites` đếm tất cả; gửi hộp thư `kind: 'invite'` → người mời thấy thông báo và ví cập nhật.
+  Trả `invitedBy` để người mới thấy "Bạn được … mời vào trường".
+- `inviteInfo` trả tổng số bạn, số được thưởng hôm nay, 50 bạn gần nhất. `inviteSheet`: ô link, sao chép, chia sẻ (Web
+  Share), mã QR (`qr.js`), "Tạo thiệp mời có mã QR" (`drawInviteCard` trong `cards.js`, 720 × 1040, để in hoặc gửi ảnh).
+- `qr.js` tự tạo mã QR (chế độ byte UTF-8, mức sửa lỗi M, phiên bản 1–10, chọn mặt nạ theo điểm phạt chuẩn ISO/IEC 18004),
+  không dùng thư viện ngoài. Đã kiểm bằng hai bộ đọc độc lập (OpenCV, ZXing) với link mời và chuỗi có dấu tiếng Việt.
+
 ### 5.7 Phong cách
 
 | Token | Giá trị | Dùng cho |
@@ -517,6 +560,24 @@ Mỗi lượt presence trả kèm inbox của người gọi rồi xoá (nhận 
 - Thẻ ảnh (`cards.js`): giấy chứng nhận 900 × 640 và thiệp tri ân 720 × 900 vẽ bằng canvas; `shareCanvas` dùng
   Web Share (gửi file) nếu máy hỗ trợ, nếu không thì tải về.
 
+### 5.12 Trang trí theo mùa và thời tiết (`season.js`)
+
+`seasonOf(now, force)` tính theo giờ Việt Nam, `World` gọi lại mỗi 5 giây; chỉ áp dụng ngoài sân trường (cảnh có `lamps`).
+Xem trước bằng `?mua=tet | trungthu | 2011 | phuong | mua | suong | thuong` (ghép được: `?mua=tet,mua`).
+
+| Dịp / mùa | Khi nào | Trang trí |
+|---|---|---|
+| Tết | 14 ngày trước đến 10 ngày sau mùng 1 (bảng ngày Tết 2025–2035) | Băng rôn cổng đỏ "CHÚC MỪNG NĂM MỚI – XUÂN BÍNH NGỌ 2026" (can chi tự tính), phông sân khấu "MỪNG XUÂN …", dây đèn lồng đỏ giữa các cặp cột đèn, đèn lồng trên mọi cột, cây không có hoa riêng nở hoa đào + cánh đào rơi, 5 chậu mai vàng/đào hồng (cổng, hai bên sân khấu, lối vào dãy 5 tầng) |
+| Trung thu | 10 ngày trước đến 2 ngày sau rằm tháng Tám | Băng rôn cam "VUI TẾT TRUNG THU", dây đèn lồng đỏ – vàng – cam, đèn ông sao trên cột đèn; tối: đèn lồng toả sáng, trăng rằm to và vàng hơn |
+| 20/11 | 10–21/11 | Băng rôn "CHÀO MỪNG NGÀY NHÀ GIÁO VIỆT NAM 20-11", phông "TRI ÂN THẦY CÔ 20-11", lẵng hoa hai bên sân khấu |
+| Phượng nở | Tháng 5–6 nở rộ, tháng 4 và 7 có hoa, còn lại lác đác | Tán phượng đỏ rực, cánh phượng rơi, thảm cánh hoa dưới gốc; bằng lăng rộ tháng 5–7, hoa sữa rộ tháng 10–11 |
+| Mưa phùn | Tháng 2–3, khoảng 60% số ngày (cùng ngày mọi người thấy như nhau) | Vệt mưa mảnh, vòng nước loang, trời xám |
+| Sương mù | Tháng 11–3, khoảng nửa số ngày, 5:00–8:30 (tan dần từ 7:30) | Màn sương trắng và các mảng sương trôi chậm |
+
+Thứ tự vẽ: nền → thảm cánh hoa → vật thể/nhân vật (có dây đèn lồng, chậu Tết) → cánh hoa rơi → bóng nước → màn đêm
+(đèn lồng khoét sáng + quầng) → mưa/sương (toạ độ màn hình) → trời sao → nhãn. Vào trường thấy một lời chúc theo dịp
+(mỗi phiên một lần).
+
 ## 6. Kiến trúc
 
 ```
@@ -547,7 +608,9 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 |---|---|
 | `main.js` | Khởi động, ghi danh, thanh trên/dưới, vòng đồng bộ, hộp thư, chuông trống, chuyển cảnh, toàn bộ bảng chức năng (nhiệm vụ, ví, online, âm thanh, căng tin, gửi xe, nhà hiệu bộ…), ảnh kỷ yếu + album, sổ lưu bút |
 | `minigames.js` | Khung trò chơi 5 vòng + penalty, bóng rổ, pha chế hóa học, dò mìn, kiểm tra bài cũ |
-| `cards.js` | Giấy chứng nhận, thiệp tri ân dạng ảnh, chia sẻ/tải về |
+| `cards.js` | Giấy chứng nhận, thiệp tri ân, thiệp mời có mã QR dạng ảnh, chia sẻ/tải về |
+| `season.js` | Mùa, lễ Tết, thời tiết theo giờ Việt Nam (`seasonOf`, can chi) |
+| `qr.js` | Tạo mã QR (`qrMatrix`, `drawQr`) |
 | `npcs.js` | Nhân vật phụ sân trường và cô chủ nhiệm từng lớp |
 | `sound.js` | Hiệu ứng âm thanh Web Audio, cài đặt âm lượng |
 | `classroom.js` | Cảnh lớp học (640 × 980): bố cục, vật cản, 36 chỗ ngồi, điểm tương tác, vẽ bảng lớp, áp phích, bàn ghế, hành lang |
@@ -587,7 +650,7 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `tok` | token | id người dùng |
 | `code` | mã khôi phục `CTN-XXXX-XXXX` | id người dùng |
 | `presence` | id | `{id, name, role, khoa, lop, school, look, x, y, zone, scene, sit, sitBack, dir, noBalloon, say, sayAt, throw: {x, y, target, at}, at}` |
-| `inbox` | `uid nhận\|thời gian-id` | `{id, kind: gift\|love\|loveReply, from, fromName, …}` – xoá khi đã trả về |
+| `inbox` | `uid nhận\|thời gian-id` | `{id, kind: gift\|love\|loveReply\|invite, from, fromName, …}` – xoá khi đã trả về |
 | `love` | id | `{id, from, fromName, to, toName, line, ans?, at}` |
 | `counter` | `flower\|ngày` | `{n}` – số bó hoa tặng thầy cô trong ngày |
 | `flowerlog` | `thời gian-id` | `{name, khoa, lop, to, at}` |
@@ -601,7 +664,11 @@ CREATE TABLE kv (t TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY 
 | `chatlast` | `all` | `{at, n, del[], delAt}` – thời điểm tin mới nhất, số tin, id tin bị xoá gần đây |
 | `photouid` | `uid\|thời gian-id` | `{id}` – ảnh theo người đăng (để quản trị xoá) |
 | `khoalt` | `K20` | `{khoa, farewell, thanks, by, at, prev}` – lời chia tay của khóa + lời tri ân thầy cô |
-| `uidx` | id người dùng | `{id, name, role, khoa, lop, school, at, banned}` – chỉ mục thành viên cho quản trị |
+| `uidx` | id người dùng | `{id, name, role, khoa, lop, school, at, banned, look, c}` – chỉ mục thành viên cho quản trị và Tìm bạn cũ (`c` = liên hệ `{fb, zalo, note, vis}`) |
+| `chatr` | `phòng\|thời gian-id` | tin phòng riêng (`phòng` = `k:K20` hoặc `l:Toán\|K20`), như `chat` kèm `room` |
+| `chatrl` | phòng | `{room, at, n, del[], delAt}` – như `chatlast` cho từng phòng riêng |
+| `chatrate` | `uid\|khoảng 30 giây` | `{n}` – số tin đã gửi vào phòng riêng |
+| `invite` | `người mời\|thời gian-id` | `{id, name, role, khoa, lop, school, at, rewarded}` – bạn vào trường qua link mời |
 | `adminfail` | `ip\|giờ` | `{n}` – số lần nhập sai mã quản trị |
 | `gvcn` | `lớp\|khóa` (`*` = mọi khóa) | `{lop, khoa, title, name, by, at}` – tên thầy cô chủ nhiệm |
 | `event` | id | `{id, title, date, time, place, note, khoa, lop, by, byId, joins[], at}` |
@@ -618,11 +685,15 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | Action | Ghi danh | Vào | Ra |
 |---|---|---|---|
 | `ping` | – | – | `{ok, school}` |
-| `register` | – | `role, name, khoa, lop, school, look` | `{token, user}` |
+| `register` | – | `role, name, khoa, lop, school, look, ref?` (id người mời) | `{token, user, invitedBy}` |
+| `inviteInfo` | ✔ | – | `{items[], total, today, cap, points, money}` |
+| `setContact` | ✔ | `fb?, zalo?, note?, vis` (`khoa`/`all`) | `{user}` (`user.contact`) |
+| `friends` | – (có token thì thấy liên hệ được phép) | `khoa?` (`K20` hoặc `gv`), `lop?, q?` | `{items[], total, byLop, khoas, gv, all}` |
+| `roomSay` | ✔ HS/cựu HS | `room` (`k:K20`, `l:Toán\|K20`), `text` (≤ 200), `scene?` | `{msg}`; 403 không thuộc phòng, 429 gửi quá nhanh |
 | `recover` | – | `code` | `{token, user}` |
 | `me` | ✔ | – | `{user}` |
 | `look` | ✔ | `look, name` | `{user}` |
-| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, noBalloon, say?, throw? {x, y, target}, chatAfter?, chatDelAfter?` | `{others[], inbox[], chat[], chatDel?, chatDelAt?, now}`; 403 `{banned}` nếu bị khoá – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
+| `presence` | ✔ | `x, y, zone, scene, sit, sitBack, dir, noBalloon, say?, throw? {x, y, target}, chatAfter?, chatDelAfter?, rooms? {phòng: {after, delAfter}}` | `{others[], inbox[], chat[], chatDel?, chatDelAt?, roomFeed?, now}`; 403 `{banned}` nếu bị khoá – mỗi người kèm `say` và `throw` gần nhất (giữ 6 giây) |
 | `online` | – | `chatAfter?, chatDelAfter?` | `{others[], chat[], chatDel?, chatDelAt?, now}` |
 | `guestbook` | – | `room` | `{items[]}` (100 mới nhất) |
 | `sign` | ✔ | `room, body` (≤ 600 ký tự) | `{item, user}` |
@@ -634,8 +705,9 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 | `setClassTeacher` | ✔ | `lop, title` (Thầy/Cô), `name` (≤ 30), `khoa?` (thầy cô) | `{item}`; 403 nếu không phải lớp mình |
 | `teachersAll` | – | – | `{items[]}` – mọi tên thầy cô đã đặt |
 | `adminCheck` | mã | `code` | `{ok, batch}`; 403 sai mã, 429 sai quá nhiều, 503 chưa đặt mã |
-| `adminChat` | mã | `code` | `{items[]}` – ~100 tin gần nhất |
-| `adminDeleteChat` | mã | `code, ids[]` (≤ 30) | `{deleted, remaining}` |
+| `adminChat` | mã | `code, room?` | `{items[]}` – ~100 tin gần nhất của khung chung hoặc phòng riêng |
+| `adminRooms` | mã | `code` | `{items[{room, at, n}]}` |
+| `adminDeleteChat` | mã | `code, ids[]` (≤ 30), `room?` | `{deleted, remaining}` |
 | `adminPurgeChat` | mã | `code, uid` | `{deleted, remaining}` |
 | `adminUsers` | mã | `code, q?, banned?` | `{items[], total}` |
 | `adminDeleteGb` | mã | `code, room, at, id` | `{ok}` |
@@ -686,7 +758,7 @@ Mọi chức năng là `POST /api/<action>`, thân là JSON, trả JSON. Chức 
 
 | Lệnh | Việc |
 |---|---|
-| `npm test` | 13 nhóm kiểm thử nghiệp vụ (`node --test`): ghi danh, presence (cảnh, ngồi, ném bóng), album, chuỗi điểm danh và ví, nhiệm vụ & thành tựu, hộp thư đãi bạn/tỏ tình, chào cờ, tặng hoa… |
+| `npm test` | 27 nhóm kiểm thử nghiệp vụ (`node --test`): ghi danh, presence (cảnh, ngồi, ném bóng), album, chuỗi điểm danh và ví, nhiệm vụ & thành tựu, hộp thư đãi bạn/tỏ tình, chào cờ, tặng hoa… |
 | `npm run db:init` + `npm run dev` | Worker + D1 cục bộ, `http://localhost:8787` |
 | `npx wrangler dev --ip 0.0.0.0` | Cho điện thoại cùng Wi-Fi truy cập |
 | `npm run static` | Chỉ giao diện, chế độ ngoại tuyến, `http://localhost:8080` |

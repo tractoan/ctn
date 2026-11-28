@@ -1,6 +1,7 @@
 // Sân trường: vẽ bản đồ, camera, tìm đường (A* trên lưới), nhân vật mình + người khác.
 import { WORLD, GROUNDS, BUILDINGS, WALLS, GATE, TREES, BENCHES, SEATS, CHAIR_ROWS, ROOM_DOORS, FLOWERBEDS, LAMPS, STAIRS, YARD, DRUM, FLAG, BOARD, STAGE, HOTSPOTS, CLASS_DOORS, solids } from './campus.js';
 import { drawAvatar } from './avatar.js';
+import { seasonOf } from './season.js';
 
 const CELL = 20;
 const AV = 1.2; // tỉ lệ nhân vật
@@ -19,6 +20,13 @@ export function skyTint(now = Date.now()) {
 export function nightLevel(now = Date.now()) { return skyTint(now).night; }
 let NIGHT = 0;
 let SKY = { color: null, lamps: false, night: 0 };
+// Mùa, lễ Tết, thời tiết hiện tại (season.js) – tính lại vài giây một lần
+let SEASON = seasonOf();
+const BLOOM = { phuong: ['#F2544A', '#FFD45E'], banglang: ['#C29BEA', '#FFF2A8'], hoasua: ['#FFFFFF', '#F4E7A1'], dao: ['#F7A1C4', '#FFE6F0'] };
+// Cây đang có hoa: cây không có hoa riêng thì dịp Tết nở hoa đào
+const bloomOf = (t) => t.bloom || (SEASON.fest === 'tet' ? 'dao' : null);
+const bloomLevel = (kind) => (kind === 'dao' ? 2 : SEASON.bloom[kind] ?? 1);
+const rnd01 = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 // Logo trường (vẽ trên biển cổng)
 const LOGO = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: 'logo.jpg' }) : null;
 const SPEED = 190; // px/giây
@@ -408,8 +416,103 @@ function drawTree(ctx, t, time) {
   }
   circ(ctx, 'rgba(255,255,255,.35)', t.x - 8 + sway, t.y - 82, 8);
   circ(ctx, 'rgba(255,255,255,.25)', t.x + 14 + sway, t.y - 60, 5);
-  const bloom = { phuong: ['#F2544A', '#FFD45E'], banglang: ['#C29BEA', '#FFF2A8'], hoasua: ['#FFFFFF', '#F4E7A1'] }[t.bloom];
-  if (bloom) for (let f = 0; f < 12; f++) { const a = f * 2.4 + t.x, r = 10 + (f * 37) % 24; flower5(ctx, t.x + Math.cos(a) * r + sway, t.y - 62 + Math.sin(a) * r * 0.75, 3.4, bloom[0], bloom[1]); }
+  const kind = bloomOf(t), bloom = BLOOM[kind];
+  if (!bloom) return;
+  const lv = bloomLevel(kind);
+  // nở rộ: phủ những chùm hoa lên tán
+  if (lv === 2) for (let f = 0; f < 9; f++) { const a = f * 1.9 + t.x * 0.3, r = 6 + (f * 29) % 22; circ(ctx, kind === 'phuong' ? 'rgba(226,58,46,.85)' : kind === 'dao' ? 'rgba(246,160,196,.85)' : kind === 'banglang' ? 'rgba(186,140,232,.8)' : 'rgba(255,255,250,.85)', t.x + Math.cos(a) * r + sway, t.y - 64 + Math.sin(a) * r * 0.7, 7 + (f % 3)); }
+  const n = [4, 12, 26][lv];
+  for (let f = 0; f < n; f++) { const a = f * 2.4 + t.x, r = 8 + (f * 37) % 27; flower5(ctx, t.x + Math.cos(a) * r + sway, t.y - 62 + Math.sin(a) * r * 0.75, lv === 2 ? 3.6 : 3.4, bloom[0], bloom[1]); }
+}
+
+// Cánh hoa rơi từ cây đang nở rộ (phượng tháng 5–6, đào dịp Tết)
+function petalTrees() { return TREES.filter((t) => t.kind === 'tree' && bloomLevel(bloomOf(t) || 'x') === 2 && (bloomOf(t) === 'phuong' || bloomOf(t) === 'dao')); }
+function drawPetals(ctx, now, inView) {
+  for (const t of petalTrees()) {
+    if (!inView(t.x, t.y)) continue;
+    const col = bloomOf(t) === 'phuong' ? '#E8473C' : '#F59BBE';
+    ctx.fillStyle = col;
+    for (let i = 0; i < 6; i++) {
+      const seed = t.x * 13 + t.y * 7 + i * 101, per = 5200 + (seed % 7) * 450;
+      const k = ((now + seed * 37) % per) / per;
+      const x = t.x + (rnd01(seed) * 70 - 35) + Math.sin(now / 650 + i) * 7 + k * 16, y = t.y - 72 + k * 84;
+      ctx.globalAlpha = k > 0.85 ? (1 - k) / 0.15 : 1;
+      ctx.beginPath(); ctx.ellipse(x, y, 2.6, 1.5, now / 420 + i, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+// Thảm cánh hoa dưới gốc (vẽ ngay trên nền, dưới chân người)
+function drawPetalCarpet(ctx) {
+  for (const t of petalTrees()) {
+    ctx.fillStyle = bloomOf(t) === 'phuong' ? 'rgba(226,64,52,.75)' : 'rgba(245,155,190,.8)';
+    for (let i = 0; i < 18; i++) {
+      const a = rnd01(t.x + i * 7) * Math.PI * 2, r = 14 + rnd01(t.y + i * 11) * 34;
+      ctx.beginPath(); ctx.ellipse(t.x + Math.cos(a) * r, t.y + 6 + Math.sin(a) * r * 0.35, 2.4, 1.4, a, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+// ---------- Đèn lồng dịp Tết, Trung thu ----------
+// Dây đèn lồng căng giữa các cặp cột đèn (giữa sân, trước cổng, sân đá cầu, hành lang dãy 5 tầng)
+const LANTERN_SPANS = [[0, 1], [2, 3], [6, 7], [8, 9]];
+let LANTERN_CACHE = null;
+function lanterns() {
+  const fest = SEASON.fest;
+  if (fest !== 'tet' && fest !== 'trungthu') return [];
+  if (LANTERN_CACHE?.fest === fest) return LANTERN_CACHE.list;
+  const list = [];
+  for (const [i, j] of LANTERN_SPANS) {
+    const a = LAMPS[i], b = LAMPS[j];
+    const x0 = a.x + 12, x1 = b.x - 12, y0 = a.y - 70, n = Math.max(3, Math.round((x1 - x0) / 46));
+    for (let k = 1; k < n; k++) {
+      const u = k / n, x = x0 + (x1 - x0) * u, sag = Math.sin(u * Math.PI) * 22;
+      list.push({ x, y: y0 + sag + 12, base: Math.max(a.y, b.y), k, kind: fest === 'tet' ? 'red' : ['red', 'gold', 'orange'][k % 3] });
+    }
+  }
+  // đèn ông sao (Trung thu) / đèn lồng đỏ (Tết) treo ở mọi cột đèn
+  for (const l of LAMPS) list.push({ x: l.x + 12, y: l.y - 58, base: l.y, kind: fest === 'tet' ? 'red' : 'star', post: true });
+  LANTERN_CACHE = { fest, list };
+  return list;
+}
+function drawLanternString(ctx, a, b, fest, now) {
+  const x0 = a.x + 12, x1 = b.x - 12, y0 = a.y - 70;
+  ctx.strokeStyle = 'rgba(70,50,40,.75)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, y0 + 44, x1, y0); ctx.stroke();
+  for (const l of lanterns()) if (!l.post && l.base === Math.max(a.y, b.y) && l.x > x0 && l.x < x1) drawLantern(ctx, l, now);
+}
+function drawLantern(ctx, l, now) {
+  const sw = Math.sin(now / 700 + l.x * 0.05) * 1.5, x = l.x + sw, y = l.y;
+  ctx.strokeStyle = 'rgba(70,50,40,.8)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(l.x, y - 12); ctx.lineTo(x, y - 7); ctx.stroke();
+  if (l.kind === 'star') { // đèn ông sao 5 cánh
+    ctx.fillStyle = '#E53935'; ctx.strokeStyle = '#FFD54F'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5 + sw * 0.03, r = i % 2 ? 4.5 : 10; ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + 3 + Math.sin(a) * r); }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#FFD54F'; ctx.beginPath(); ctx.moveTo(x, y + 13); ctx.lineTo(x, y + 20); ctx.stroke();
+    return;
+  }
+  const col = { red: '#D32F2F', gold: '#F9A825', orange: '#EF6C00' }[l.kind];
+  ctx.fillStyle = '#B8860B'; ctx.fillRect(x - 3.5, y - 8, 7, 2.5); ctx.fillRect(x - 3.5, y + 7.5, 7, 2.5);
+  ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, 7, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,220,120,.7)'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.ellipse(x, y, 3.5, 8, 0, 0, Math.PI * 2); ctx.moveTo(x, y - 8); ctx.lineTo(x, y + 8); ctx.stroke();
+  ctx.strokeStyle = '#FFC107'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.lineTo(x, y + 17); ctx.stroke();
+}
+// Chậu mai vàng, đào hồng dịp Tết (cạnh cổng, hai bên sân khấu)
+const TET_POTS = [{ x: 640, y: 1172, kind: 'mai' }, { x: 1186, y: 1172, kind: 'dao' }, { x: 968, y: 262, kind: 'dao' }, { x: 1334, y: 262, kind: 'mai' }, { x: 1040, y: 804, kind: 'mai' }];
+function drawTetPot(ctx, p) {
+  const { x, y } = p;
+  ctx.fillStyle = 'rgba(20,30,50,.16)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7B3F1D'; ctx.beginPath(); ctx.moveTo(x - 14, y - 16); ctx.lineTo(x + 14, y - 16); ctx.lineTo(x + 10, y); ctx.lineTo(x - 10, y); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#F2B233'; ctx.fillRect(x - 13, y - 12, 26, 2);
+  ctx.strokeStyle = '#5D3A22'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+  const br = [[-16, -52], [0, -60], [15, -50], [-8, -40], [9, -36]];
+  ctx.beginPath(); for (const [dx, dy] of br) { ctx.moveTo(x, y - 16); ctx.quadraticCurveTo(x + dx * 0.3, y - 30, x + dx, y + dy); } ctx.stroke();
+  ctx.lineCap = 'butt';
+  const col = p.kind === 'mai' ? ['#FFD600', '#FF8F00'] : ['#F7A1C4', '#FFE6F0'];
+  for (let i = 0; i < 16; i++) { const [dx, dy] = br[i % br.length], k = 0.45 + rnd01(i + x) * 0.6; flower5(ctx, x + dx * k + (rnd01(i * 3 + y) - 0.5) * 8, y - 16 + (dy + 16) * k + (rnd01(i * 5) - 0.5) * 6, 2.8, col[0], col[1]); }
 }
 
 // Ghế đá hoa cương hồng
@@ -525,7 +628,12 @@ function drawStage(ctx) {
   ctx.fillStyle = '#1F5E3B'; ctx.fillRect(s.x + 20, s.y - 70, s.w - 40, 70);
   ctx.fillStyle = '#C62828'; ctx.fillRect(s.x + s.w / 2 - 50, s.y - 70, 100, 70);
   ctx.fillStyle = '#C62828'; ctx.fillRect(s.x + 10, s.y - 86, s.w - 20, 18);
-  label(ctx, s.label, s.x + s.w / 2, s.y - 77, { size: 9, color: '#FFE08A', weight: 800 });
+  label(ctx, SEASON.stage || s.label, s.x + s.w / 2, s.y - 77, { size: 9, color: '#FFE08A', weight: 800 });
+  // 20/11: lẵng hoa tươi hai bên bục
+  if (SEASON.fest === '2011') for (const fx of [s.x + 22, s.x + s.w - 22]) {
+    ctx.fillStyle = '#8D6E63'; ctx.beginPath(); ctx.moveTo(fx - 10, s.y + 6); ctx.lineTo(fx + 10, s.y + 6); ctx.lineTo(fx + 6, s.y + 22); ctx.lineTo(fx - 6, s.y + 22); ctx.closePath(); ctx.fill();
+    for (let i = 0; i < 12; i++) { const a = i * 0.9 + fx; flower5(ctx, fx + Math.cos(a) * (4 + (i % 3) * 4), s.y - 2 + Math.sin(a) * 5 - (i % 3) * 3, 4, ['#E91E63', '#FFEB3B', '#FFFFFF', '#FF7043'][i % 4]); }
+  }
   // bục sân khấu
   ctx.fillStyle = '#E7A9A0'; rr(ctx, s.x, s.y, s.w, s.h, 3); ctx.fill();
   ctx.fillStyle = '#C98C83'; ctx.fillRect(s.x, s.y + s.h - 10, s.w, 10);
@@ -555,9 +663,9 @@ function drawGate(ctx, time) {
     }
   }
   // băng rôn xanh
-  const wave = Math.sin(time / 600) * 1;
-  ctx.fillStyle = '#1E5BB8'; rr(ctx, g.x + 10, top + 56 + wave, g.w - 20, 16, 2); ctx.fill();
-  label(ctx, 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ THẦY TRÒ VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 64 + wave, { size: 7.5, color: '#fff', weight: 800 });
+  const wave = Math.sin(time / 600) * 1, band = SEASON.gate;
+  ctx.fillStyle = band ? band.bg : '#1E5BB8'; rr(ctx, g.x + 10, top + 56 + wave, g.w - 20, 16, 2); ctx.fill();
+  label(ctx, band ? band.text : 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ THẦY TRÒ VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 64 + wave, { size: 7.5, color: band ? band.fg : '#fff', weight: 800 });
 }
 
 // ---------- Nguồn sáng ban đêm (tính một lần) ----------
@@ -659,6 +767,11 @@ export const CAMPUS_SCENE = {
     for (const g of CHAIR_ROWS) items.push({ y: g.y - 1, draw: () => drawChairGroup(ctx, g) });
     items.push({ y: 650, draw: () => drawLectern(ctx, 735, 650) });
     items.push({ y: GATE.y + 10, draw: () => drawGate(ctx, now) });
+    if (SEASON.fest === 'tet' || SEASON.fest === 'trungthu') {
+      for (const [i, j] of LANTERN_SPANS) items.push({ y: Math.max(LAMPS[i].y, LAMPS[j].y) + 0.5, draw: () => drawLanternString(ctx, LAMPS[i], LAMPS[j], SEASON.fest, now) });
+      for (const l of lanterns()) if (l.post) items.push({ y: l.base + 0.5, draw: () => drawLantern(ctx, l, now) });
+    }
+    if (SEASON.fest === 'tet') for (const p of TET_POTS) items.push({ y: p.y, draw: () => drawTetPot(ctx, p) });
     return items;
   },
 };
@@ -687,6 +800,7 @@ export class World {
     this.onHitOther = () => {};
     this.onTapNpc = () => {};
     this.shield = false;
+    this.forceSeason = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('mua') || '' : '';
     this.bg = null;
     this.scene = null;
     this.grid = null;
@@ -923,6 +1037,14 @@ export class World {
     ctx.scale(z, z);
     ctx.translate(-this.cam.x, -this.cam.y);
     if (this.bg) ctx.drawImage(this.bg, 0, 0);
+    if (!this._seasonAt || Math.abs(Date.now() - this._seasonAt) > 5000) {
+      this._seasonAt = Date.now();
+      const prev = SEASON.fest;
+      SEASON = seasonOf(Date.now(), this.forceSeason);
+      if (prev !== SEASON.fest) LANTERN_CACHE = null;
+    }
+    const outdoors = !!this.scene.lamps;
+    if (outdoors) drawPetalCarpet(ctx);
 
     // đường đi
     if (this.path.length && this.me && !this._capturing) {
@@ -941,6 +1063,10 @@ export class World {
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
 
+    if (outdoors) {
+      const x0 = this.cam.x - 120, y0 = this.cam.y - 60, x1 = this.cam.x + this.vw / z + 120, y1 = this.cam.y + this.vh / z + 160;
+      drawPetals(ctx, now, (x, y) => x > x0 && x < x1 && y > y0 && y < y1);
+    }
     this._drawFx(ctx, now);
     if (this.tapFx && now - this.tapFx.t < 400 && !this._capturing) {
       const k = (now - this.tapFx.t) / 400;
@@ -950,6 +1076,7 @@ export class World {
     // màu trời theo giờ; tối thì đèn, cửa sổ, biển trường, sân khấu, đom đóm toả sáng
     if (this.scene.lamps && SKY.color) this._nightPass(ctx, z, now);
     ctx.restore();
+    if (outdoors && (SEASON.rain || SEASON.fog > 0)) this._weather(ctx, now);
     if (this.scene.lamps && SKY.lamps && !this._capturing) this._drawSky(ctx, now);
 
     // nhãn điểm tương tác (vẽ theo toạ độ màn hình để luôn dễ đọc)
@@ -1010,6 +1137,8 @@ export class World {
     for (const [x, y, r, a] of L.pools) hole(x, y, r, a);
     const flies = fireflies(now).filter((f) => inView(f.x, f.y));
     for (const f of flies) hole(f.x, f.y, 9, 0.5 * f.b);
+    const lans = lanterns().filter((l) => inView(l.x, l.y));
+    for (const l of lans) hole(l.x, l.y + 2, 26, 0.75);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(d, 0, 0); ctx.restore();
     // quầng sáng cộng màu
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -1028,8 +1157,50 @@ export class World {
     // biển trường: hai đèn rọi từ dưới lên
     const g0 = GATE, top = g0.y - 104;
     for (const gx of [g0.x + g0.w * 0.25, g0.x + g0.w * 0.75]) glow(gx, top + 30, 120, 'rgba(255,245,220,.22)');
+    // đèn lồng, đèn ông sao
+    for (const l of lans) glow(l.x, l.y + 2, 30, l.kind === 'gold' ? 'rgba(255,200,60,.5)' : 'rgba(255,110,50,.5)');
     // đom đóm
     for (const f of flies) { glow(f.x, f.y, 8, `rgba(210,255,120,${0.75 * f.b})`); ctx.fillStyle = `rgba(250,255,200,${f.b})`; ctx.beginPath(); ctx.arc(f.x, f.y, 1.3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+  }
+
+  // Mưa phùn (vệt mưa mảnh, trời xám) và sương mù buổi sáng (mảng sương trôi chậm), vẽ theo toạ độ màn hình
+  _weather(ctx, now) {
+    const W = this.vw, H = this.vh;
+    ctx.save(); ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (SEASON.rain) {
+      ctx.fillStyle = `rgba(96,112,134,${0.2 * (1 - NIGHT * 0.5)})`; ctx.fillRect(0, 0, W, H);
+      const n = Math.min(650, Math.round(W * H / 2400));
+      ctx.strokeStyle = `rgba(236,242,252,${0.7 - NIGHT * 0.3})`; ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const sp = 0.32 + rnd01(i + 77) * 0.18;
+        const y = (rnd01(i + 999) * (H + 40) + now * sp) % (H + 40) - 20;
+        const x = (rnd01(i) * (W + 60) + now * sp * 0.25) % (W + 60) - 30;
+        ctx.moveTo(x, y); ctx.lineTo(x - 3, y - 12);
+      }
+      ctx.stroke();
+      // vòng nước loang trên mặt sân
+      ctx.strokeStyle = `rgba(236,242,252,${0.45 - NIGHT * 0.2})`; ctx.lineWidth = 1;
+      for (let i = 0; i < 18; i++) {
+        const per = 900 + (i % 5) * 140, k = ((now + i * 377) % per) / per, cyc = Math.floor((now + i * 377) / per);
+        const x = rnd01(i * 31 + cyc) * W, y = rnd01(i * 17 + cyc * 3) * H;
+        ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.ellipse(x, y, 2 + k * 9, 1 + k * 3.5, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (SEASON.fog > 0) {
+      const f = SEASON.fog;
+      ctx.fillStyle = `rgba(232,237,242,${0.3 * f})`; ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 8; i++) {
+        const r = 150 + (i % 3) * 80;
+        const x = (rnd01(i + 5) * (W + 2 * r) + now * 0.012 * (1 + (i % 3) * 0.4)) % (W + 2 * r) - r;
+        const y = rnd01(i + 50) * H;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, `rgba(246,248,250,${0.5 * f})`); g.addColorStop(1, 'rgba(246,248,250,0)');
+        ctx.fillStyle = g; ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
+      }
+    }
     ctx.restore();
   }
 
@@ -1047,12 +1218,13 @@ export class World {
       ctx.beginPath(); ctx.arc(x, y, i % 5 === 0 ? 1.5 : 0.9, 0, Math.PI * 2); ctx.fill();
     }
     // trăng
-    const mx = this.vw - 120, my = top + 34;
-    const mg = ctx.createRadialGradient(mx, my, 6, mx, my, 46);
+    const full = SEASON.fest === 'trungthu', mr = full ? 22 : 14;
+    const mx = this.vw - 120, my = top + 34 + (full ? 8 : 0);
+    const mg = ctx.createRadialGradient(mx, my, 6, mx, my, full ? 80 : 46);
     mg.addColorStop(0, `rgba(255,246,210,${0.45 * a})`); mg.addColorStop(1, 'rgba(255,246,210,0)');
-    ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, 46, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, full ? 80 : 46, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = a;
-    ctx.fillStyle = '#FFF4CC'; ctx.beginPath(); ctx.arc(mx, my, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = full ? '#FFE9A8' : '#FFF4CC'; ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(214,200,150,.55)'; ctx.beginPath(); ctx.arc(mx - 4, my - 3, 3, 0, Math.PI * 2); ctx.arc(mx + 5, my + 4, 2.2, 0, Math.PI * 2); ctx.arc(mx + 2, my - 6, 1.6, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }

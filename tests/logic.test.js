@@ -503,3 +503,133 @@ test('lời chia tay khóa + lời tri ân: cựu học sinh viết cho khóa m�
   assert.equal((await adm({ khoa: 'K5', farewell: '', thanks: '' })).body.item, null);
   assert.equal((await call(s, 'khoaLetter', { khoa: 'K5' })).body.item, null);
 });
+
+test('tìm bạn cũ: lọc khóa, lớp, tên; liên hệ chỉ hiện theo quyền chủ nhân cho phép', async () => {
+  const s = memStore();
+  const t = Date.UTC(2026, 10, 22, 3);
+  const reg = async (name, role, khoa, lop, school) => (await call(s, 'register', { name, role, khoa, lop, school }, '', t)).body;
+  const a = await reg('Minh Anh', 'cuuhs', 'K20', 'Toán');
+  const b = await reg('Bình', 'cuuhs', 'K20', 'Văn');
+  const c = await reg('Châu', 'cuuhs', 'K21', 'Toán');
+  const d = await reg('Hùng', 'gv', '', '', 'Thầy · Vật lý');
+  assert.equal((await call(s, 'setContact', { fb: 'javascript:alert(1)' }, a.token)).status, 400);
+  assert.equal((await call(s, 'setContact', { zalo: '12345' }, a.token)).status, 400);
+  const me = (await call(s, 'setContact', { fb: 'https://www.facebook.com/minh.anh.99/?mibextid=abc', zalo: '0912 345 678', note: 'Đang ở Hà Nội', vis: 'khoa' }, a.token)).body.user;
+  assert.deepEqual(me.contact, { fb: 'minh.anh.99', zalo: '0912345678', note: 'Đang ở Hà Nội', vis: 'khoa' });
+  const find = async (body, token = '') => (await call(s, 'friends', body, token, t + 1000)).body;
+  // bạn cùng khóa thấy Facebook, Zalo; khác khóa chỉ biết là có liên hệ; chưa ghi danh chỉ thấy tên
+  const k20 = await find({ khoa: '20' }, b.token);
+  assert.deepEqual(k20.items.map((x) => x.name).sort(), ['Bình', 'Minh Anh']);
+  assert.deepEqual(k20.byLop, { Toán: 1, Văn: 1 });
+  assert.deepEqual([k20.khoas, k20.gv], [{ K20: 2, K21: 1 }, 1]);
+  const seen = k20.items.find((x) => x.id === a.user.id);
+  assert.deepEqual([seen.fb, seen.zalo, seen.note], ['minh.anh.99', '0912345678', 'Đang ở Hà Nội']);
+  const other = (await find({ khoa: 'K20', lop: 'Toán' }, c.token)).items;
+  assert.deepEqual(other.map((x) => [x.name, x.fb, x.hidden, x.note]), [['Minh Anh', undefined, 'khoa', 'Đang ở Hà Nội']]);
+  const anon = (await find({ q: 'minh' })).items;
+  assert.deepEqual(anon.map((x) => [x.name, x.fb, x.note]), [['Minh Anh', undefined, undefined]]);
+  // cho mọi thành viên xem; thầy cô lọc riêng; người đang online xếp trước
+  await call(s, 'setContact', { fb: 'profile.php?id=1000123456', vis: 'all' }, a.token);
+  assert.equal((await find({ khoa: 'K20' }, c.token)).items.find((x) => x.id === a.user.id).fb, 'profile.php?id=1000123456');
+  assert.deepEqual((await find({ khoa: 'gv' })).items.map((x) => x.name), ['Hùng']);
+  await call(s, 'presence', { x: 5, y: 5, scene: 'campus' }, c.token, t + 500);
+  assert.deepEqual((await find({ lop: 'Toán' })).items.map((x) => [x.name, x.online]), [['Châu', true], ['Minh Anh', false]]);
+  // xoá liên hệ
+  assert.equal((await call(s, 'setContact', { fb: '', zalo: '', note: '' }, a.token)).body.user.contact, null);
+  assert.equal(d.user.role, 'gv');
+});
+
+test('phòng chat riêng của khóa và lớp: chỉ thành viên gửi, nhận; giới hạn tốc độ; quản trị xoá', async () => {
+  const s = memStore();
+  const t = Date.UTC(2026, 10, 22, 3);
+  const adm = (action, body) => handle(action, { store: s, token: '', now: t + 9e4, adminCode: 'm', ip: '1' }, { code: 'm', ...body });
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' }, '', t)).body;
+  const b = (await call(s, 'register', { name: 'Bình', role: 'cuuhs', khoa: 'K20', lop: 'Văn' }, '', t)).body;
+  const c = (await call(s, 'register', { name: 'Châu', role: 'cuuhs', khoa: 'K21', lop: 'Toán' }, '', t)).body;
+  const k = (await call(s, 'register', { name: 'Khách', role: 'khach', school: 'Phụ huynh' }, '', t)).body;
+  const say = (u, room, text, at) => call(s, 'roomSay', { room, text }, u.token, at);
+  assert.equal((await say(a, 'k:K20', 'Chào cả khóa 20!', t + 100)).status, 200);
+  assert.equal((await say(a, 'l:Toán|K20', 'Toán K20 đâu rồi', t + 200)).status, 200);
+  assert.equal((await say(c, 'k:K20', 'xin vào', t + 300)).status, 403);
+  assert.equal((await say(b, 'l:Toán|K20', 'xin vào', t + 300)).status, 403);
+  assert.equal((await say(k, 'k:K20', 'xin vào', t + 300)).status, 403);
+  assert.equal((await say(a, 'l:Hack|K20', 'x', t + 300)).status, 400);
+  // Bình (K20 Văn) chỉ nhận phòng khóa 20, không nhận phòng lớp Toán; khung chung không lẫn tin phòng riêng
+  const r = (await call(s, 'presence', { x: 1, y: 1, rooms: { 'k:K20': { after: 0 }, 'l:Toán|K20': { after: 0 } } }, b.token, t + 1000)).body;
+  assert.deepEqual(Object.keys(r.roomFeed), ['k:K20']);
+  assert.deepEqual(r.roomFeed['k:K20'].chat.map((m) => [m.name, m.text, m.room]), [['An', 'Chào cả khóa 20!', 'k:K20']]);
+  assert.deepEqual(r.chat, []);
+  const mine = (await call(s, 'presence', { x: 1, y: 1, rooms: { 'l:Toán|K20': { after: t + 150 } } }, a.token, t + 1000)).body.roomFeed;
+  assert.deepEqual(mine['l:Toán|K20'].chat.map((m) => m.text), ['Toán K20 đâu rồi']);
+  // tối đa 8 tin / 30 giây
+  const w = Math.ceil((t + 60e3) / 30e3) * 30e3;
+  for (let i = 0; i < 8; i++) assert.equal((await say(b, 'k:K20', 'tin ' + i, w + i)).status, 200);
+  assert.equal((await say(b, 'k:K20', 'tin 9', w + 9)).status, 429);
+  assert.equal((await say(b, 'k:K20', 'tin sau', w + 30e3)).status, 200);
+  // quản trị: danh sách phòng, xem và xoá tin trong phòng; máy đang mở nhận danh sách đã xoá
+  assert.deepEqual((await adm('adminRooms', {})).body.items.map((x) => x.room).sort(), ['k:K20', 'l:Toán|K20']);
+  const items = (await adm('adminChat', { room: 'k:K20' })).body.items;
+  assert.equal(items.length, 10);
+  const hi = items.find((m) => m.text === 'Chào cả khóa 20!');
+  assert.equal((await adm('adminDeleteChat', { room: 'k:K20', ids: [hi.id] })).body.deleted, 1);
+  const f = (await call(s, 'presence', { x: 1, y: 1, rooms: { 'k:K20': { after: w + 30e3, delAfter: 0 } } }, a.token, t + 9e4)).body.roomFeed['k:K20'];
+  assert.deepEqual(f.chatDel, [hi.id]);
+  // xoá hết tin của một người ở mọi phòng
+  let p = (await adm('adminPurgeChat', { uid: b.user.id })).body;
+  assert.deepEqual([p.deleted, p.remaining], [9, 0]);
+  assert.deepEqual((await adm('adminChat', { room: 'k:K20' })).body.items, []);
+  assert.equal((await adm('adminChat', { room: 'l:Toán|K20' })).body.items.length, 1);
+});
+
+test('mời bạn bằng link: người mời được 50 điểm và 10.000đ, tối đa 10 bạn mỗi ngày, có thông báo', async () => {
+  const s = memStore();
+  const t = Date.UTC(2026, 10, 22, 3);
+  const a = (await call(s, 'register', { name: 'An', role: 'cuuhs', khoa: 'K20', lop: 'Toán' }, '', t)).body;
+  const b = (await call(s, 'register', { name: 'Bình', role: 'cuuhs', khoa: 'K20', lop: 'Văn', ref: a.user.id }, '', t + 10)).body;
+  assert.equal(b.invitedBy, 'An');
+  let me = (await call(s, 'me', {}, a.token, t + 20)).body.user;
+  assert.deepEqual([me.points, me.wallet, me.invites], [50, 10000, 1]);
+  const inbox = (await call(s, 'presence', { x: 1, y: 1 }, a.token, t + 30)).body.inbox;
+  assert.deepEqual(inbox.map((x) => [x.kind, x.fromName, x.sub, x.rewarded]), [['invite', 'Bình', 'K20 · Văn', true]]);
+  // mã mời sai thì vẫn vào trường bình thường
+  const z = await call(s, 'register', { name: 'Zed', role: 'khach', ref: 'khong-co' }, '', t + 40);
+  assert.equal(z.status, 200); assert.equal(z.body.invitedBy, null);
+  for (let i = 0; i < 10; i++) await call(s, 'register', { name: 'Bạn ' + i, role: 'khach', ref: a.user.id }, '', t + 100 + i);
+  me = (await call(s, 'me', {}, a.token, t + 200)).body.user;
+  assert.deepEqual([me.points, me.wallet, me.invites], [500, 100000, 11]);
+  const info = (await call(s, 'inviteInfo', {}, a.token, t + 200)).body;
+  assert.deepEqual([info.total, info.today, info.cap, info.items.filter((x) => !x.rewarded).length], [11, 10, 10, 1]);
+  // sang ngày mới lại được thưởng
+  await call(s, 'register', { name: 'Hôm sau', role: 'khach', ref: a.user.id }, '', t + 86400e3);
+  assert.equal((await call(s, 'me', {}, a.token, t + 86400e3)).body.user.points, 550);
+});
+
+test('trang trí theo mùa: Tết, Trung thu, 20/11, phượng, mưa phùn, sương mù, xem trước', async () => {
+  const { seasonOf, canChi } = await import('../public/js/season.js');
+  const vn = (y, m, d, hh = 10, mm = 0) => Date.UTC(y, m - 1, d, hh - 7, mm);
+  assert.equal(canChi(2026), 'Bính Ngọ'); assert.equal(canChi(2027), 'Đinh Mùi');
+  const tet = seasonOf(vn(2026, 2, 17));
+  assert.equal(tet.fest, 'tet'); assert.match(tet.gate.text, /XUÂN BÍNH NGỌ 2026/);
+  assert.equal(seasonOf(vn(2026, 2, 3)).fest, 'tet'); // 14 ngày trước Tết
+  assert.equal(seasonOf(vn(2026, 2, 28)).fest, null); // 11 ngày sau Tết
+  assert.equal(seasonOf(vn(2026, 9, 25)).fest, 'trungthu');
+  assert.equal(seasonOf(vn(2026, 11, 20)).fest, '2011');
+  assert.equal(seasonOf(vn(2026, 11, 28)).fest, null);
+  assert.equal(seasonOf(vn(2026, 6, 1)).bloom.phuong, 2);
+  assert.equal(seasonOf(vn(2026, 11, 28)).bloom.phuong, 0);
+  assert.equal(seasonOf(vn(2026, 11, 28)).bloom.hoasua, 2);
+  // mưa phùn chỉ tháng 2–3, khoảng một nửa số ngày; cả ngày giống nhau cho mọi người
+  const rainy = Array.from({ length: 31 }, (_, i) => seasonOf(vn(2027, 3, i + 1)).rain).filter(Boolean).length;
+  assert.ok(rainy > 8 && rainy < 28, 'số ngày mưa tháng 3: ' + rainy);
+  assert.equal(Array.from({ length: 30 }, (_, i) => seasonOf(vn(2027, 6, i + 1)).rain).some(Boolean), false);
+  assert.equal(seasonOf(vn(2027, 3, 5, 8)).rain, seasonOf(vn(2027, 3, 5, 20)).rain);
+  // sương mù: chỉ sáng sớm mùa đông, tan dần tới 8:30
+  const foggy = Array.from({ length: 31 }, (_, i) => i + 1).find((d) => seasonOf(vn(2026, 12, d, 6)).fog === 1);
+  assert.ok(foggy);
+  assert.ok(seasonOf(vn(2026, 12, foggy, 8, 0)).fog > 0 && seasonOf(vn(2026, 12, foggy, 8, 0)).fog < 1);
+  assert.equal(seasonOf(vn(2026, 12, foggy, 9)).fog, 0);
+  // ?mua= để xem trước
+  const p = seasonOf(vn(2026, 11, 28), 'trungthu,mua');
+  assert.deepEqual([p.fest, p.rain, p.fog], ['trungthu', true, 0]);
+  assert.equal(seasonOf(vn(2026, 2, 17), 'thuong').fest, null);
+});

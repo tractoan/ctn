@@ -48,6 +48,15 @@ trống giờ ra chơi/vào lớp, tặng hoa và thiệp tri ân 20/11, giấy 
 danh sách người online, khiên chặn bóng nước, ngày/đêm theo giờ thật, chỉnh âm lượng, áo dài – vest kỷ yếu –
 khăn quàng đỏ.
 
+**Kết nối bạn cũ**: 🔎 **Tìm bạn cũ** theo khóa, lớp, tên (thấy ai đã về trường, ai đang online, Facebook/Zalo nếu
+bạn ấy để lại – chỉ bạn cùng khóa hoặc mọi thành viên, tuỳ người đó chọn); khung chat có thêm **phòng riêng của khóa và
+của lớp** mình; 💌 **Mời bạn** bằng link riêng hoặc mã QR, có cả thiệp mời in được – mỗi bạn vào qua link được +50 điểm
+và 10.000đ. Các mục này ở "Nhân vật của tôi" (bấm ảnh nhân vật góc trên).
+
+**Theo mùa**: Tết có hoa đào, mai, đèn lồng đỏ; Trung thu đèn lồng, đèn ông sao; 20/11 băng rôn tri ân thầy cô; tháng 5–6
+phượng nở đỏ, cánh phượng rơi; tháng 2–3 có ngày mưa phùn, sáng mùa đông có sương mù. Xem trước:
+`/?mua=tet`, `/?mua=trungthu`, `/?mua=2011`, `/?mua=phuong`, `/?mua=mua`, `/?mua=suong`.
+
 Điều khiển: chạm/nhấp vào sân để đi (tự tìm đường quanh các dãy nhà), chạm nhãn để mở,
 trên máy tính dùng thêm phím mũi tên / WASD, cuộn chuột để phóng to/thu nhỏ.
 Tạo nhân vật 4 bước như trang mẫu (vai → thông tin → chọn ngoại hình → tên). Không cần mật khẩu: mỗi nhân vật có **mã khôi phục** `CTN-XXXX-XXXX` để dùng lại trên máy khác.
@@ -74,6 +83,8 @@ public/            giao diện tĩnh (không cần build)
   js/rooms.js      6 phòng bên trong: thư viện, phòng máy, phòng thí nghiệm, nhà hiệu bộ, căng tin, nhà đa năng
   music/           3 bài nhạc nền (MP3)
   js/games.js      đá cầu, câu hỏi đố vui
+  js/season.js     trang trí theo mùa, lễ Tết, thời tiết (?mua=… để xem trước)
+  js/qr.js         tạo mã QR cho link mời bạn (không dùng thư viện ngoài)
   js/logic.js      nghiệp vụ dùng chung cho server và chế độ ngoại tuyến
   js/api.js        gọi /api; nếu không có server thì chạy logic.js trên localStorage
 src/worker.js      Cloudflare Worker: phục vụ file tĩnh + API /api/<chức năng> trên D1

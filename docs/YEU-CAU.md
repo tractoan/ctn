@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.4 – áo khoác đồng phục mới theo mẫu áo thật của trường |
+| Phiên bản | 2.5 – tìm bạn cũ, phòng chat riêng của khóa/lớp, mời bạn bằng link + mã QR, trang trí theo mùa |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -253,6 +253,26 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 > YC-TT2-08: chưa kiểm thử vào đúng sáng thứ Hai trên trình duyệt (kiểm thử tự động đã giả lập giờ thứ Hai cho máy chủ).
 > YC-TT2-17: chưa nghe thử trên thiết bị thật.
 
+### 4.12 Kết nối bạn cũ và trang trí theo mùa
+
+| Mã | Yêu cầu | Ưu tiên | TT |
+|---|---|---|---|
+| YC-KN-01 | **Tìm bạn cũ**: lọc theo khóa (hoặc thầy cô), lớp chuyên, tên không dấu; thấy ai đã ghi danh, ai đang online và đang ở đâu; số người theo khóa và theo lớp | P1 | ✅ |
+| YC-KN-02 | Thông tin liên hệ **tuỳ chọn**: Facebook, Zalo, một dòng giới thiệu; chủ nhân chọn chỉ bạn cùng khóa hay mọi thành viên được xem Facebook/Zalo; người chưa ghi danh không thấy | P1 | ✅ |
+| YC-KN-03 | Từ kết quả tìm: mở Facebook/Zalo, viết sổ lưu bút, đi tới chỗ bạn đang online (kể cả trong lớp/phòng khác) | P2 | ✅ |
+| YC-KN-04 | **Phòng chat riêng** của khóa và của lớp chuyên trong khóa, bên cạnh khung chat chung; chỉ thành viên đọc và gửi; tab có số tin chưa đọc; giới hạn tốc độ gửi | P1 | ✅ |
+| YC-KN-05 | Quản trị xem, xoá tin trong phòng riêng; xoá mọi tin của người bị khoá ở mọi phòng | P1 | ✅ |
+| YC-KN-06 | **Mời bạn bằng link**: mỗi người một link riêng; bạn ghi danh qua link thì người mời được +50 điểm thi đua và 10.000đ (tối đa 10 bạn mỗi ngày) kèm thông báo; xem danh sách bạn đã mời | P1 | ✅ |
+| YC-KN-07 | Mã QR của link mời, và **thiệp mời có mã QR** để in hoặc gửi ảnh | P2 | ✅ |
+| YC-MUA-01 | **Tết**: hoa đào, mai, đèn lồng đỏ, băng rôn chúc mừng năm mới có năm can chi | P2 | ✅ |
+| YC-MUA-02 | **Trung thu**: dây đèn lồng, đèn ông sao, đèn sáng ban đêm, trăng rằm | P2 | ✅ |
+| YC-MUA-03 | **20/11**: băng rôn chào mừng ngày Nhà giáo Việt Nam, lẵng hoa sân khấu | P2 | ✅ |
+| YC-MUA-04 | **Mùa phượng** tháng 5–6: phượng nở rộ, cánh phượng rơi; mùa khác hoa thưa theo mùa thật (bằng lăng, hoa sữa) | P2 | ✅ |
+| YC-MUA-05 | **Thời tiết**: mưa phùn tháng 2–3, sương mù sáng sớm mùa đông; mọi người cùng thấy thời tiết như nhau trong ngày | P3 | ✅ |
+| YC-MUA-06 | Xem trước mọi dịp bằng tham số `?mua=` | P3 | ✅ |
+
+> YC-KN-06: chưa thử quét mã QR bằng camera điện thoại thật (đã kiểm bằng hai bộ đọc mã QR trên máy).
+
 ## 5. Yêu cầu phi chức năng
 
 | Mã | Yêu cầu | Ưu tiên | TT |
@@ -298,6 +318,8 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-TD | `logic.js` (`khoaBoard`, `leaderboard`, `POINTS`) | "lưu bút, sổ đầu bài, bảng thi đua" | Mở bảng tin |
 | YC-AT | `logic.js` (`SCHEDULE`, `periodOf`), `main.js` (`music`, `beatDrum`) | "giờ ra chơi giảm 20%" (gồm `periodOf`) | Bấm 🎵 phát/dừng/tắt |
 | YC-TT2 | `logic.js` (`DAILY_QUESTS`, `ACHIEVEMENTS`, `act`, `quests`, `claim`, `wallet`, `flag`, `flower`, `love`, `loveReply`, hộp thư trong `presence`), `minigames.js`, `cards.js`, `npcs.js`, `sound.js`, `main.js` | "điểm danh: chuỗi ngày…", "nhiệm vụ ngày và thành tựu…", "đãi bạn và tỏ tình…", "chào cờ chỉ sáng thứ Hai…" | 2 người: vé xe bus, nhận thưởng, đãi trà đá, tỏ tình – đồng ý, dò mìn, pha chế, penalty 5 quả, giấy chứng nhận, tặng hoa, ngồi lớp, kiểm tra bài cũ, khiên, ví |
+| YC-KN | `logic.js` (`friends`, `setContact`, `roomSay`, `roomFeeds`, `chatRooms`, `inviteInfo`, `register`), `qr.js`, `cards.js` (`drawInviteCard`), `main.js` (`friendsSheet`, `contactSheet`, `inviteSheet`, tab khung chat) | "tìm bạn cũ…", "phòng chat riêng…", "mời bạn bằng link…" | 3 người: mời qua link, tab Chung/Khóa/Lớp, đọc đúng phòng, liên hệ Facebook/Zalo, lọc lớp, đi tới; quản trị chọn phòng; đọc mã QR trên thiệp bằng ZXing |
+| YC-MUA | `season.js`, `world.js` (`drawTree`, `drawPetals`, `lanterns`, `_weather`, `_nightPass`) | "trang trí theo mùa…" | Ảnh chụp từng dịp bằng `?mua=` (ngày, đêm, điện thoại) |
 | YC-PN | `ui.js` (`h`), `worker.js`, `api.js` (chế độ ngoại tuyến), `style.css` | "…chức năng lạ trả 404" | Chạy ngoại tuyến bằng `npm run static` |
 
 ## 8. Vấn đề mở
