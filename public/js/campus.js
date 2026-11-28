@@ -86,7 +86,8 @@ export const ROOM_DOORS = [
 // Điểm tương tác: chạm nhãn → nhân vật đi tới (x, y) → mở bảng `panel`. `map`: nhãn ngắn trên bản đồ.
 export const HOTSPOTS = [
   { id: 'gate', x: 910, y: 1215, icon: '🚪', label: 'Cổng trường', map: 'Cổng', panel: 'gate' },
-  { id: 'guard', x: 1212, y: 1160, icon: '👮', label: 'Bác bảo vệ', map: 'Bảo vệ', panel: 'guard' },
+  // bác bảo vệ đã có bảng tên riêng (nhân vật phụ, chạm vào để nói chuyện) nên điểm này không hiện nhãn đè lên người
+  { id: 'guard', x: 1205, y: 1160, icon: '👮', label: 'Bác bảo vệ', map: 'Bảo vệ', panel: 'guard', nolabel: true },
   { id: 'parking', x: 560, y: 1150, icon: '🛵', label: 'Gửi xe · điểm danh', map: 'Gửi xe', panel: 'parking' },
   { id: 'sidegate', x: 40, y: 489, icon: '🚧', label: 'Cổng phụ', panel: 'sidegate' },
   { id: 'office', x: 396, y: 800, icon: '🏛️', label: 'Nhà hiệu bộ', map: 'Hiệu bộ', panel: 'enterRoom', room: 'hieubo', spot: 'office' },
@@ -124,7 +125,8 @@ for (const [y, bloom] of [[240, 'phuong'], [360, 'hoasua'], [480, 'banglang'], [
 // Hàng chậu cảnh dưới sân
 for (let x = 760; x <= 1380; x += 90) if (Math.abs(x - 1087) > 70) trees.push({ x, y: 715, kind: 'bonsai' });
 // Cây to quanh cổng, góc vườn
-for (const [x, y, bloom] of [[60, 1070, 'phuong'], [170, 1120], [280, 1060, 'banglang'], [1660, 860, 'phuong'], [1780, 940], [1900, 880, 'banglang'], [1700, 1080, 'hoasua'], [1880, 1110, 'phuong'], [1600, 1150, 'phuong']]) trees.push({ x, y, kind: 'tree', bloom, planter: x < 1610 && y > 1000 && x > 1500 });
+// (cây trong hai vườn đứng lùi về phía cổng để không che ghế đá)
+for (const [x, y, bloom] of [[45, 1150, 'phuong'], [190, 1160], [280, 1060, 'banglang'], [1660, 860, 'phuong'], [1780, 940], [1900, 880, 'banglang'], [1950, 1010, 'hoasua'], [1880, 1110, 'phuong'], [1600, 1150, 'phuong']]) trees.push({ x, y, kind: 'tree', bloom, planter: x < 1610 && y > 1000 && x > 1500 });
 // Cây có bồn dọc lối vào (trên nền gạch)
 trees.push({ x: 505, y: 690, kind: 'tree', bloom: 'phuong', planter: true }, { x: 505, y: 930, kind: 'tree', bloom: 'banglang', planter: true });
 // Chỗ trốn học

@@ -552,6 +552,9 @@ Mỗi lượt presence trả kèm inbox của người gọi rồi xoá (nhận 
   `npcSheet` (nói tiếp + hành động theo `panel`: vào nhà hiệu bộ, căng tin, đá cầu, pha chế, kiểm tra bài cũ).
 - Chuông trống: `checkBell()` chạy mỗi 20 giây, so `periodOf()` với lần trước; đổi sang "Ra chơi" hoặc "Tiết …" thì
   hiện banner + âm thanh. Sáng thứ Hai mở trang thấy banner chào cờ với nút đưa tới đúng hàng ghế lớp mình.
+- Che khuất: vật thể vẽ theo chiều y nên người đứng ngay sau tán cây hoặc sau biển cổng bị che; khi đó cây (`behindTree`,
+  tính cho mình, người khác và nhân vật phụ) hoặc biển cổng (`GATE_FADE`, chỉ người chơi) hiện trong mờ. Nhân vật phụ
+  đứng yên và ghế đá được đặt để không nằm sau cây (Đội cờ đỏ đứng ở ô cổng bên trái, bác bảo vệ cạnh trụ cổng phải).
 - Ngày/đêm: `skyTint()` trả về màu phủ theo giờ Việt Nam; ban đêm xem 5.7 (`_nightPass`, `_drawSky`).
   Lớp học không có `lamps` nên luôn sáng. Kiểm thử có thể ép `world.forceNight`.
 - Âm thanh (`sound.js`): bộ dao động + nhiễu Web Audio cho `click, coin, pop, whoosh, splash, drum, bell, win,

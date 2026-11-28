@@ -22,6 +22,9 @@ let NIGHT = 0;
 let SKY = { color: null, lamps: false, night: 0 };
 // Có người chơi đứng ngay sau cổng (bị biển trường che) thì làm biển trong mờ để vẫn thấy người
 let GATE_FADE = false;
+// Vị trí mọi người trên sân (mình, người khác, nhân vật phụ): ai đứng ngay sau tán cây thì tán cây hiện trong mờ
+let PEOPLE = [];
+const behindTree = (t) => (t.kind === 'tree' || t.kind === 'palm') && PEOPLE.some((p) => p.y < t.y - 2 && p.y > t.y - 92 && Math.abs(p.x - t.x) < 50);
 // Mùa, lễ Tết, thời tiết hiện tại (season.js) – tính lại vài giây một lần
 let SEASON = seasonOf();
 const BLOOM = { phuong: ['#F2544A', '#FFD45E'], banglang: ['#C29BEA', '#FFF2A8'], hoasua: ['#FFFFFF', '#F4E7A1'], dao: ['#F7A1C4', '#FFE6F0'] };
@@ -762,7 +765,12 @@ export const CAMPUS_SCENE = {
     const items = [];
     for (const b of BUILDINGS) items.push({ y: b.y + b.h, draw: () => drawBuilding(ctx, b) });
     for (const d of CLASS_DOORS) if (d.side === 's') items.push({ y: d.y - 25, draw: () => drawDoor(ctx, d) });
-    for (const t of TREES) items.push({ y: t.y, draw: () => drawTree(ctx, t, now) });
+    for (const t of TREES) items.push({ y: t.y, draw: () => {
+      const fade = behindTree(t);
+      if (fade) { ctx.save(); ctx.globalAlpha = 0.5; }
+      drawTree(ctx, t, now);
+      if (fade) ctx.restore();
+    } });
     for (const b of BENCHES) items.push({ y: b.y - 1, draw: () => drawBench(ctx, b) });
     items.push({ y: STAGE.y + STAGE.h + 1, draw: () => drawFlag(ctx, now) });
     items.push({ y: DRUM.y, draw: () => drawDrum(ctx) });
@@ -1064,7 +1072,8 @@ export class World {
     if (outdoors) {
       const g = GATE, behind = (p) => p && p.x > g.x - 60 && p.x < g.x + g.w + 60 && p.y > g.y - 75 && p.y < g.y + 10;
       GATE_FADE = behind(this.me) || [...this.others.values()].some(behind);
-    }
+      PEOPLE = [this.me, ...this.others.values(), ...this.npcs.filter((n) => (n.scene || 'campus') === 'campus')].filter(Boolean);
+    } else PEOPLE = [];
     const items = this.scene.statics(ctx, now);
     for (const n of this.npcs) if ((n.scene || 'campus') === this.scene.id) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir, sit: !!n.sit && !n.moving, scale: AV }); this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57', false, true); this._bubble(ctx, n.id, n.x, n.y, now); } });
     for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { const osit = o.data.sit && !o.moving; drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: osit ? o.data.dir || 1 : o.dir, back: osit ? o.data.sitBack : o.back, sit: osit, scale: AV }); if (o.data.noBalloon) this._shieldFx(ctx, o.x, o.y); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
