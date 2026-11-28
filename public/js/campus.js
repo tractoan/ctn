@@ -86,7 +86,7 @@ export const ROOM_DOORS = [
 // Điểm tương tác: chạm nhãn → nhân vật đi tới (x, y) → mở bảng `panel`. `map`: nhãn ngắn trên bản đồ.
 export const HOTSPOTS = [
   { id: 'gate', x: 910, y: 1215, icon: '🚪', label: 'Cổng trường', map: 'Cổng', panel: 'gate' },
-  { id: 'guard', x: 1185, y: 1160, icon: '👮', label: 'Bác bảo vệ', map: 'Bảo vệ', panel: 'guard' },
+  { id: 'guard', x: 1212, y: 1160, icon: '👮', label: 'Bác bảo vệ', map: 'Bảo vệ', panel: 'guard' },
   { id: 'parking', x: 560, y: 1150, icon: '🛵', label: 'Gửi xe · điểm danh', map: 'Gửi xe', panel: 'parking' },
   { id: 'sidegate', x: 40, y: 489, icon: '🚧', label: 'Cổng phụ', panel: 'sidegate' },
   { id: 'office', x: 396, y: 800, icon: '🏛️', label: 'Nhà hiệu bộ', map: 'Hiệu bộ', panel: 'enterRoom', room: 'hieubo', spot: 'office' },

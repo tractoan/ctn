@@ -20,6 +20,8 @@ export function skyTint(now = Date.now()) {
 export function nightLevel(now = Date.now()) { return skyTint(now).night; }
 let NIGHT = 0;
 let SKY = { color: null, lamps: false, night: 0 };
+// Có người chơi đứng ngay sau cổng (bị biển trường che) thì làm biển trong mờ để vẫn thấy người
+let GATE_FADE = false;
 // Mùa, lễ Tết, thời tiết hiện tại (season.js) – tính lại vài giây một lần
 let SEASON = seasonOf();
 const BLOOM = { phuong: ['#F2544A', '#FFD45E'], banglang: ['#C29BEA', '#FFF2A8'], hoasua: ['#FFFFFF', '#F4E7A1'], dao: ['#F7A1C4', '#FFE6F0'] };
@@ -501,7 +503,7 @@ function drawLantern(ctx, l, now) {
   ctx.strokeStyle = '#FFC107'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.lineTo(x, y + 17); ctx.stroke();
 }
 // Chậu mai vàng, đào hồng dịp Tết (cạnh cổng, hai bên sân khấu)
-const TET_POTS = [{ x: 640, y: 1172, kind: 'mai' }, { x: 1186, y: 1172, kind: 'dao' }, { x: 968, y: 262, kind: 'dao' }, { x: 1334, y: 262, kind: 'mai' }, { x: 1040, y: 804, kind: 'mai' }];
+const TET_POTS = [{ x: 612, y: 1172, kind: 'mai' }, { x: 1262, y: 1172, kind: 'dao' }, { x: 968, y: 262, kind: 'dao' }, { x: 1334, y: 262, kind: 'mai' }, { x: 1040, y: 804, kind: 'mai' }];
 function drawTetPot(ctx, p) {
   const { x, y } = p;
   ctx.fillStyle = 'rgba(20,30,50,.16)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 18, 5, 0, 0, Math.PI * 2); ctx.fill();
@@ -650,7 +652,9 @@ function drawGate(ctx, time) {
     ctx.fillStyle = '#7FB6DA'; ctx.fillRect(px, top + 40, 26, g.y - top - 36);
     ctx.fillStyle = '#A8D0EA'; ctx.fillRect(px + 4, top + 44, 18, g.y - top - 44);
   }
-  // xà ngang + biển trường trắng chữ đỏ
+  // xà ngang + biển trường trắng chữ đỏ (trong mờ khi có người đứng ngay phía sau)
+  ctx.save();
+  if (GATE_FADE) ctx.globalAlpha = 0.45;
   ctx.fillStyle = '#7FB6DA'; rr(ctx, g.x - 46, top + 2, g.w + 92, 50, 4); ctx.fill();
   ctx.fillStyle = '#FBFBF7'; rr(ctx, g.x - 38, top + 6, g.w + 76, 40, 3); ctx.fill();
   label(ctx, 'SỞ GIÁO DỤC & ĐÀO TẠO TỈNH THÁI NGUYÊN', g.x + g.w / 2, top + 14, { size: 7.5, color: '#C62828', weight: 800 });
@@ -666,6 +670,7 @@ function drawGate(ctx, time) {
   const wave = Math.sin(time / 600) * 1, band = SEASON.gate;
   ctx.fillStyle = band ? band.bg : '#1E5BB8'; rr(ctx, g.x + 10, top + 56 + wave, g.w - 20, 16, 2); ctx.fill();
   label(ctx, band ? band.text : 'NHIỆT LIỆT CHÀO MỪNG CÁC THẾ HỆ THẦY TRÒ VỀ THĂM TRƯỜNG', g.x + g.w / 2, top + 64 + wave, { size: 7.5, color: band ? band.fg : '#fff', weight: 800 });
+  ctx.restore();
 }
 
 // ---------- Nguồn sáng ban đêm (tính một lần) ----------
@@ -1056,6 +1061,10 @@ export class World {
     }
 
     // các vật thể sắp theo chiều y để che khuất đúng
+    if (outdoors) {
+      const g = GATE, behind = (p) => p && p.x > g.x - 60 && p.x < g.x + g.w + 60 && p.y > g.y - 75 && p.y < g.y + 10;
+      GATE_FADE = behind(this.me) || [...this.others.values()].some(behind);
+    }
     const items = this.scene.statics(ctx, now);
     for (const n of this.npcs) if ((n.scene || 'campus') === this.scene.id) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir, sit: !!n.sit && !n.moving, scale: AV }); this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57', false, true); this._bubble(ctx, n.id, n.x, n.y, now); } });
     for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { const osit = o.data.sit && !o.moving; drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: osit ? o.data.dir || 1 : o.dir, back: osit ? o.data.sitBack : o.back, sit: osit, scale: AV }); if (o.data.noBalloon) this._shieldFx(ctx, o.x, o.y); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
