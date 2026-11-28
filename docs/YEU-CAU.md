@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.5 – tìm bạn cũ, phòng chat riêng của khóa/lớp, mời bạn bằng link + mã QR, trang trí theo mùa |
+| Phiên bản | 2.6 – tối ưu cho ~300 người online cùng lúc; 2.5 – tìm bạn cũ, phòng chat riêng của khóa/lớp, mời bạn bằng link + mã QR, trang trí theo mùa |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Tài liệu liên quan | [Tài liệu thiết kế](THIET-KE.md) · [README](../README.md) |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -283,7 +283,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-PN-04 | Vẽ mượt ~60 khung hình/giây trên điện thoại tầm trung | P2 | 🟡 |
 | YC-PN-05 | Vị trí người khác cập nhật mỗi 2,5 giây; độ trễ chấp nhận được ≤ 3 giây | P2 | ✅ |
 | YC-PN-06 | **Chế độ ngoại tuyến**: khi không có máy chủ, trang vẫn chạy đầy đủ chức năng một người, dữ liệu lưu trên trình duyệt, có nhãn cảnh báo | P2 | ✅ |
-| YC-PN-07 | Vận hành trong gói miễn phí Cloudflare Workers + D1 với vài trăm người online cùng lúc | P1 | 🟡 |
+| YC-PN-07 | Vận hành với ~300 người online cùng lúc: độ trễ đồng bộ < 1 giây, không lỗi, dung lượng tải về nhỏ, điện thoại vẽ mượt. Gói miễn phí Cloudflare chỉ đủ cho vài chục người online; vài trăm người cần gói Workers Paid | P1 | 🟡 |
 | YC-PN-08 | Toàn bộ giao diện và thông báo lỗi bằng tiếng Việt, dễ hiểu, nói cách khắc phục | P1 | ✅ |
 | YC-PN-09 | **An toàn nội dung**: mọi nội dung người dùng nhập hiển thị dưới dạng văn bản thuần, không chạy được mã | P1 | ✅ |
 | YC-PN-10 | **Kiểm tra dữ liệu vào** ở máy chủ: giới hạn độ dài, danh sách giá trị hợp lệ, định dạng ngày; thân request ≤ 8 KB (riêng đăng ảnh ≤ 400 KB, chỉ nhận JPEG) | P1 | ✅ |
@@ -294,7 +294,7 @@ vào đúng nhân vật, cùng tên, cùng ví, cùng điểm.
 | YC-PN-15 | **Truy cập**: nút có nhãn cho trình đọc màn hình, đóng bảng bằng phím Esc, chữ đủ tương phản | P3 | 🟡 |
 
 > YC-PN-02, 04: mới kiểm thử trên Chromium giả lập iPhone 13 và máy tính, chưa thử trên máy Android/iOS thật.
-> YC-PN-07, 14: chưa triển khai thật lên Cloudflare; mới chạy bằng `wrangler dev` cục bộ.
+> YC-PN-07, 14: chưa triển khai thật lên Cloudflare; mới đo bằng mô phỏng SQLite và `wrangler dev` cục bộ với 300 kết nối giả lập (số liệu ở THIET-KE mục 6.3).
 
 ## 6. Ràng buộc và giả định
 

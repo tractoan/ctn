@@ -124,8 +124,13 @@ không nằm trong mã nguồn. Đổi mã: chạy lại `npx wrangler secret pu
 tạo file `.dev.vars` có dòng `ADMIN_CODE=...` (file này đã được `.gitignore`). Ở chế độ chỉ giao diện (`npm run static`)
 và trên link chạy thử, mã là `DEMO` (dữ liệu chỉ nằm trên trình duyệt đó). Nhập sai 10 lần trong 1 giờ thì bị khoá 1 giờ.
 
-Ghi chú: vị trí người chơi được đồng bộ bằng cách hỏi máy chủ mỗi 2,5 giây (không dùng WebSocket),
-bảng thi đua tính trên toàn bộ người dùng – phù hợp cộng đồng vài trăm đến vài nghìn người.
+Ghi chú: vị trí người chơi được đồng bộ bằng cách hỏi máy chủ mỗi 2,5 giây (không dùng WebSocket; tab ẩn thì 15 giây),
+máy chủ chỉ gửi những người vừa thay đổi. Đã đo với 300 người online cùng lúc (docs/THIET-KE.md mục 6.3).
+
+**Gói miễn phí hay trả phí?** Gói miễn phí Cloudflare cho 100.000 yêu cầu Worker mỗi ngày (D1: 5 triệu dòng đọc,
+100.000 dòng ghi mỗi ngày). 300 người online cùng lúc dùng khoảng 430.000 yêu cầu mỗi giờ, nên gói miễn phí chỉ đủ
+khoảng 15 phút – hết hạn mức thì trang ngừng chạy tới hôm sau. Gói miễn phí hợp với vài chục người online rải rác trong
+ngày; buổi họp lớp đông người nên nâng lên gói **Workers Paid** (5 USD/tháng, Workers & Pages → Plans).
 
 ---
 

@@ -633,3 +633,70 @@ test('trang trí theo mùa: Tết, Trung thu, 20/11, phượng, mưa phùn, sư�
   assert.deepEqual([p.fest, p.rain, p.fog], ['trungthu', true, 0]);
   assert.equal(seasonOf(vn(2026, 2, 17), 'thuong').fest, null);
 });
+
+test('đông người: chỉ gửi người thay đổi, đứng yên 8 giây mới ghi một lần, danh sách online đọc tối đa 1,5 giây một lần', async () => {
+  const s = memStore();
+  const count = { put: 0, list: 0 };
+  const spy = { ...s, async put(t, k, v) { if (t === 'presence') count.put++; return s.put(t, k, v); }, async list(t, p, l) { if (t === 'presence') count.list++; return s.list(t, p, l); } };
+  const mem = {};
+  const P = (token, body, now) => handle('presence', { store: spy, token, now, mem }, body).then((r) => r.body);
+  const t = Date.UTC(2026, 10, 28, 3);
+  const reg = async (name) => (await call(s, 'register', { name, role: 'cuuhs', khoa: 'K20', lop: 'Toán' }, '', t)).body;
+  const a = await reg('An'), b = await reg('Bình'), c = await reg('Châu');
+  await P(a.token, { x: 10, y: 20 }, t + 1000);
+  // lần đầu: đủ thông tin mọi người
+  let r = await P(b.token, { x: 50, y: 60 }, t + 1500);
+  assert.equal(r.full, true);
+  assert.deepEqual(r.others.map((o) => [o.name, o.x]), [['An', 10]]);
+  assert.equal(r.ids, undefined);
+  let since = r.since, sig = r.sig;
+  // người mới vào: gửi đủ, kèm danh sách id mới
+  await P(c.token, { x: 70, y: 80 }, t + 2000);
+  mem.snap = null;
+  r = await P(b.token, { x: 50, y: 60, since, sig }, t + 4000);
+  assert.ok(r.others.some((o) => o.id === c.user.id && o.name === 'Châu'));
+  assert.deepEqual([...r.ids].sort(), [a.user.id, c.user.id].sort());
+  since = r.since; sig = r.sig;
+  // An đi lại: chỉ gửi phần động (không có tên), không gửi lại danh sách id
+  await P(a.token, { x: 300, y: 20 }, t + 6000);
+  mem.snap = null;
+  r = await P(b.token, { x: 50, y: 60, since, sig }, t + 7500);
+  const an = r.others.find((o) => o.id === a.user.id);
+  assert.deepEqual([an.x, an.name], [300, undefined]);
+  assert.equal(r.ids, undefined);
+  // (gửi lặp lại những ai đổi trong 3 giây trước mốc để không sót bản ghi đang được ghi dở)
+  const r2 = await P(b.token, { x: 50, y: 60, since: r.since, sig: r.sig }, t + 9800);
+  assert.equal(r2.others.some((o) => o.id === c.user.id), false);
+  // đứng yên: 8 giây mới ghi lại một lần
+  const before = count.put;
+  await P(a.token, { x: 300, y: 20 }, t + 9000);
+  await P(a.token, { x: 300, y: 20 }, t + 11000);
+  assert.equal(count.put, before);
+  await P(a.token, { x: 300, y: 20 }, t + 14500);
+  assert.equal(count.put, before + 1);
+  // đổi ngoại hình: gửi đủ
+  await call(s, 'look', { look: { v: 2, gender: 'nu', hair: 3 } }, a.token, t + 15000);
+  await P(a.token, { x: 300, y: 20 }, t + 15000);
+  mem.snap = null;
+  r = await P(b.token, { x: 50, y: 60, since: r.since, sig: r.sig }, t + 16000);
+  assert.equal(r.others.find((o) => o.id === a.user.id).name, 'An');
+  // trong 1,5 giây, các yêu cầu dùng chung một lần đọc danh sách
+  const lists = count.list;
+  await P(c.token, { x: 70, y: 80 }, t + 16200);
+  await P(a.token, { x: 300, y: 20 }, t + 16400);
+  assert.equal(count.list, lists);
+  await P(a.token, { x: 300, y: 20 }, t + 17600);
+  assert.equal(count.list, lists + 1);
+  // người ở cảnh khác (trong lớp) đi lại: không gửi; đổi cảnh thì gửi
+  await P(c.token, { x: 100, y: 100, scene: 'lop:Toán' }, t + 18000);
+  mem.snap = null;
+  r = await P(b.token, { x: 50, y: 60, since: r.since, sig: r.sig }, t + 19000);
+  assert.deepEqual(r.others.filter((o) => o.id === c.user.id).map((o) => o.scene), ['lop:Toán']);
+  await P(c.token, { x: 200, y: 150, scene: 'lop:Toán' }, t + 22000);
+  mem.snap = null;
+  r = await P(b.token, { x: 50, y: 60, since: t + 20500, sig: r.sig }, t + 23000);
+  assert.equal(r.others.some((o) => o.id === c.user.id), false);
+  // người rời đi: không còn trong danh sách id
+  r = await P(b.token, { x: 50, y: 60, since: r.since, sig: r.sig }, t + 45000);
+  assert.deepEqual(r.ids, []);
+});

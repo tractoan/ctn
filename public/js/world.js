@@ -36,6 +36,29 @@ const rnd01 = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; retur
 const LOGO = typeof Image !== 'undefined' ? Object.assign(new Image(), { src: 'logo.jpg' }) : null;
 const SPEED = 190; // px/giây
 
+// ---------- Vẽ nhanh khi đông người ----------
+// Hình nhân vật (theo ngoại hình, hướng, tư thế, 8 nhịp bước) và bảng tên được vẽ sẵn ra canvas nhỏ rồi dán lại mỗi khung
+// hình, thay vì vẽ lại từng nét. Giữ tối đa 400 hình mỗi loại; hình đang dùng không bị bỏ – thiếu chỗ thì vẽ trực tiếp.
+const SPR = { x: -26, y: -80, w: 52, h: 92 }; // vùng bao một nhân vật quanh bàn chân (đã nhân AV), đo từ mọi kiểu tóc, áo, tư thế
+const SPRITE_MAX = 400, TAU = Math.PI * 2;
+const SPRITES = new Map(), TAGS = new Map();
+let FRAME = 0;
+const LOOK_KEYS = new WeakMap();
+const lookKey = (look) => { if (!look || typeof look !== 'object') return '-'; let k = LOOK_KEYS.get(look); if (!k) { k = JSON.stringify(look); LOOK_KEYS.set(look, k); } return k; };
+function cached(map, key, make) {
+  const e = map.get(key);
+  if (e) { e.f = FRAME; map.delete(key); map.set(key, e); return e.c; }
+  if (map.size >= SPRITE_MAX) {
+    const [oldKey, old] = map.entries().next().value;
+    if (FRAME - old.f < 30) return null; // hình nào cũng đang dùng: vẽ trực tiếp
+    map.delete(oldKey);
+  }
+  const c = make();
+  map.set(key, { c, f: FRAME });
+  return c;
+}
+if (typeof document !== 'undefined') document.fonts?.addEventListener?.('loadingdone', () => TAGS.clear()); // phông chữ vừa tải xong: vẽ lại bảng tên
+
 // ---------- Lưới va chạm & tìm đường (mỗi cảnh một lưới) ----------
 export class Grid {
   constructor(w, h, solidList) {
@@ -1075,9 +1098,13 @@ export class World {
       PEOPLE = [this.me, ...this.others.values(), ...this.npcs.filter((n) => (n.scene || 'campus') === 'campus')].filter(Boolean);
     } else PEOPLE = [];
     const items = this.scene.statics(ctx, now);
-    for (const n of this.npcs) if ((n.scene || 'campus') === this.scene.id) items.push({ y: n.y, draw: () => { drawAvatar(ctx, n.x, n.y, n.look, { t: now, moving: n.moving, dir: n.dir, sit: !!n.sit && !n.moving, scale: AV }); this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57', false, true); this._bubble(ctx, n.id, n.x, n.y, now); } });
-    for (const [id, o] of this.others) items.push({ y: o.y, draw: () => { const osit = o.data.sit && !o.moving; drawAvatar(ctx, o.x, o.y, o.data.look, { t: now, moving: o.moving, dir: osit ? o.data.dir || 1 : o.dir, back: osit ? o.data.sitBack : o.back, sit: osit, scale: AV }); if (o.data.noBalloon) this._shieldFx(ctx, o.x, o.y); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
-    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { drawAvatar(ctx, m.x, m.y, m.look, { t: now, moving: m.moving, dir: m.dir, back: m.sit ? m.sit.back : m.back, sit: !!m.sit, scale: AV }); if (this.shield) this._shieldFx(ctx, m.x, m.y); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._wetFx(ctx, 'me', m.x, m.y, now); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
+    // chỉ vẽ người trong khung nhìn (chừa lề cho đầu, bảng tên, bong bóng lời nói)
+    FRAME++;
+    const vx0 = this.cam.x - 60, vx1 = this.cam.x + this.vw / z + 60, vy0 = this.cam.y - 30, vy1 = this.cam.y + this.vh / z + 120;
+    const vis = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
+    for (const n of this.npcs) if ((n.scene || 'campus') === this.scene.id && vis(n.x, n.y)) items.push({ y: n.y, draw: () => { this._avatar(ctx, n.x, n.y, n.look, { moving: n.moving, dir: n.dir, sit: !!n.sit && !n.moving }, now); this._nameTag(ctx, n.x, n.y, n.name, n.sub, '#2E8B57', false, true); this._bubble(ctx, n.id, n.x, n.y, now); } });
+    for (const [id, o] of this.others) if (vis(o.x, o.y)) items.push({ y: o.y, draw: () => { const osit = o.data.sit && !o.moving; this._avatar(ctx, o.x, o.y, o.data.look, { moving: o.moving, dir: osit ? o.data.dir || 1 : o.dir, back: osit ? o.data.sitBack : o.back, sit: osit }, now); if (o.data.noBalloon) this._shieldFx(ctx, o.x, o.y); this._nameTag(ctx, o.x, o.y, o.data.name, this.subOf(o.data), '#1D2433'); this._wetFx(ctx, id, o.x, o.y, now); this._bubble(ctx, id, o.x, o.y, now); } });
+    if (this.me) { const m = this.me; items.push({ y: m.y, draw: () => { this._avatar(ctx, m.x, m.y, m.look, { moving: m.moving, dir: m.dir, back: m.sit ? m.sit.back : m.back, sit: !!m.sit }, now); if (this.shield) this._shieldFx(ctx, m.x, m.y); this._nameTag(ctx, m.x, m.y, m.name, m.sub, '#D8343A', true); this._wetFx(ctx, 'me', m.x, m.y, now); this._bubble(ctx, 'me', m.x, m.y, now); } }); }
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
 
@@ -1119,6 +1146,7 @@ export class World {
     // chạm vào người khác
     for (const o of this.others.values()) {
       const sx = (o.x - this.cam.x) * z, sy = (o.y - this.cam.y) * z;
+      if (sx < -60 || sx > this.vw + 60 || sy < -20 || sy > this.vh + 120) continue;
       this.labelRects.push({ x: sx - 16 * AV * z, y: sy - 58 * AV * z, w: 32 * AV * z, h: 60 * AV * z, player: o.data });
     }
     for (const n of this.npcs) {
@@ -1349,12 +1377,55 @@ export class World {
     ctx.fillStyle = 'rgba(79,195,247,.25)'; ctx.beginPath(); ctx.ellipse(x, y + 1, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
   }
 
+  // Nhân vật: dán hình vẽ sẵn (đứng yên: 1 hình; đi: 8 nhịp bước); khi chụp ảnh kỷ yếu thì vẽ trực tiếp cho nét
+  _avatar(ctx, x, y, look, o, now) {
+    if (this._capturing) { drawAvatar(ctx, x, y, look, { ...o, t: now, scale: AV }); return; }
+    const k = Math.min(2.5, Math.max(0.5, Math.round(this.dpr * this.baseZoom * this.zoom * 4) / 4));
+    const ph = o.moving ? Math.floor(((now / 90) % TAU) / TAU * 8) : -1;
+    const dir = o.dir < 0 ? -1 : 1;
+    const c = cached(SPRITES, `${lookKey(look)}|${dir}|${o.back ? 1 : 0}|${o.sit ? 1 : 0}|${ph}|${k}`, () => {
+      const cv = document.createElement('canvas');
+      cv.width = Math.ceil(SPR.w * k); cv.height = Math.ceil(SPR.h * k);
+      const g = cv.getContext('2d');
+      g.setTransform(k, 0, 0, k, -SPR.x * k, -SPR.y * k);
+      drawAvatar(g, 0, 0, look, { moving: !!o.moving, dir, back: !!o.back, sit: !!o.sit, t: o.moving ? (ph + 0.5) / 8 * TAU * 90 : 0, scale: AV });
+      return cv;
+    });
+    if (!c) { drawAvatar(ctx, x, y, look, { ...o, t: now, scale: AV }); return; }
+    const bob = o.moving ? 0 : Math.sin(now / 700) * 0.4 * AV; // nhịp thở khi đứng yên
+    ctx.drawImage(c, x + SPR.x, y + SPR.y - bob, SPR.w, SPR.h);
+  }
+
   _nameTag(ctx, x, y, name, sub, color, mine = false, npc = false) {
+    if (!this._capturing) {
+      const k = Math.min(2.5, Math.max(0.5, Math.round(this.dpr * this.baseZoom * this.zoom * 4) / 4));
+      const c = cached(TAGS, `${name}|${sub || ''}|${color}|${mine ? 1 : 0}|${npc ? 1 : 0}|${k}`, () => {
+        const m = document.createElement('canvas').getContext('2d');
+        const { w, hgt } = this._tagSize(m, name, sub);
+        const cv = document.createElement('canvas');
+        cv.width = Math.ceil((w + 2) * k); cv.height = Math.ceil((hgt + 3) * k);
+        const g = cv.getContext('2d');
+        g.setTransform(k, 0, 0, k, (w / 2 + 1) * k, k);
+        this._drawTag(g, 0, 0, name, sub, color, mine, npc);
+        cv.tw = w + 2; cv.th = hgt + 3; cv.hgt = hgt;
+        return cv;
+      });
+      if (c) { ctx.drawImage(c, x - c.tw / 2, y - 58 * AV - 2 - c.hgt - 1, c.tw, c.th); return; }
+    }
+    this._drawTag(ctx, x, y - 58 * AV - 2 - this._tagSize(ctx, name, sub).hgt, name, sub, color, mine, npc);
+  }
+
+  _tagSize(ctx, name, sub) {
     ctx.font = '700 10px "Be Vietnam Pro", system-ui, sans-serif';
     const w1 = ctx.measureText(name).width;
     ctx.font = '600 8px "Be Vietnam Pro", system-ui, sans-serif';
     const w2 = sub ? ctx.measureText(sub).width : 0;
-    const w = Math.max(w1, w2) + 12, hgt = sub ? 25 : 15, top = y - 58 * AV - 2 - hgt;
+    return { w: Math.max(w1, w2) + 12, hgt: sub ? 25 : 15 };
+  }
+
+  // Bảng tên: tâm ngang x, mép trên top
+  _drawTag(ctx, x, top, name, sub, color, mine, npc) {
+    const { w, hgt } = this._tagSize(ctx, name, sub);
     ctx.fillStyle = 'rgba(0,0,0,.12)'; rr(ctx, x - w / 2, top + 1.5, w, hgt, 6); ctx.fill();
     ctx.fillStyle = mine ? '#2F6FB5' : npc ? '#FFF8E1' : 'rgba(255,255,255,.96)';
     rr(ctx, x - w / 2, top, w, hgt, 6); ctx.fill();

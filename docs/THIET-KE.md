@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Phiên bản | 2.8 – tìm bạn cũ (Facebook/Zalo tuỳ chọn), phòng chat riêng của khóa và lớp, mời bạn bằng link + mã QR + thiệp mời, trang trí theo mùa và thời tiết |
+| Phiên bản | 2.9 – tối ưu cho ~300 người online cùng lúc (đồng bộ chỉ người thay đổi, vẽ nhân vật dựng sẵn); 2.8 – tìm bạn cũ (Facebook/Zalo tuỳ chọn), phòng chat riêng của khóa và lớp, mời bạn bằng link + mã QR + thiệp mời, trang trí theo mùa và thời tiết |
 | Tài liệu yêu cầu | [YEU-CAU.md](YEU-CAU.md) – mã yêu cầu `YC-…` được dẫn lại trong tài liệu này |
 | Nhánh | `claude/thpt-chuyen-thai-nguyen-srs08f` |
 | Sản phẩm tham khảo | [thpt.chuyenhalong.workers.dev](https://thpt.chuyenhalong.workers.dev/) |
@@ -631,11 +631,45 @@ store.get(t, k) · store.put(t, k, v) · store.del(t, k) · store.list(t, prefix
 | Việc | Chu kỳ |
 |---|---|
 | Vẽ canvas, di chuyển | `requestAnimationFrame`, tốc độ 190 px/giây |
-| Đồng bộ vị trí (`presence` / `online` với khách) | 2,5 giây; người khác được nội suy mượt giữa hai lần |
+| Đồng bộ vị trí (`presence` / `online` với khách) | 2,5 giây (15 giây khi tab ẩn); người khác được nội suy mượt giữa hai lần |
 | Đồng hồ, tiết học | 15 giây |
 | Bản đồ toàn cảnh (khi mở) | 1,5 giây |
 
-Không dùng WebSocket: đơn giản, chạy được trên gói miễn phí, đủ cho cộng đồng vài trăm người online.
+Không dùng WebSocket: đơn giản, đủ cho cộng đồng vài trăm người online (xem 6.3 về giới hạn gói miễn phí).
+
+### 6.3 Hiệu năng khi đông người (~300 người online)
+
+**Máy chủ** (`logic.js`, `worker.js`):
+- *Ghi ít*: bản ghi `presence` có `st` (lúc tên/ngoại hình đổi), `mt` (lúc vị trí, tư thế, lời nói, cú ném đổi), `sct` (lúc
+  đổi cảnh). Không đổi gì thì 8 giây mới ghi lại một lần (`PRESENCE_BEAT`, vẫn trong hạn online 20 giây).
+- *Đọc ít*: danh sách người online (`presenceSnap`) đọc từ D1 tối đa 1,5 giây một lần trong mỗi isolate (`ctx.mem` = biến
+  toàn cục của Worker); 30 tin chat mới nhất của mỗi phòng cũng dùng chung tới khi có tin mới / tin bị xoá.
+- *Gửi ít* (`presenceDelta`): máy khách gửi `since` (mốc lần trước) và `sig` (chữ ký danh sách id). `since = 0` → gửi đủ.
+  Còn lại chỉ gửi người đổi sau mốc: đổi tên/ngoại hình → bản đủ; đi lại, nói → phần động; người ở cảnh khác chỉ gửi khi
+  họ đổi cảnh hoặc nói. Danh sách id chỉ gửi khi có người vào/ra (chữ ký khác). Mốc trả về lùi 2 giây để không sót bản ghi
+  đang được ghi dở (gửi lặp vài người, máy khách gộp lại không sao).
+
+**Máy khách** (`main.js`, `world.js`): giữ bảng người online, gộp phần thay đổi; gặp người chưa biết hoặc vừa đổi cảnh thì
+xin lại đủ danh sách. Tab ẩn: 15 giây đồng bộ một lần. Chỉ vẽ người trong khung nhìn; hình nhân vật (theo ngoại hình,
+hướng, tư thế, 8 nhịp bước) và bảng tên vẽ sẵn ra canvas nhỏ rồi dán lại (tối đa 400 hình mỗi loại, hình đang dùng không
+bị bỏ, thiếu chỗ thì vẽ trực tiếp); khi chụp ảnh kỷ yếu vẫn vẽ trực tiếp cho nét.
+
+**Đo** (300 người, mỗi người 2,5 giây một lần = 120 yêu cầu/giây; 20% đang đi lại, 1% đang nói):
+
+| | Trước | Sau |
+|---|---|---|
+| Dòng D1 đọc / yêu cầu (mô phỏng SQLite, 1–10 isolate) | 337 | 9–25 |
+| Dòng D1 ghi / yêu cầu | 1,02 | 0,37 |
+| Dung lượng phản hồi (chưa nén / gzip) | 100 KB / 10 KB | 10–16 KB / 1,6–2 KB |
+| `wrangler dev` thật, 300 kết nối: độ trễ trung vị / p95 | 3,4 s / 5,9 s (chỉ kịp 83 yêu cầu/giây) | 0,14 s / 0,58 s (đủ 120/giây, 0 lỗi) |
+| Vẽ 1 khung hình, 300 người trong sân (Chromium không GPU) | 84 ms | 5–8 ms |
+| Điện thoại giả lập, người rải khắp trường | 30 hình/giây | 56–59 hình/giây |
+
+**Giới hạn gói miễn phí**: 300 người × 2,5 giây = ~430 nghìn yêu cầu/giờ, vượt hạn mức 100 nghìn yêu cầu/ngày của Workers
+Free sau ~15 phút (D1 sau tối ưu: ~4–11 triệu dòng đọc, ~160 nghìn dòng ghi mỗi giờ, cũng vượt 5 triệu đọc / 100 nghìn ghi
+mỗi ngày của gói miễn phí). Muốn vài trăm người online cùng lúc cần gói Workers Paid; với gói này một buổi họp lớp 300
+người vài giờ nằm trong phần đã bao gồm của D1 (25 tỉ dòng đọc, 50 triệu dòng ghi mỗi tháng). Mô phỏng: `node --no-warnings`
+script `model.mjs` (SQLite thật qua `node:sqlite`, đếm truy vấn như D1) và `load.mjs` (HTTP thật vào `wrangler dev`).
 
 ## 7. Dữ liệu
 

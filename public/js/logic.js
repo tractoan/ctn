@@ -33,6 +33,56 @@ export const MENU = [
 
 export const DAILY_ALLOWANCE = 20000;
 const PRESENCE_TTL = 20000;
+// ---------- Hiệu năng khi đông người (xem docs/THIET-KE.md mục 6.3) ----------
+// Ai đứng yên thì chỉ ghi lại vị trí 8 giây một lần (vẫn còn trong hạn 20 giây); danh sách người online được đọc từ D1
+// nhiều nhất 1,5 giây một lần trong mỗi isolate của Worker (ctx.mem); mỗi lượt chỉ gửi những người vừa thay đổi.
+const PRESENCE_BEAT = 8000, SNAP_TTL = 1500, SNAP_OVERLAP = 2000;
+const STATIC_KEYS = ['name', 'role', 'khoa', 'lop', 'school'];
+const DYN_KEYS = ['x', 'y', 'zone', 'scene', 'sit', 'sitBack', 'dir', 'noBalloon'];
+async function presenceSnap(ctx) {
+  const mem = ctx.mem;
+  if (mem?.snap && ctx.now >= mem.snap.at && ctx.now - mem.snap.at < SNAP_TTL) return mem.snap;
+  const all = await ctx.store.list('presence', '', 1000);
+  const rows = [];
+  let cleaned = 0;
+  for (const { k, v } of all) {
+    if (ctx.now - v.at <= PRESENCE_TTL) { rows.push(v); continue; }
+    if (ctx.now - v.at > 600e3 && cleaned < 10) { cleaned++; await ctx.store.del('presence', k); } // dọn dần bản ghi cũ
+  }
+  const snap = { at: ctx.now, rows };
+  if (mem) mem.snap = snap;
+  return snap;
+}
+// Chữ ký ngắn của danh sách id đang online: máy khách giữ đúng danh sách thì không cần gửi lại
+function idsSig(ids) {
+  let h = 2166136261;
+  for (const id of ids) for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  return (h >>> 0).toString(36) + '.' + ids.length;
+}
+// since = 0: gửi đủ mọi người. since > 0: chỉ người thay đổi sau mốc đó – đổi tên / ngoại hình thì gửi đủ, chỉ đi lại /
+// nói thì gửi phần động (người ở cảnh khác chỉ gửi khi họ đổi cảnh hoặc nói); kèm danh sách id (nếu khác chữ ký máy khách
+// đang giữ) để máy khách bỏ người đã rời đi.
+function presenceDelta(snap, meId, b) {
+  const since = Number(b.since) || 0, scene = typeof b.scene === 'string' ? b.scene : '';
+  const others = [], ids = [];
+  for (const v of snap.rows) {
+    if (v.id === meId) continue;
+    ids.push(v.id);
+    const st = v.st || v.at, mt = v.mt || v.at;
+    if (since && st <= since && mt <= since) continue;
+    if (!since || st > since) { const { st: _s, mt: _m, sct: _c, ...row } = v; others.push(row); continue; }
+    if (scene && (v.scene || 'campus') !== scene && (v.sct || 0) <= since && !(v.sayAt > since)) continue;
+    const d = { id: v.id };
+    for (const k of DYN_KEYS) d[k] = v[k];
+    if (v.say) { d.say = v.say; d.sayAt = v.sayAt; }
+    if (v.throw) d.throw = v.throw;
+    others.push(d);
+  }
+  const sig = idsSig(ids);
+  const out = { others, sig, since: snap.at - SNAP_OVERLAP, full: !since };
+  if (since && b.sig !== sig) out.ids = ids;
+  return out;
+}
 
 const POINTS = { checkin: 2, guestbook: 5, event: 3, join: 3, quiz: 1, game: 1, classSit: 10, flag: 20, treat: 3, flower: 5, ach: 20, submit: 10, notebook: 5, invite: 50 };
 // Mời bạn bằng link: người mời được +50 điểm thi đua và 10.000đ cho mỗi bạn mới, tối đa 10 bạn được thưởng mỗi ngày
@@ -382,8 +432,14 @@ async function feedOf(ctx, room, since, delSince) {
   const out = { chat: [] };
   if (!last) return out;
   if (last.at > since) {
-    const rows = await ctx.store.list(L.t, L.pre, CHAT_SEND);
-    out.chat = rows.map((r) => r.v).filter((m) => m.at > since).sort((a, c) => a.at - c.at);
+    // 30 tin mới nhất dùng chung trong isolate cho tới khi có tin mới hoặc có tin bị xoá
+    const mem = ctx.mem, c = mem?.feed?.[room];
+    let rows = c && c.at === last.at && c.delAt === last.delAt ? c.rows : null;
+    if (!rows) {
+      rows = (await ctx.store.list(L.t, L.pre, CHAT_SEND)).map((r) => r.v);
+      if (mem) { if (!mem.feed || Object.keys(mem.feed).length > 500) mem.feed = {}; mem.feed[room] = { at: last.at, delAt: last.delAt, rows }; }
+    }
+    out.chat = rows.filter((m) => m.at > since).sort((a, c) => a.at - c.at);
   }
   if (last.delAt && last.delAt > delSince) { out.chatDel = last.del || []; out.chatDelAt = last.delAt; }
   return out;
@@ -551,7 +607,7 @@ const handlers = {
     for (const r of inKhoa) if (r.lop) byLop[r.lop] = (byLop[r.lop] || 0) + 1;
     const list = inKhoa.filter((r) => (!lop || r.lop === lop) && (!q || fold(r.name).includes(q)));
     const pres = new Map();
-    for (const { v } of await ctx.store.list('presence', '', 500)) if (ctx.now - v.at <= PRESENCE_TTL) pres.set(v.id, v);
+    for (const v of (await presenceSnap(ctx)).rows) pres.set(v.id, v);
     const canSee = (r) => viewer && r.c && (viewer.id === r.id || r.c.vis === 'all' || (r.c.vis === 'khoa' && viewer.khoa && viewer.khoa === r.khoa));
     const items = list.map((r) => {
       const p = pres.get(r.id), see = canSee(r);
@@ -616,32 +672,35 @@ const handlers = {
       noBalloon: !!b.noBalloon,
     };
     const old = await ctx.store.get('presence', u.id);
+    let fresh = false; // vừa nói / vừa ném
     if (typeof b.say === 'string' && b.say.trim()) {
-      p.say = str(b.say, 80); p.sayAt = ctx.now;
+      p.say = str(b.say, 80); p.sayAt = ctx.now; fresh = true;
       await postChat(ctx, u, p.say, p.scene);
     }
     else if (old && old.say && ctx.now - old.sayAt < 6000) { p.say = old.say; p.sayAt = old.sayAt; }
     // Ném bóng nước: lưu cú ném gần nhất 6 giây để người khác kịp thấy
     if (b.throw && typeof b.throw === 'object') {
-      p.throw = { x: num(b.throw.x, 0, 4000), y: num(b.throw.y, 0, 4000), target: str(b.throw.target, 20), at: ctx.now };
+      p.throw = { x: num(b.throw.x, 0, 4000), y: num(b.throw.y, 0, 4000), target: str(b.throw.target, 20), at: ctx.now }; fresh = true;
     } else if (old && old.throw && ctx.now - old.throw.at < 6000) p.throw = old.throw;
-    await ctx.store.put('presence', u.id, p);
-    const all = await ctx.store.list('presence', '', 500);
-    const others = [];
-    for (const { k, v } of all) {
-      if (ctx.now - v.at > PRESENCE_TTL) { if (ctx.now - v.at > 600e3) await ctx.store.del('presence', k); continue; }
-      if (v.id !== u.id) others.push(v);
-    }
+    // st: lúc tên / ngoại hình đổi; mt: lúc vị trí, tư thế, lời nói đổi. Không đổi gì thì 8 giây mới ghi lại một lần.
+    const live = old && ctx.now - old.at <= PRESENCE_TTL;
+    const same = (keys) => live && keys.every((k) => old[k] === p[k]);
+    p.st = same(STATIC_KEYS) && JSON.stringify(old.look) === JSON.stringify(p.look) ? old.st || old.at : ctx.now;
+    p.mt = p.st !== ctx.now && same(DYN_KEYS) && !fresh ? old.mt || old.at : ctx.now;
+    p.sct = live && old.scene === p.scene ? old.sct || old.at : ctx.now; // lúc đổi cảnh (sân, lớp, phòng)
+    const expired = live && ((old.say && !p.say) || (old.throw && !p.throw)); // lời nói, cú ném đã quá 6 giây: ghi lại để xoá
+    if (!(live && !expired && p.st === (old.st || old.at) && p.mt === (old.mt || old.at) && ctx.now - old.at < PRESENCE_BEAT)) await ctx.store.put('presence', u.id, p);
+    b = { ...b, scene: p.scene };
+    const snap = await presenceSnap(ctx);
     // hộp thư: quà được đãi, lời tỏ tình, câu trả lời – lấy ra là xoá
     const inbox = [];
     for (const { k, v } of await ctx.store.list('inbox', u.id + '|', 20)) { inbox.push(v); await ctx.store.del('inbox', k); }
-    return { others, inbox: inbox.reverse(), ...(await chatFeed(ctx, b)), ...(await roomFeeds(ctx, u, b)), now: ctx.now };
+    return { ...presenceDelta(snap, u.id, b), inbox: inbox.reverse(), ...(await chatFeed(ctx, b)), ...(await roomFeeds(ctx, u, b)), now: ctx.now };
   },
 
   // Khách chưa ghi danh: chỉ xem ai đang online và khung chat chung, không hiện mình
   async online(ctx, b) {
-    const all = await ctx.store.list('presence', '', 500);
-    return { others: all.map((r) => r.v).filter((v) => ctx.now - v.at <= PRESENCE_TTL), ...(await chatFeed(ctx, b)), now: ctx.now };
+    return { ...presenceDelta(await presenceSnap(ctx), '', b), ...(await chatFeed(ctx, b)), now: ctx.now };
   },
 
   async guestbook(ctx, b) {

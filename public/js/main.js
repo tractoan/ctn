@@ -555,6 +555,23 @@ function enterSchool() {
     if (o) toast(`🎈 Ném vào ${o.data.name}!`);
     if (!me.guest) pendingThrow = t;
   };
+  // Danh sách người online giữ trên máy: máy chủ chỉ gửi người vừa thay đổi (since), kèm danh sách id khi có người vào / ra
+  const pres = { since: 0, sig: '', map: new Map() };
+  const mergeOthers = (r) => {
+    if (r.full || r.sig === undefined) pres.map = new Map();
+    let missing = false;
+    for (const p of r.others || []) {
+      const old = pres.map.get(p.id);
+      if (old) pres.map.set(p.id, { ...old, ...p });
+      else if (p.name !== undefined) pres.map.set(p.id, p);
+      else missing = true; // chưa biết người này: lượt sau xin lại đủ danh sách
+    }
+    if (r.ids) { const keep = new Set(r.ids); for (const id of [...pres.map.keys()]) if (!keep.has(id)) pres.map.delete(id); }
+    if (me.id) pres.map.delete(me.id);
+    pres.since = missing || r.since === undefined ? 0 : r.since;
+    pres.sig = r.sig || '';
+    return [...pres.map.values()];
+  };
   const tick = async () => {
     const pos = { x: Math.round(world.me.x), y: Math.round(world.me.y) };
     const zone = world.zoneOf(pos.x, pos.y);
@@ -563,21 +580,24 @@ function enterSchool() {
     try {
       let r;
       const all = channels.get('all');
-      if (me.guest) r = await api('online', { chatAfter: all.after, chatDelAfter: all.delAfter });
+      // vừa sang cảnh khác (sân ↔ lớp, phòng): xin lại đủ danh sách vì vị trí người ở cảnh mới chưa được cập nhật
+      if (pres.scene !== world.scene.id) { pres.scene = world.scene.id; pres.since = 0; }
+      if (me.guest) r = await api('online', { chatAfter: all.after, chatDelAfter: all.delAfter, since: pres.since, sig: pres.sig, scene: world.scene.id });
       else {
         const sit = world.me.sit;
         const rooms = Object.fromEntries([...channels.values()].filter((c) => c.room !== 'all').map((c) => [c.room, { after: c.after, delAfter: c.delAfter }]));
-        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1, noBalloon: world.shield, chatAfter: all.after, chatDelAfter: all.delAfter, rooms };
+        const body = { ...pos, zone, scene: world.scene.id, sit: !!sit, sitBack: !!(sit && sit.back), dir: world.me.dir || 1, noBalloon: world.shield, chatAfter: all.after, chatDelAfter: all.delAfter, rooms, since: pres.since, sig: pres.sig };
         if (pendingSay) { body.say = pendingSay; pendingSay = null; }
         if (pendingThrow) { body.throw = pendingThrow; pendingThrow = null; }
         r = await api('presence', body);
       }
+      const everyone = mergeOthers(r);
       // chỉ hiện những người cùng cảnh (cùng sân trường, hoặc cùng trong một lớp)
-      world.updateOthers(r.others.filter((p) => (p.scene || 'campus') === world.scene.id));
-      lastOnline = r.others;
-      const here = r.others.filter((p) => (p.scene || 'campus') === world.scene.id).length + (me.guest ? 0 : 1);
+      world.updateOthers(everyone.filter((p) => (p.scene || 'campus') === world.scene.id));
+      lastOnline = everyone;
+      const here = everyone.filter((p) => (p.scene || 'campus') === world.scene.id).length + (me.guest ? 0 : 1);
       online.lastChild.textContent = String(here);
-      online.title = `${here} người ở khu này · ${r.others.length + (me.guest ? 0 : 1)} người cả trường. Bấm để xem`;
+      online.title = `${here} người ở khu này · ${everyone.length + (me.guest ? 0 : 1)} người cả trường. Bấm để xem`;
       for (const it of r.inbox || []) handleInbox(it);
       takeFeed(channels.get('all'), r);
       for (const [room, res] of Object.entries(r.roomFeed || {})) takeFeed(channels.get(room), res);
@@ -585,8 +605,15 @@ function enterSchool() {
     } catch (e) { if (e.banned) bannedNotice(e.message); /* lỗi khác: thử lại lượt sau */ }
     if (world.scene.id === 'campus') savePos();
   };
-  tick();
-  setInterval(tick, 2500);
+  // Đồng bộ 2,5 giây một lần; khi chuyển sang tab / ứng dụng khác thì 15 giây một lần (vẫn được tính là online)
+  let tickTimer = 0, ticking = false;
+  const loop = async () => {
+    if (ticking) return;
+    ticking = true; clearTimeout(tickTimer);
+    try { await tick(); } finally { ticking = false; tickTimer = setTimeout(loop, document.hidden ? 15000 : 2500); }
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loop(); });
+  loop();
   setInterval(checkBell, 20000);
   checkBell(true);
   // lời chúc theo mùa, lễ Tết (mỗi phiên một lần)

@@ -23,6 +23,8 @@ function d1Store(db) {
   };
 }
 
+// Bộ nhớ tạm dùng chung giữa các yêu cầu trong cùng một isolate (ảnh chụp danh sách người online)
+const MEM = {};
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
 export default {
@@ -43,7 +45,8 @@ export default {
       const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
       // mã quản trị: `npx wrangler secret put ADMIN_CODE` (chạy thử trên máy: file .dev.vars)
       const ip = request.headers.get('cf-connecting-ip') || '';
-      const res = await handle(action, { store: d1Store(env.DB), token, now: Date.now(), adminCode: env.ADMIN_CODE || '', ip }, body);
+      const res = await handle(action, { store: d1Store(env.DB), token, now: Date.now(), adminCode: env.ADMIN_CODE || '', ip, mem: MEM }, body);
+      // (Cloudflare tự nén gzip/brotli phản hồi JSON cho trình duyệt)
       return new Response(JSON.stringify(res.body), { status: res.status, headers: JSON_HEADERS });
     }
     return env.ASSETS.fetch(request);
